@@ -1,0 +1,24 @@
+package net.maksy.mcmmoparties.spigot;
+
+public enum Lang {
+    PARTY_ALREADY_EXISTS,
+    PARTY_NOT_EXISTS,
+    PARTY_CHAR_LIMIT,
+    ALREADY_IN_PARTY,
+    ALREADY_REQUESTING,
+    PARTY_KICKED,
+    PARTY_LEFT,
+    CANT_KICK_SELF,
+    NOT_MEMBER,
+    NOT_REQUESTING,
+    NOT_IN_PARTY,
+    NOT_A_NUMBER,
+    NOT_OWNER,
+    NEW_OWNER,
+    REQUEST_SEND,
+    PARTY_CREATED,
+    PARTY_JOINED,
+    PARTY_LEVELUP,
+
+    PLAYER_NOT_EXISTS;
+}

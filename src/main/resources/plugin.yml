@@ -1,0 +1,11 @@
+name: McMMOParties
+version: '${project.version}'
+main: net.maksy.mcmmoparties.spigot.McMMOParties
+api-version: 1.18
+authors: [ MaksyKun ]
+commands:
+  party:
+    description: Party command
+    usage: /party
+    aliases:
+      - pa
