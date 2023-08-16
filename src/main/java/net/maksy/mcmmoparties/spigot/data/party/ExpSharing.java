@@ -5,6 +5,8 @@ public class ExpSharing {
     private double percent;
     private int radius;
 
+    private boolean isScaling = false;
+
     public ExpSharing(double percent, int radius) {
         this.percent = percent;
         this.radius = radius;
@@ -25,4 +27,8 @@ public class ExpSharing {
     public void setRadius(int radius) {
         this.radius = radius;
     }
+
+    public boolean isScaling() { return isScaling; }
+
+    public void setScaling(boolean isScaling) { this.isScaling = isScaling; }
 }

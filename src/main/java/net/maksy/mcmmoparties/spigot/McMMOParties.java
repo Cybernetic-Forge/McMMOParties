@@ -3,9 +3,7 @@ package net.maksy.mcmmoparties.spigot;
 import net.maksy.mcmmoparties.spigot.commands.PartyCommands;
 import net.maksy.mcmmoparties.spigot.data.sql.SQLManager;
 import net.maksy.mcmmoparties.spigot.events.PartyEventHandler;
-import net.maksy.mcmmoparties.spigot.events.TestEvents;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.Objects;
 

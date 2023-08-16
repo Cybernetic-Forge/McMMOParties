@@ -244,7 +244,7 @@ public class SQLManager {
 
             PreparedStatement updateMembers = connection.prepareStatement("UPDATE " + PARTY_TABLE + " SET Display=?, Experience=?, Level=? WHERE PartyID=?");
             updateMembers.setString(1, party.getDisplay());
-            updateMembers.setFloat(2, party.getExperience());
+            updateMembers.setFloat(2, party.getTotalExperience());
             updateMembers.setLong(3, party.getLevel());
             updateMembers.setString(4, party.getPartyID().toLowerCase());
             updateMembers.executeUpdate();

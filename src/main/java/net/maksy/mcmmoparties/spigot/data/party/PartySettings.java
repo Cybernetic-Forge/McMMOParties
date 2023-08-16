@@ -82,9 +82,11 @@ public class PartySettings {
         this.partyChat = partyChat;
     }
 
+    public ExpSharing getExpSharing() { return  expSharing; }
+
     public void setExpSharing(ExpSharing expSharing) { this.expSharing = expSharing;}
 
     public double getSharingPercent() { return expSharing.getPercent(); }
 
-    public double getSharingRadius() { return expSharing.getPercent(); }
+    public int getSharingRadius() { return expSharing.getRadius(); }
 }

@@ -1,6 +1,9 @@
 package net.maksy.mcmmoparties.spigot.events;
 
+import com.gmail.nossr50.datatypes.player.McMMOPlayer;
 import com.gmail.nossr50.events.experience.McMMOPlayerXpGainEvent;
+import com.gmail.nossr50.mcMMO;
+import net.maksy.mcmmoparties.spigot.Lang;
 import net.maksy.mcmmoparties.spigot.LanguageConfig;
 import net.maksy.mcmmoparties.spigot.McMMOParties;
 import net.maksy.mcmmoparties.spigot.PartyLoader;
@@ -17,39 +20,31 @@ import org.bukkit.entity.Player;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.UUID;
 
 import static net.maksy.mcmmoparties.spigot.Lang.*;
 
 public class PartyEventHandler {
-    private final HashMap<String, PartyEvent> PARTY_EVENT = new HashMap<>();
-    private final HashMap<String, PartyLevelChangeEvent> PARTY_LEVEL_CHANGE_EVENT = new HashMap<>();
-
     HashMap<String, BossBar> barMap = new HashMap<>();
     HashSet<Player> playerSet = new HashSet<>();
 
     private final PartyLoader partyLoader = McMMOParties.getPartyLoader();
 
-    public void initEvents() {
-        for (McMMOParty party : McMMOParties.getPartyLoader().getParties()) {
-            PARTY_EVENT.putIfAbsent(party.getPartyID(), new PartyEvent(party));
-            PARTY_LEVEL_CHANGE_EVENT.putIfAbsent(party.getPartyID(), new PartyLevelChangeEvent(party));
-        }
-    }
-
-    public void callEvents() {
-    }
-
-    public void callPartyLevelChangedEvent(McMMOParty party, long level) {
-        PartyLevelChangeEvent event = PARTY_LEVEL_CHANGE_EVENT.get(party.getPartyID());
+    public void callPartyLevelChangedEvent(McMMOParty party) {
+        PartyLevelChangeEvent event = new PartyLevelChangeEvent(party);
         Bukkit.getPluginManager().callEvent(event);
-        if (!event.isCancelled())
-            party.setLevel(level);
+        if (!event.isCancelled()) {
+            party.setLevel(party.getLevel() + 1);
+            party.setCurrentExperience(party.getTotalExperience() - McMMOParties.getConfigManager().getPastExp(party.getLevel()));
+            party.setNeededExperience(McMMOParties.getConfigManager().getNeededExperience(party.getLevel() + 1));
+
+            party.announceToMembers(LanguageConfig.get().getMessage(Lang.PARTY_LEVELUP, new Replaceable("%level%", String.valueOf(party.getLevel()))));
+        }
     }
 
     public void callPartyExpChangedEvent(Player player, McMMOParty party, McMMOPlayerXpGainEvent event) {
         float a = McMMOParties.getConfigManager().getScaledExp(event.getSkill(), event.getRawXpGained());
-
         PartyExpChangeEvent epEvent = new PartyExpChangeEvent(party, a);
         Bukkit.getPluginManager().callEvent(epEvent);
 
@@ -72,14 +67,24 @@ public class PartyEventHandler {
         }
     }
 
+    public void callPartyShareExpEvent(Player player, McMMOParty party, McMMOPlayerXpGainEvent event) {
+        float a = (float) (event.getRawXpGained() * party.getPartySettings().getSharingPercent());
+        PartyShareExpEvent shareEvent = new PartyShareExpEvent(party, event.getSkill(), a);
+        Bukkit.getPluginManager().callEvent(shareEvent);
+
+        if (!shareEvent.isCancelled()) {
+            mcMMO.getDatabaseManager().loadPlayerProfile(player).addXp(event.getSkill(), a);
+        }
+    }
+
     public void callPartyMemberJoinEvent(McMMOParty party, OfflinePlayer newComer, boolean instant) {
         PartyMemberJoinEvent event = new PartyMemberJoinEvent(party, newComer);
         Bukkit.getPluginManager().callEvent(event);
         if (!event.isCancelled()) {
             if (instant) {
-                PartyCommandUtils.addMember(newComer.getPlayer(), party.getPartyID());
+                PartyCommandUtils.addMember(Objects.requireNonNull(newComer.getPlayer()), party.getPartyID());
             } else {
-                SQLAsyncManager.sendRequest(newComer.getUniqueId(), party.getPartyID(), () -> newComer.getPlayer().sendMessage(LanguageConfig.get().getMessage(REQUEST_SEND, new Replaceable("%party%", party.getPartyID()))));
+                SQLAsyncManager.sendRequest(newComer.getUniqueId(), party.getPartyID(), () -> Objects.requireNonNull(newComer.getPlayer()).sendMessage(LanguageConfig.get().getMessage(REQUEST_SEND, new Replaceable("%party%", party.getPartyID()))));
             }
         }
     }
@@ -100,7 +105,7 @@ public class PartyEventHandler {
                 for (UUID uuid : party.getMembers()) {
                     OfflinePlayer member = Bukkit.getOfflinePlayer(uuid);
                     if (member.isOnline()) {
-                        member.getPlayer().sendMessage(LanguageConfig.get().getMessage(PARTY_LEFT, new Replaceable("%player%", leaver.getName())));
+                        Objects.requireNonNull(member.getPlayer()).sendMessage(LanguageConfig.get().getMessage(PARTY_LEFT, new Replaceable("%player%", leaver.getName())));
                     }
                 }
                 if (finalNewOwner == null) {
@@ -120,7 +125,7 @@ public class PartyEventHandler {
                 for (UUID uuid : party.getMembers()) {
                     OfflinePlayer member = Bukkit.getOfflinePlayer(uuid);
                     if (member.isOnline())
-                        member.getPlayer().sendMessage(LanguageConfig.get().getMessage(PARTY_KICKED, new Replaceable("%player%", kickedPlayer.getName())));
+                        Objects.requireNonNull(member.getPlayer()).sendMessage(LanguageConfig.get().getMessage(PARTY_KICKED, new Replaceable("%player%", kickedPlayer.getName())));
                 }
                 partyLoader.reload(party.getPartyID());
             });
@@ -136,7 +141,7 @@ public class PartyEventHandler {
                     for (UUID uuid : party.getMembers()) {
                         OfflinePlayer member = Bukkit.getOfflinePlayer(uuid);
                         if (member.isOnline()) {
-                            member.getPlayer().sendMessage(LanguageConfig.get().getMessage(NEW_OWNER, new Replaceable("%player%", Bukkit.getOfflinePlayer(newLeader).getName())));
+                            Objects.requireNonNull(member.getPlayer()).sendMessage(LanguageConfig.get().getMessage(NEW_OWNER, new Replaceable("%player%", Bukkit.getOfflinePlayer(newLeader).getName())));
                         }
                     }
                     partyLoader.reload(party.getPartyID());
@@ -148,7 +153,7 @@ public class PartyEventHandler {
                             for (UUID uuid : party.getMembers()) {
                                 OfflinePlayer member = Bukkit.getOfflinePlayer(uuid);
                                 if (member.isOnline()) {
-                                    member.getPlayer().sendMessage(LanguageConfig.get().getMessage(NEW_OWNER, new Replaceable("%player%", Bukkit.getOfflinePlayer(newLeader).getName())));
+                                    Objects.requireNonNull(member.getPlayer()).sendMessage(LanguageConfig.get().getMessage(NEW_OWNER, new Replaceable("%player%", Bukkit.getOfflinePlayer(newLeader).getName())));
                                 }
                             }
                             partyLoader.reload(party.getPartyID());

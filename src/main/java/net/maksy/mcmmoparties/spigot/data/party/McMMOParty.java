@@ -52,18 +52,18 @@ public class McMMOParty {
         if(currentExperience < neededExperience)
             return;
 
-        setLevel(getLevel() + 1);
-        currentExperience = this.experience - McMMOParties.getConfigManager().getPastExp(getLevel());
-        neededExperience = McMMOParties.getConfigManager().getNeededExperience(getLevel() + 1);
-
-        announceToMembers(LanguageConfig.get().getMessage(Lang.PARTY_LEVELUP, new Replaceable("%level%", String.valueOf(getLevel()))));
+        McMMOParties.getPartyEventHandler().callPartyLevelChangedEvent(this);
     }
 
-    public float getExperience() {
+    public float getTotalExperience() {
         return experience;
     }
 
+    public void setCurrentExperience(float currentExperience) { this.currentExperience = currentExperience; }
+
     public float getCurrentExperience() { return currentExperience; }
+
+    public void setNeededExperience(float neededExperience) { this.neededExperience = neededExperience; }
 
     public float getNeededExperience() { return neededExperience; }
 

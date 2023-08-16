@@ -11,7 +11,7 @@ public class PartyExpChangeEvent extends PartyEvent {
         this.party = party;
     }
 
-    public float getExperience() { return party.getExperience(); }
+    public float getExperience() { return party.getTotalExperience(); }
 
     public void setExperience(float experience) { party.setExperience(experience); }
 }
