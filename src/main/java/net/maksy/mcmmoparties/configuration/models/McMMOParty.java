@@ -1,7 +1,7 @@
 package net.maksy.mcmmoparties.configuration.models;
 
-import net.maksy.mcmmoparties.configuration.configs.ExpShareConfig;
 import net.maksy.mcmmoparties.McMMOParties;
+import net.maksy.mcmmoparties.configuration.configs.ExpShareConfig;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 

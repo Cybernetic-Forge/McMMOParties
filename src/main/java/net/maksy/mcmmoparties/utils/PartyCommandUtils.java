@@ -1,20 +1,18 @@
 package net.maksy.mcmmoparties.utils;
 
-import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
 import net.maksy.mcmmoparties.McMMOParties;
 import net.maksy.mcmmoparties.configuration.PartyLoader;
+import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
+import net.maksy.mcmmoparties.configuration.enums.PartyState;
+import net.maksy.mcmmoparties.configuration.models.McMMOParty;
+import net.maksy.mcmmoparties.configuration.sql.SQLAsyncManager;
 import net.maksy.mcmmoparties.creation.EditorRegistry;
 import net.maksy.mcmmoparties.creation.PartyOverview;
-import net.maksy.mcmmoparties.configuration.models.McMMOParty;
-import net.maksy.mcmmoparties.configuration.enums.PartyState;
-import net.maksy.mcmmoparties.configuration.sql.SQLAsyncManager;
 import net.maksy.mcmmoparties.events.PartyEventHandler;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
-import java.util.Objects;
 import java.util.UUID;
 
 import static net.maksy.mcmmoparties.configuration.enums.Lang.*;
@@ -41,7 +39,7 @@ public class PartyCommandUtils {
             return;
         }
 
-        EditorRegistry.getPartyEditor(player.getUniqueId()).open(partyID);
+        EditorRegistry.getPartyEditor(player).open(partyID);
     }
 
     public static void joinPartyCommand(Player player, String[] args) {
@@ -110,7 +108,7 @@ public class PartyCommandUtils {
                         if (member.isOnline())
                             member.getPlayer().sendMessage(LanguageConfig.get().getMessage(PARTY_JOINED, new Replaceable("%player%", request.getName())));
                     }
-                    partyLoader.reload(party.getPartyID());
+                    partyLoader.reload();
                 });
             });
         });
@@ -207,14 +205,6 @@ public class PartyCommandUtils {
 
     public static void addMember(Player player, String partyID) {
         partyLoader.getParty(partyID).getMembers().add(player.getUniqueId());
-        SQLAsyncManager.updateParty(partyLoader.getParty(partyID), () -> {
-            for (UUID uuid : partyLoader.getParty(partyID).getMembers()) {
-                OfflinePlayer member = Bukkit.getOfflinePlayer(uuid);
-                if (member.isOnline())
-                    member.getPlayer().sendMessage(LanguageConfig.get().getMessage(PARTY_JOINED, new Replaceable("%player%", player.getName())));
-            }
-
-            partyLoader.reload(partyID);
-        });
+        McMMOParties.getPartyLoader().update(partyLoader.getParty(partyID));
     }
 }

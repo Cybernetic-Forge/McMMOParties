@@ -4,8 +4,8 @@ import io.papermc.paper.dialog.Dialog;
 import io.papermc.paper.dialog.DialogResponseView;
 import io.papermc.paper.registry.data.dialog.ActionButton;
 import io.papermc.paper.registry.data.dialog.DialogBase;
-import io.papermc.paper.registry.data.dialog.body.DialogBody;
 import io.papermc.paper.registry.data.dialog.action.DialogAction;
+import io.papermc.paper.registry.data.dialog.body.DialogBody;
 import io.papermc.paper.registry.data.dialog.input.DialogInput;
 import io.papermc.paper.registry.data.dialog.type.DialogType;
 import net.kyori.adventure.audience.Audience;
@@ -13,11 +13,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickCallback;
 import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
 import net.maksy.mcmmoparties.utils.Utils;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.util.List;
-import java.util.UUID;
 
 import static net.maksy.mcmmoparties.configuration.enums.Lang.NOT_A_NUMBER;
 
@@ -31,18 +29,17 @@ public class ValueMessenger {
     private ValueMessenger() {
     }
 
-    public void open(UUID uuid, int slot) {
-        Player player = Bukkit.getPlayer(uuid);
+    public void open(Player player, int slot) {
         if (player == null)
             return;
 
-        PartyEditor editor = EditorRegistry.getPartyEditor(uuid);
+        PartyEditor editor = EditorRegistry.getPartyEditor(player);
         openTextDialog(player, editor, slot);
     }
 
-    public void setValue(UUID uuid, int pos, String text) {
-        EditorRegistry.getPartyEditor(uuid).setValue(pos, text);
-        EditorRegistry.getPartyEditor(uuid).open();
+    public void setValue(Player player, int pos, String text) {
+        EditorRegistry.getPartyEditor(player).setValue(pos, text);
+        EditorRegistry.getPartyEditor(player).open();
     }
 
     private void openTextDialog(Player player, PartyEditor editor, int slot) {

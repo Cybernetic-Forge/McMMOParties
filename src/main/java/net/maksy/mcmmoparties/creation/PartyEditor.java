@@ -1,28 +1,33 @@
 package net.maksy.mcmmoparties.creation;
 
 import com.gmail.nossr50.datatypes.skills.PrimarySkillType;
-import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
 import net.maksy.mcmmoparties.McMMOParties;
+import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
+import net.maksy.mcmmoparties.configuration.models.McMMOParty;
+import net.maksy.mcmmoparties.configuration.models.PartySettings;
 import net.maksy.mcmmoparties.configuration.models.SkillRequirement;
-import net.maksy.mcmmoparties.configuration.sql.SQLAsyncManager;
 import net.maksy.mcmmoparties.utils.InventoryUtils;
 import net.maksy.mcmmoparties.utils.Replaceable;
 import net.maksy.mcmmoparties.utils.Utils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static net.maksy.mcmmoparties.configuration.enums.Lang.NOT_A_NUMBER;
 import static net.maksy.mcmmoparties.configuration.enums.Lang.PARTY_CREATED;
 
 public class PartyEditor implements Listener {
 
-    private final UUID uuid;
+    private final Player player;
 
     private final Inventory inventory;
 
@@ -33,11 +38,11 @@ public class PartyEditor implements Listener {
     private boolean locked;
     private String password = "";
 
-    public PartyEditor(UUID uuid) {
-        this.uuid = uuid;
+    public PartyEditor(Player player) {
+        this.player = player;
         this.locked = false;
         McMMOParties.getInstance().getServer().getPluginManager().registerEvents(this, McMMOParties.getInstance());
-        inventory = Bukkit.createInventory(Bukkit.getPlayer(uuid), McMMOParties.getPartyEditorCfg().getInvSize(), McMMOParties.getPartyEditorCfg().getPartyEditorTitle());
+        inventory = Bukkit.createInventory(player, McMMOParties.getPartyEditorCfg().getInvSize(), McMMOParties.getPartyEditorCfg().getPartyEditorTitle());
         for (PrimarySkillType skill : PrimarySkillType.values()) {
             skillRequirements.add(new SkillRequirement(skill, 0));
         }
@@ -117,34 +122,73 @@ public class PartyEditor implements Listener {
 
     public void open(String partyID) {
         this.partyID = partyID;
+        loadPartyData(partyID);
         initInventory();
-        Objects.requireNonNull(Bukkit.getPlayer(uuid)).openInventory(inventory);
+        player.openInventory(inventory);
+    }
+
+    private void loadPartyData(String partyID) {
+        McMMOParty party = McMMOParties.getPartyLoader().getParty(partyID);
+        if (party != null) {
+            this.display = party.getDisplay();
+            this.locked = party.getPartySettings().isLocked();
+            this.password = party.getPartySettings().getPassword();
+            this.skillRequirements.clear();
+            this.skillRequirements.addAll(party.getPartySettings().getSkillRequirements());
+            this.slots.clear();
+            for (SkillRequirement skill : skillRequirements) {
+                var skillRequirementIcon = McMMOParties.getPartyEditorCfg().getIcon("Requirements." + skill.getSkill().toString().toUpperCase(), new Replaceable("%skill%", skill.getSkill().name()), new Replaceable("%level%", String.valueOf(skill.getAmount())));
+                if(skillRequirementIcon.getKey() == -1) continue;
+                slots.put(skillRequirementIcon.getKey(), skill);
+            }
+        }
     }
 
     public void open() {
         initInventory();
-        Objects.requireNonNull(Bukkit.getPlayer(uuid)).openInventory(inventory);
+        player.openInventory(inventory);
     }
 
     void click(InventoryClickEvent event) {
         int slot = event.getSlot();
 
         switch (slot) {
-            case 47 -> ValueMessenger.get().open(uuid, 47);
-            case 48 -> ValueMessenger.get().open(uuid, 48);
+            case 47 -> ValueMessenger.get().open(player,47);
+            case 48 -> ValueMessenger.get().open(player,48);
             case 49 -> setValue(49, null);
-            case 50 -> ValueMessenger.get().open(uuid, 50);
+            case 50 -> ValueMessenger.get().open(player, 50);
             case 52 -> {
-                SQLAsyncManager.createParty(Bukkit.getPlayer(uuid), partyID, display, skillRequirements, locked, password
-                        , () -> {
-                            Objects.requireNonNull(Bukkit.getPlayer(uuid)).sendMessage(LanguageConfig.get().getMessage(PARTY_CREATED, new Replaceable("%party%", partyID + " | " + display)));
-                            McMMOParties.getPartyLoader().reload(partyID);
-                        });
-                Objects.requireNonNull(Bukkit.getPlayer(uuid)).closeInventory();
+                McMMOParty existingParty = McMMOParties.getPartyLoader().getParty(partyID);
+                if (existingParty != null) {
+                    // Update existing party
+                    McMMOParty updatedParty = new McMMOParty(
+                            partyID,
+                            display,
+                            existingParty.getTotalExperience(),
+                            existingParty.getLevel(),
+                            existingParty.getOwner(),
+                            existingParty.getMembers(),
+                            new PartySettings(
+                                    skillRequirements,
+                                    locked,
+                                    password,
+                                    existingParty.getPartySettings().isItemShare(),
+                                    existingParty.getPartySettings().isExpShare(),
+                                    existingParty.getPartySettings().isPartyChat()
+                            )
+                    );
+                    McMMOParties.getSQL().updateParty(updatedParty);
+                } else {
+                    // Create new party
+                    McMMOParties.getSQL().createParty(player, partyID, display, skillRequirements, locked, password);
+                }
+                McMMOParties.getPartyLoader().reload();
+                player.closeInventory();
+                player.sendMessage(LanguageConfig.get().getMessage(PARTY_CREATED, new Replaceable("%party%", partyID + " | " + display)));
             }
             default -> {
                 if (slots.containsKey(slot))
-                    ValueMessenger.get().open(uuid, slot);
+                    ValueMessenger.get().open(player, slot);
             }
         }
     }
@@ -157,7 +201,7 @@ public class PartyEditor implements Listener {
             case 50 -> setPassword(value);
             default -> {
                 if (!Utils.isNotNumber(value)) {
-                    Objects.requireNonNull(Bukkit.getPlayer(uuid)).sendMessage(LanguageConfig.get().getMessage(NOT_A_NUMBER));
+                    player.sendMessage(LanguageConfig.get().getMessage(NOT_A_NUMBER));
                     return;
                 }
                 if (slots.containsKey(slot))

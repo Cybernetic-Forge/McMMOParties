@@ -11,10 +11,10 @@ public class PartyLoader {
     private final HashMap<String, McMMOParty> partyMap = new HashMap<>();
 
     public PartyLoader() {
-        initialize();
+        reload();
     }
 
-    private void initialize() {
+    public void reload() {
         SQLAsyncManager.getMcMMOParties(parties -> {
             for (McMMOParty party : parties) {
                 partyMap.putIfAbsent(party.getPartyID(), party);
@@ -44,6 +44,11 @@ public class PartyLoader {
         return null;
     }
 
+    public void update(McMMOParty party) {
+        partyMap.put(party.getPartyID(), party);
+        McMMOParties.getSQL().updateParty(party);
+        reload();
+    }
     public void reload(String partyID) {
         SQLAsyncManager.getMcMMOParty(partyID, party -> partyMap.put(partyID, party));
     }

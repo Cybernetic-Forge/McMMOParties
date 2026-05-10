@@ -1,6 +1,5 @@
 package net.maksy.mcmmoparties.utils;
 
-import com.gmail.nossr50.datatypes.skills.PrimarySkillType;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.Inventory;

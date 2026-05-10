@@ -3,11 +3,10 @@ package net.maksy.mcmmoparties.creation;
 import com.gmail.nossr50.datatypes.skills.PrimarySkillType;
 import com.gmail.nossr50.util.player.UserManager;
 import lombok.Getter;
-import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.McMMOParties;
+import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.utils.InventoryUtils;
 import net.maksy.mcmmoparties.utils.Replaceable;
-import org.apache.commons.lang3.tuple.Pair;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -208,7 +207,7 @@ public class PartyOverview implements Listener {
             initInventory();
         } else if (slot == 47 && playerUuid.equals(party.getOwner())) { // Edit Party
             player.closeInventory();
-            PartyEditor editor = EditorRegistry.getPartyEditor(playerUuid);
+            PartyEditor editor = EditorRegistry.getPartyEditor(player);
             editor.open(party.getPartyID());
         } else if (slot == 52) { // Back
             player.closeInventory();

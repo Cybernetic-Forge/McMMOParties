@@ -1,14 +1,16 @@
 package net.maksy.mcmmoparties.configuration.sql;
 
-import com.gmail.nossr50.datatypes.skills.PrimarySkillType;
-import com.zaxxer.hikari.HikariDataSource;
-import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
 import net.maksy.mcmmoparties.McMMOParties;
+import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
 import net.maksy.mcmmoparties.configuration.enums.DatabaseType;
 import net.maksy.mcmmoparties.configuration.enums.PartyState;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.configuration.models.PartySettings;
 import net.maksy.mcmmoparties.configuration.models.SkillRequirement;
+import net.maksy.mcmmoparties.configuration.sql.tables.PartyTableSQL;
+import net.maksy.mcmmoparties.configuration.sql.tables.PlayerTableSQL;
+import net.maksy.mcmmoparties.configuration.sql.tables.SettingsTableSQL;
+import net.maksy.mcmmoparties.configuration.sql.tables.SkillRequirementTableSQL;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -16,516 +18,301 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.logging.Level;
 
 import static net.maksy.mcmmoparties.configuration.enums.Lang.ALREADY_REQUESTING;
 
 public class SQLManager {
-    private final JavaPlugin plugin = McMMOParties.getInstance();
+    private static final JavaPlugin plugin = McMMOParties.getInstance();
 
-    HikariDataSource dataSource = new HikariDataSource();
-    private final DatabaseType dbType = DatabaseType.valueOf(plugin.getConfig().getString("SQL.Type").toUpperCase());
-    private final String host = plugin.getConfig().getString("SQL.Host");
-    private final String database = plugin.getConfig().getString("SQL.Database");
-    private final String username = plugin.getConfig().getString("SQL.Username");
-    private final String password = plugin.getConfig().getString("SQL.Password");
-    private final int port = plugin.getConfig().getInt("SQL.Port");
+    private static final DatabaseType dbType = DatabaseType.valueOf(
+            Objects.requireNonNullElse(plugin.getConfig().getString("SQL.Type"), "LOCALE").toUpperCase(Locale.ROOT)
+    );
+    private static final String host = plugin.getConfig().getString("SQL.Host");
+    private static final String database = plugin.getConfig().getString("SQL.Database");
+    private static final String username = plugin.getConfig().getString("SQL.Username");
+    private static final String password = plugin.getConfig().getString("SQL.Password");
+    private static final int port = plugin.getConfig().getInt("SQL.Port");
 
-    private final String PARTY_TABLE = "mcMMOParty_parties";
-    private final String PLAYER_TABLE = "mcMMOParty_players";
-    private final String SETTINGS_TABLE = "mcMMOParty_settings";
-    private final String SKILL_TABLE = "mcMMOParty_skill_requirements";
+    private static final int maxRetries = 3;
+    private static final int initialDelayMillis = 1000;
+    private static final double backoffFactor = 2.0;
+    private static final double jitterFactor = 0.5;
 
-    public void connect() {
+    private final PartyTableSQL partyTable;
+    private final PlayerTableSQL playerTable;
+    private final SettingsTableSQL settingsTable;
+    private final SkillRequirementTableSQL skillTable;
+
+    public SQLManager() {
+        try {
+            ensureDriverLoaded();
+            partyTable = new PartyTableSQL();
+            playerTable = new PlayerTableSQL();
+            settingsTable = new SettingsTableSQL();
+            skillTable = new SkillRequirementTableSQL();
+
+            try (Connection connection = connection()) {
+                skillTable.migrateSkillColumnsIfPresent(connection);
+            }
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not initialize database tables", e);
+            Bukkit.getPluginManager().disablePlugin(plugin);
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void ensureDriverLoaded() {
+        try {
+            if (dbType == DatabaseType.LOCALE) {
+                Class.forName("org.sqlite.JDBC");
+            } else if (dbType == DatabaseType.MARIADB) {
+                Class.forName("org.mariadb.jdbc.Driver");
+            } else {
+                Class.forName("com.mysql.cj.jdbc.Driver");
+            }
+        } catch (ClassNotFoundException e) {
+            throw new IllegalStateException("Could not load SQL driver for " + dbType.name(), e);
+        }
+    }
+
+    public static Connection connection() throws SQLException {
+        return connection(database);
+    }
+
+    public static Connection connection(String databaseName) throws SQLException {
+        ensureDriverLoaded();
+
+        int retries = 0;
+        Random random = new Random();
+
+        while (retries < maxRetries) {
+            try {
+                return DriverManager.getConnection(buildJdbcUrl(databaseName), username, password);
+            } catch (SQLException e) {
+                plugin.getLogger().warning("Failed to connect to SQL database (attempt " + (retries + 1) + "/" + maxRetries + "): " + e.getMessage());
+                if (retries < maxRetries - 1) {
+                    int delay = (int) (initialDelayMillis * Math.pow(backoffFactor, retries));
+                    int jitter = (int) (delay * jitterFactor * random.nextDouble());
+                    int retryDelay = delay + jitter;
+                    plugin.getLogger().warning("Retrying in " + retryDelay + " milliseconds...");
+                    try {
+                        Thread.sleep(retryDelay);
+                    } catch (InterruptedException interruptedException) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                retries++;
+            }
+        }
+
+        throw new SQLException("Failed to connect to SQL database after " + maxRetries + " attempts");
+    }
+
+    private static String buildJdbcUrl(String databaseName) {
         if (dbType == DatabaseType.LOCALE) {
             File databaseFile = new File(plugin.getDataFolder(), "Database.db");
             if (!databaseFile.exists()) {
                 try {
-                    databaseFile.createNewFile();
+                    if (!databaseFile.createNewFile()) {
+                        plugin.getLogger().warning("SQLite database file could not be created: " + databaseFile.getAbsolutePath());
+                    }
                 } catch (IOException exception) {
-                    plugin.getLogger().log(Level.SEVERE, "Failed to created SQLite database.  Error: "
-                            + exception.getMessage());
+                    plugin.getLogger().log(Level.SEVERE, "Failed to create SQLite database file", exception);
                 }
             }
-            dataSource.setPoolName("SQLiteConnectionPool");
-            dataSource.setDriverClassName("org.sqlite.JDBC");
-            dataSource.setJdbcUrl("jdbc:sqlite:" + databaseFile);
-        } else {
-            dataSource.setJdbcUrl(dbType.getJdbcUrl() + "//" + host + ":" + port + "/" + database);
-            dataSource.setUsername(username);
-            dataSource.setPassword(password);
+            return "jdbc:sqlite:" + databaseFile.getAbsolutePath().replace('\\', '/');
         }
-    }
 
-    //Initialize SQL-Tables
-    public SQLManager() {
-        connect();
-        try {
-            //Set the connection
-            Connection connection = dataSource.getConnection();
-
-            // Build the 'mcMMOParties_parties' table with MySQL-compatible types and engine
-            String createParties = "CREATE TABLE IF NOT EXISTS " + PARTY_TABLE + " ("
-                    + "PartyID varchar(36) PRIMARY KEY,"
-                    + " Display varchar(255),"
-                    + " Experience DOUBLE,"
-                    + " `Level` BIGINT) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
-            connection.prepareStatement(createParties).execute();
-
-            // Create the 'mcMMOParties_players' table
-            String createPlayers = "CREATE TABLE IF NOT EXISTS " + PLAYER_TABLE + " ("
-                    + "UUID varchar(36) PRIMARY KEY,"
-                    + " PartyID varchar(36),"
-                    + " PartyState varchar(16),"
-                    + " FOREIGN KEY (PartyID) REFERENCES " + PARTY_TABLE + "(PartyID) ON DELETE CASCADE ON UPDATE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
-            connection.prepareStatement(createPlayers).execute();
-
-            // Build the 'mcMMOParties_settings' table (no per-skill columns)
-
-            String createSettings = "CREATE TABLE IF NOT EXISTS " + SETTINGS_TABLE + " (PartyID varchar(36) PRIMARY KEY, Locked TINYINT, Password varchar(255), ItemShare TINYINT, ExpShare TINYINT, PartyChat TINYINT, FOREIGN KEY (PartyID) REFERENCES " + PARTY_TABLE + "(PartyID) ON DELETE CASCADE ON UPDATE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
-            connection.prepareStatement(createSettings).execute();
-
-            // Create a separate table for per-skill requirements (PartyID length must match PARTIES)
-            String createSkillTable = "CREATE TABLE IF NOT EXISTS " + SKILL_TABLE + " (PartyID varchar(36), Skill varchar(64), Amount INT, PRIMARY KEY (PartyID, Skill), FOREIGN KEY (PartyID) REFERENCES " + PARTY_TABLE + "(PartyID) ON DELETE CASCADE ON UPDATE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
-            connection.prepareStatement(createSkillTable).execute();
-
-            // Migrate old per-skill columns if present in settings table
-            migrateSkillColumnsIfPresent(connection);
-
-            Bukkit.getConsoleSender().sendMessage("§a" + dbType.getName() + " Database was successfully connected");
-        } catch (SQLException e) {
-            e.printStackTrace();
-            Bukkit.getConsoleSender().sendMessage("§cplugin was disabled due to a missing SQL-Connection");
-            plugin.getPluginLoader().disablePlugin(plugin);
-        }
+        String prefix = dbType == DatabaseType.MARIADB ? "jdbc:mariadb://" : "jdbc:mysql://";
+        return prefix + host + ":" + port + "/" + databaseName;
     }
 
     public void createParty(Player player, String partyID, String display, List<SkillRequirement> skillRequirements, boolean locked, String password) {
-        Connection connection = null;
-        try {
-            connection = dataSource.getConnection();
-            connection.setAutoCommit(false);
+        String normalizedPartyID = normalizePartyID(partyID);
+        String partyDisplay = display == null ? partyID : display;
+        List<SkillRequirement> requirements = skillRequirements == null ? List.of() : skillRequirements;
 
-            try (PreparedStatement select = connection.prepareStatement("SELECT * FROM " + PARTY_TABLE + " WHERE PartyID=?")) {
-                select.setString(1, partyID.toLowerCase());
-                ResultSet search = select.executeQuery();
-                if (search.next()) {
+        try (Connection connection = connection()) {
+            connection.setAutoCommit(false);
+            try {
+                if (partyTable.exists(connection, normalizedPartyID)) {
                     connection.rollback();
                     return;
                 }
-            }
 
-            try (PreparedStatement insert = connection.prepareStatement("INSERT INTO " + PARTY_TABLE + " (PartyID,Display,Experience,`Level`) VALUES(?,?,0,0)")) {
-                insert.setString(1, partyID.toLowerCase());
-                insert.setString(2, display != null ? display : partyID);
-                insert.executeUpdate();
-            }
+                partyTable.insertParty(connection, normalizedPartyID, partyDisplay);
+                playerTable.upsertPlayer(connection, player.getUniqueId(), normalizedPartyID, PartyState.OWNER);
+                settingsTable.insertSettings(connection, normalizedPartyID, locked, password);
 
-            // Insert or update player row for owner. Use the same connection to avoid race conditions.
-            try (PreparedStatement selectPlayer = connection.prepareStatement("SELECT * FROM " + PLAYER_TABLE + " WHERE UUID=?")) {
-                selectPlayer.setString(1, player.getUniqueId().toString());
-                ResultSet rsPlayer = selectPlayer.executeQuery();
-                if (rsPlayer.next()) {
-                    // existing row - update to new party and OWNER state
-                    try (PreparedStatement updatePlayer = connection.prepareStatement("UPDATE " + PLAYER_TABLE + " SET PartyID=?, PartyState=? WHERE UUID=?")) {
-                        updatePlayer.setString(1, partyID.toLowerCase());
-                        updatePlayer.setString(2, PartyState.OWNER.toString().toUpperCase());
-                        updatePlayer.setString(3, player.getUniqueId().toString());
-                        updatePlayer.executeUpdate();
-                    }
-                } else {
-                    try (PreparedStatement insertPlayer = connection.prepareStatement("INSERT INTO " + PLAYER_TABLE + "(UUID,PartyID,PartyState) VALUES(?,?,?)")) {
-                        insertPlayer.setString(1, player.getUniqueId().toString());
-                        insertPlayer.setString(2, partyID.toLowerCase());
-                        insertPlayer.setString(3, PartyState.OWNER.toString().toUpperCase());
-                        insertPlayer.executeUpdate();
-                    }
+                for (SkillRequirement skill : requirements) {
+                    skillTable.upsertSkillRequirement(connection, normalizedPartyID, skill);
                 }
-                rsPlayer.close();
-            }
 
-            // Insert settings (flags only)
-            try (PreparedStatement insertSettings = connection.prepareStatement("INSERT INTO " + SETTINGS_TABLE + " (PartyID,Locked,Password,ItemShare,ExpShare,PartyChat) VALUES(?,?,?,?,?,?)")) {
-                insertSettings.setString(1, partyID.toLowerCase());
-                insertSettings.setInt(2, locked ? 1 : 0);
-                insertSettings.setString(3, password);
-                insertSettings.setInt(4, 0);
-                insertSettings.setInt(5, 0);
-                insertSettings.setInt(6, 0);
-                insertSettings.executeUpdate();
+                connection.commit();
+            } catch (SQLException e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                connection.setAutoCommit(true);
             }
-
-            // Insert per-skill requirements into skill table
-            for (SkillRequirement skill : skillRequirements) {
-                try (PreparedStatement insertSkill = connection.prepareStatement("INSERT INTO " + SKILL_TABLE + " (PartyID,Skill,Amount) VALUES(?,?,?)")) {
-                    insertSkill.setString(1, partyID.toLowerCase());
-                    insertSkill.setString(2, skill.getSkill().toString());
-                    insertSkill.setInt(3, skill.getAmount());
-                    insertSkill.executeUpdate();
-                }
-            }
-
-            connection.commit();
         } catch (SQLException e) {
-            if (connection != null) {
-                try {
-                    connection.rollback();
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                }
-            }
-            e.printStackTrace();
-        } finally {
-            if (connection != null) {
-                try {
-                    connection.setAutoCommit(true);
-                    connection.close();
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                }
-            }
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not create party " + partyID, e);
         }
     }
 
     public McMMOParty getMcMMOParty(String partyID) {
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement select = connection.prepareStatement("SELECT * FROM " + PARTY_TABLE + " WHERE PartyID=?")) {
-            select.setString(1, partyID.toLowerCase());
-            ResultSet result = select.executeQuery();
+        String normalizedPartyID = normalizePartyID(partyID);
 
-            if (result.next()) {
-                String prefix = result.getString("Display");
-                float experience = result.getFloat("Experience");
-                long level = result.getLong("Level");
+        try (Connection connection = connection()) {
+            PartyTableSQL.PartyRow partyRow = partyTable.getParty(connection, normalizedPartyID);
+            if (partyRow == null) {
+                return null;
+            }
 
-                PreparedStatement selectPlayers = connection.prepareStatement("SELECT * FROM " + PLAYER_TABLE + " WHERE PartyID=?");
-                selectPlayers.setString(1, partyID.toLowerCase());
-                ResultSet resultPlayers = selectPlayers.executeQuery();
-
-                UUID owner = null;
-                List<UUID> members = new ArrayList<>();
-                while (resultPlayers.next()) {
-                    UUID uuid = UUID.fromString(resultPlayers.getString("UUID"));
-                    PartyState state = PartyState.valueOf(resultPlayers.getString("PartyState"));
-                    // Keep party reads side-effect free; writing here can lock SQLite under async access.
-                    if (state == PartyState.NONE || state == PartyState.PENDING)
-                        continue;
-
-                    members.add(uuid);
-                    if (state == PartyState.OWNER)
-                        owner = uuid;
+            UUID owner = null;
+            List<UUID> members = new ArrayList<>();
+            for (PlayerTableSQL.PlayerRow row : playerTable.getPlayers(connection, normalizedPartyID)) {
+                if (row.state() == PartyState.NONE || row.state() == PartyState.PENDING) {
+                    continue;
                 }
-
-                // Read settings (flags only)
-                PreparedStatement selectSettings = connection.prepareStatement("SELECT * FROM " + SETTINGS_TABLE + " WHERE PartyID=?");
-                selectSettings.setString(1, partyID.toLowerCase());
-                ResultSet resultSettings = selectSettings.executeQuery();
-
-                if(resultSettings.next()) {
-                    List<SkillRequirement> skillRequirements = new ArrayList<>();
-                    // read per-skill rows from separate skill table
-                    PreparedStatement selectSkills = connection.prepareStatement("SELECT Skill,Amount FROM " + SKILL_TABLE + " WHERE PartyID=?");
-                    selectSkills.setString(1, partyID.toLowerCase());
-                    ResultSet rsSkills = selectSkills.executeQuery();
-                    while (rsSkills.next()) {
-                        String skillName = rsSkills.getString("Skill");
-                        int amount = rsSkills.getInt("Amount");
-                        try {
-                            PrimarySkillType skill = PrimarySkillType.valueOf(skillName);
-                            skillRequirements.add(new SkillRequirement(skill, amount));
-                        } catch (IllegalArgumentException ex) {
-                            // unknown skill type (maybe custom), skip
-                        }
-                    }
-                    rsSkills.close();
-                    selectSkills.close();
-
-                    String password = resultSettings.getString("Password");
-                    boolean locked = resultSettings.getInt("Locked") >= 1;
-                    boolean itemShare = resultSettings.getInt("ItemShare") >= 1;
-                    boolean expShare = resultSettings.getInt("ExpShare") >= 1;
-                    boolean partyChat = resultSettings.getInt("PartyChat") >= 1;
-                    PartySettings partySettings = new PartySettings(skillRequirements, locked, password, itemShare, expShare, partyChat);
-
-                    result.close();
-                    select.close();
-                    resultPlayers.close();
-                    selectPlayers.close();
-                    resultSettings.close();
-                    selectSettings.close();
-
-                    return new McMMOParty(partyID, prefix, experience, level, owner, members, partySettings);
+                members.add(row.uuid());
+                if (row.state() == PartyState.OWNER) {
+                    owner = row.uuid();
                 }
             }
+
+            SettingsTableSQL.SettingsRow settingsRow = settingsTable.getSettings(connection, normalizedPartyID);
+            if (settingsRow == null) {
+                return null;
+            }
+
+            PartySettings partySettings = new PartySettings(
+                    skillTable.getSkills(connection, normalizedPartyID),
+                    settingsRow.locked(),
+                    settingsRow.password(),
+                    settingsRow.itemShare(),
+                    settingsRow.expShare(),
+                    settingsRow.partyChat()
+            );
+
+            return new McMMOParty(partyRow.partyID(), partyRow.display(), partyRow.experience(), partyRow.level(), owner, members, partySettings);
         } catch (SQLException e) {
-            e.printStackTrace();
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not load party " + partyID, e);
         }
         return null;
     }
 
     public List<McMMOParty> getMcMMOParties() {
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement select = connection.prepareStatement("SELECT * FROM " + PARTY_TABLE)) {
-            ResultSet result = select.executeQuery();
-            List<McMMOParty> mcMMOParties = new ArrayList<>();
-            while (result.next()) {
-                mcMMOParties.add(getMcMMOParty(result.getString("PartyID")));
+        List<McMMOParty> mcMMOParties = new ArrayList<>();
+        try (Connection connection = connection()) {
+            for (String partyID : partyTable.getAllPartyIDs(connection)) {
+                McMMOParty party = getMcMMOParty(partyID);
+                if (party != null) {
+                    mcMMOParties.add(party);
+                }
             }
-            result.close();
-            select.close();
-            return mcMMOParties;
         } catch (SQLException e) {
-            e.printStackTrace();
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not load parties", e);
         }
-        return List.of();
+        return mcMMOParties;
     }
 
     public void updateParty(McMMOParty party) {
-        Connection connection = null;
-        try {
-            connection = dataSource.getConnection();
+        String normalizedPartyID = normalizePartyID(party.getPartyID());
+
+        try (Connection connection = connection()) {
             connection.setAutoCommit(false);
+            try {
+                partyTable.updateParty(connection, normalizedPartyID, party.getDisplay(), party.getTotalExperience(), party.getLevel());
 
-            try (PreparedStatement select = connection.prepareStatement("SELECT * FROM " + PARTY_TABLE + " WHERE PartyID=?")) {
-                select.setString(1, party.getPartyID().toLowerCase());
-                ResultSet result = select.executeQuery();
-                if (!result.next()) {
-                    connection.rollback();
-                    return;
+                for (UUID uuid : party.getMembers()) {
+                    PartyState state = party.getOwner() != null && party.getOwner().equals(uuid) ? PartyState.OWNER : PartyState.MEMBER;
+                    playerTable.upsertPlayer(connection, uuid, normalizedPartyID, state);
                 }
-            }
 
-            try (PreparedStatement updateMembers = connection.prepareStatement("UPDATE " + PARTY_TABLE + " SET Display=?, Experience=?, `Level`=? WHERE PartyID=?")) {
-                updateMembers.setString(1, party.getDisplay());
-                updateMembers.setFloat(2, party.getTotalExperience());
-                updateMembers.setLong(3, party.getLevel());
-                updateMembers.setString(4, party.getPartyID().toLowerCase());
-                updateMembers.executeUpdate();
-            }
+                settingsTable.updateSettings(connection, normalizedPartyID, party.getPartySettings());
+                skillTable.deleteByParty(connection, normalizedPartyID);
+                for (SkillRequirement skill : party.getPartySettings().getSkillRequirements()) {
+                    skillTable.upsertSkillRequirement(connection, normalizedPartyID, skill);
+                }
 
-            for (UUID uuid : party.getMembers()) {
-                insertPlayer(uuid, party.getPartyID(), PartyState.MEMBER);
-                removeIfNone(uuid, party.getPartyID());
+                connection.commit();
+            } catch (SQLException e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                connection.setAutoCommit(true);
             }
-
-            PartySettings partySettings = party.getPartySettings();
-            // Update settings flags
-            try (PreparedStatement updateSettings = connection.prepareStatement("UPDATE " + SETTINGS_TABLE + " SET Locked=?, Password=?, ItemShare=?, ExpShare=?, PartyChat=? WHERE PartyID=?")) {
-                updateSettings.setInt(1, partySettings.isLocked() ? 1 : 0);
-                updateSettings.setString(2, partySettings.getPassword());
-                updateSettings.setInt(3, partySettings.isItemShare() ? 1 : 0);
-                updateSettings.setInt(4, partySettings.isExpShare() ? 1 : 0);
-                updateSettings.setInt(5, partySettings.isPartyChat() ? 1 : 0);
-                updateSettings.setString(6, party.getPartyID().toLowerCase());
-                updateSettings.executeUpdate();
-            }
-
-            // Upsert per-skill requirements into skill table
-            for (SkillRequirement skill : partySettings.getSkillRequirements()) {
-                upsertSkillRequirement(connection, party.getPartyID().toLowerCase(), skill);
-            }
-
-            connection.commit();
         } catch (SQLException e) {
-            if (connection != null) {
-                try {
-                    connection.rollback();
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                }
-            }
-            e.printStackTrace();
-        } finally {
-            if (connection != null) {
-                try {
-                    connection.setAutoCommit(true);
-                    connection.close();
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                }
-            }
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not update party " + party.getPartyID(), e);
         }
     }
 
     public void sendRequest(UUID uuid, String partyID) {
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement select = connection.prepareStatement("SELECT * FROM " + PLAYER_TABLE + " WHERE UUID=? AND PartyState=?")) {
-            select.setString(1, uuid.toString());
-            select.setString(2, PartyState.PENDING.toString().toUpperCase());
-            ResultSet result = select.executeQuery();
+        String normalizedPartyID = normalizePartyID(partyID);
 
-            if (result.next()) {
+        try (Connection connection = connection()) {
+            if (playerTable.isPending(connection, uuid)) {
                 Objects.requireNonNull(Bukkit.getPlayer(uuid)).sendMessage(LanguageConfig.get().getMessage(ALREADY_REQUESTING));
                 return;
             }
 
-            if (!removeIfNone(uuid, partyID))
-                insertPlayer(uuid, partyID, PartyState.PENDING);
+            if (!playerTable.removeIfNone(connection, uuid, normalizedPartyID)) {
+                playerTable.insertPlayer(connection, uuid, normalizedPartyID, PartyState.PENDING);
+            }
         } catch (SQLException e) {
-            e.printStackTrace();
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not send request for " + uuid, e);
         }
     }
 
     public PartyState getPartyState(UUID uuid, String partyID) {
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement select = connection.prepareStatement("SELECT * FROM " + PLAYER_TABLE + " WHERE UUID=? AND PartyID=?")) {
-            select.setString(1, uuid.toString());
-            select.setString(2, partyID.toLowerCase());
-            ResultSet result = select.executeQuery();
+        String normalizedPartyID = normalizePartyID(partyID);
 
-            if (result.next())
-                return PartyState.valueOf(result.getString("PartyState").toUpperCase());
-
+        try (Connection connection = connection()) {
+            return playerTable.getPartyState(connection, uuid, normalizedPartyID);
         } catch (SQLException e) {
-            e.printStackTrace();
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not get party state for " + uuid, e);
         }
         return null;
     }
 
     public void setPartyState(UUID uuid, String partyID, PartyState state) {
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement select = connection.prepareStatement("SELECT * FROM " + PLAYER_TABLE + " WHERE UUID=? AND PartyID=?")) {
-            select.setString(1, uuid.toString());
-            select.setString(2, partyID.toLowerCase());
-            ResultSet result = select.executeQuery();
+        String normalizedPartyID = normalizePartyID(partyID);
 
-            if (!result.next())
-                return;
-
-            PreparedStatement update = connection.prepareStatement("UPDATE " + PLAYER_TABLE + " SET PartyState=? WHERE UUID=? AND PartyID=?");
-            update.setString(1, state.toString().toUpperCase());
-            update.setString(2, uuid.toString());
-            update.setString(3, partyID.toLowerCase());
-            update.executeUpdate();
-            update.close();
+        try (Connection connection = connection()) {
+            playerTable.setPartyState(connection, uuid, normalizedPartyID, state);
         } catch (SQLException e) {
-            e.printStackTrace();
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not update party state for " + uuid, e);
         }
     }
 
     public void insertPlayer(UUID uuid, String partyID, PartyState partyState) {
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement select = connection.prepareStatement("SELECT * FROM " + PLAYER_TABLE + " WHERE UUID=?")) {
-            select.setString(1, uuid.toString());
-            ResultSet result = select.executeQuery();
+        String normalizedPartyID = normalizePartyID(partyID);
 
-            if (result.next()) {
-                return;
-            }
-
-            PreparedStatement insert = connection.prepareStatement("INSERT INTO " + PLAYER_TABLE + "(UUID,PartyID,PartyState) VALUES(?,?,?)");
-            insert.setString(1, uuid.toString());
-            insert.setString(2, partyID.toLowerCase());
-            insert.setString(3, partyState.toString().toUpperCase());
-            insert.executeUpdate();
-            insert.close();
+        try (Connection connection = connection()) {
+            playerTable.insertPlayer(connection, uuid, normalizedPartyID, partyState);
         } catch (SQLException e) {
-            e.printStackTrace();
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not insert player " + uuid, e);
         }
     }
 
     public boolean removeIfNone(UUID uuid, String partyID) {
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement select = connection.prepareStatement("SELECT * FROM " + PLAYER_TABLE + " WHERE UUID=? AND PartyID=? AND PartyState=?")) {
-            select.setString(1, uuid.toString());
-            select.setString(2, partyID.toLowerCase());
-            select.setString(3, PartyState.NONE.toString().toUpperCase());
-            ResultSet result = select.executeQuery();
+        String normalizedPartyID = normalizePartyID(partyID);
 
-            if (result.next()) {
-                PreparedStatement delete = connection.prepareStatement("DELETE FROM " + PLAYER_TABLE + " WHERE UUID=?");
-                delete.setString(1, uuid.toString());
-                delete.executeUpdate();
-                delete.close();
-                return true;
-            }
-
+        try (Connection connection = connection()) {
+            return playerTable.removeIfNone(connection, uuid, normalizedPartyID);
         } catch (SQLException e) {
-            e.printStackTrace();
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not remove inactive player " + uuid, e);
         }
         return false;
     }
 
-    private void upsertSkillRequirement(Connection connection, String partyID, SkillRequirement skill) throws SQLException {
-        try (PreparedStatement select = connection.prepareStatement("SELECT * FROM " + SKILL_TABLE + " WHERE PartyID=? AND Skill=?")) {
-            select.setString(1, partyID);
-            select.setString(2, skill.getSkill().toString());
-            ResultSet rs = select.executeQuery();
-            if (rs.next()) {
-                try (PreparedStatement update = connection.prepareStatement("UPDATE " + SKILL_TABLE + " SET Amount=? WHERE PartyID=? AND Skill=?")) {
-                    update.setInt(1, skill.getAmount());
-                    update.setString(2, partyID);
-                    update.setString(3, skill.getSkill().toString());
-                    update.executeUpdate();
-                }
-            } else {
-                try (PreparedStatement insert = connection.prepareStatement("INSERT INTO " + SKILL_TABLE + " (PartyID,Skill,Amount) VALUES(?,?,?)")) {
-                    insert.setString(1, partyID);
-                    insert.setString(2, skill.getSkill().toString());
-                    insert.setInt(3, skill.getAmount());
-                    insert.executeUpdate();
-                }
-            }
-            rs.close();
-        }
-    }
 
-    private void migrateSkillColumnsIfPresent(Connection connection) {
-        try {
-            // Check existing columns in SETTINGS_TABLE
-            java.sql.DatabaseMetaData meta = connection.getMetaData();
-            ResultSet cols = meta.getColumns(null, null, SETTINGS_TABLE, null);
-            java.util.Set<String> columns = new java.util.HashSet<>();
-            while (cols.next()) {
-                columns.add(cols.getString("COLUMN_NAME").toUpperCase());
-            }
-            cols.close();
-
-            java.util.List<String> skillNames = new java.util.ArrayList<>();
-            for (PrimarySkillType skill : PrimarySkillType.values()) {
-                if (columns.contains(skill.toString().toUpperCase())) {
-                    skillNames.add(skill.toString());
-                }
-            }
-
-            if (skillNames.isEmpty()) return; // no old-style columns
-
-            // For each party row, migrate skill columns into SKILL_TABLE
-            try (PreparedStatement selectAll = connection.prepareStatement("SELECT PartyID" + (skillNames.isEmpty() ? "" : ", " + String.join(", ", skillNames)) + " FROM " + SETTINGS_TABLE)) {
-                ResultSet rs = selectAll.executeQuery();
-                while (rs.next()) {
-                    String partyId = rs.getString("PartyID");
-                    for (String skillName : skillNames) {
-                        int amount = rs.getInt(skillName);
-                        // insert if not exists
-                        try (PreparedStatement check = connection.prepareStatement("SELECT * FROM " + SKILL_TABLE + " WHERE PartyID=? AND Skill=?")) {
-                            check.setString(1, partyId.toLowerCase());
-                            check.setString(2, skillName);
-                            ResultSet rcheck = check.executeQuery();
-                            if (!rcheck.next()) {
-                                try (PreparedStatement insert = connection.prepareStatement("INSERT INTO " + SKILL_TABLE + " (PartyID,Skill,Amount) VALUES(?,?,?)")) {
-                                    insert.setString(1, partyId.toLowerCase());
-                                    insert.setString(2, skillName);
-                                    insert.setInt(3, amount);
-                                    insert.executeUpdate();
-                                }
-                            }
-                            rcheck.close();
-                        }
-                    }
-                }
-                rs.close();
-            }
-        } catch (SQLException ex) {
-            // migration best-effort - log and continue
-            ex.printStackTrace();
-        }
+    private String normalizePartyID(String partyID) {
+        return partyID == null ? null : partyID.toLowerCase(Locale.ROOT);
     }
 }

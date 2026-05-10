@@ -2,12 +2,12 @@ package net.maksy.mcmmoparties.events;
 
 import com.gmail.nossr50.events.experience.McMMOPlayerXpGainEvent;
 import com.gmail.nossr50.mcMMO;
-import net.maksy.mcmmoparties.configuration.enums.Lang;
-import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
 import net.maksy.mcmmoparties.McMMOParties;
 import net.maksy.mcmmoparties.configuration.PartyLoader;
-import net.maksy.mcmmoparties.configuration.models.McMMOParty;
+import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
+import net.maksy.mcmmoparties.configuration.enums.Lang;
 import net.maksy.mcmmoparties.configuration.enums.PartyState;
+import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.configuration.sql.SQLAsyncManager;
 import net.maksy.mcmmoparties.utils.PartyCommandUtils;
 import net.maksy.mcmmoparties.utils.Replaceable;
@@ -110,7 +110,7 @@ public class PartyEventHandler {
                         }
                     }
                     if (finalNewOwner == null) {
-                        partyLoader.reload(party.getPartyID());
+                        partyLoader.reload();
                         return;
                     }
                     callPartyLeaderChangeEvent(leaver, finalNewOwner, party, true);
@@ -129,7 +129,7 @@ public class PartyEventHandler {
                     if (member.isOnline())
                         Objects.requireNonNull(member.getPlayer()).sendMessage(LanguageConfig.get().getMessage(PARTY_KICKED, new Replaceable("%player%", kickedPlayer.getName())));
                 }
-                partyLoader.reload(party.getPartyID());
+                partyLoader.reload();
             });
         }
     }
@@ -146,7 +146,7 @@ public class PartyEventHandler {
                             Objects.requireNonNull(member.getPlayer()).sendMessage(LanguageConfig.get().getMessage(NEW_OWNER, new Replaceable("%player%", Bukkit.getOfflinePlayer(newLeader).getName())));
                         }
                     }
-                    partyLoader.reload(party.getPartyID());
+                    partyLoader.reload();
                 });
             } else {
                 party.setOwner(newLeader);
@@ -158,7 +158,7 @@ public class PartyEventHandler {
                                     Objects.requireNonNull(member.getPlayer()).sendMessage(LanguageConfig.get().getMessage(NEW_OWNER, new Replaceable("%player%", Bukkit.getOfflinePlayer(newLeader).getName())));
                                 }
                             }
-                            partyLoader.reload(party.getPartyID());
+                            partyLoader.reload();
                         }));
             }
         }

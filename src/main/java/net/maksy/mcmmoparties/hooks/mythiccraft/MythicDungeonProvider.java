@@ -1,6 +1,5 @@
 package net.maksy.mcmmoparties.hooks.mythiccraft;
 
-import net.maksy.mcmmoparties.McMMOParties;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
