@@ -1,0 +1,165 @@
+Title: "McMMO Party Editor"
+InvSize: 54
+Icons:
+  PartyId:
+    Slot: 47
+    Material: MAP
+    Display: "&9Party ID"
+    Lore:
+      - "&a%party_id%"
+      - "&eCancel and re-create to change your party id"
+  PartyDisplayName:
+    Slot: 48
+    Material: NAME_TAG
+    Display: "&9Party Display Name"
+    Lore:
+      - "&a%party_display_name%"
+      - "&7[&aClick&7] &eChange"
+  PartyUnlocked:
+    Slot: 49
+    Material: LIME_DYE
+    Display: "&9Party Publicity"
+    Lore:
+      - "&aPublic"
+      - "&7[&aClick&7] &eToggle"
+  PartyLocked:
+    Slot: 49
+    Material: RED_DYE
+    Display: "&9Party Publicity"
+    Lore:
+      - "&cPrivate"
+      - "&7[&aClick&7] &eToggle"
+  PartyPassword:
+    Slot: 50
+    Material: OAK_SIGN
+    Display: "&9Party Password"
+    Lore:
+      - "&a%party_password%"
+      - "&7[&aClick&7] &eChange"
+  Cancel:
+    Slot: 53
+    Material: BARRIER
+    Display: "&cCancel"
+    Lore:
+      - "&7Click to cancel party creation"
+  Create:
+    Slot: 52
+    Material: GREEN_STAINED_GLASS_PANE
+    Display: "&aCreate Party"
+    Lore:
+      - "&7Click to create your party"
+  Requirements:
+    MINING:
+      Slot: 10
+      Material: DIAMOND_PICKAXE
+      Display: "&9Mining Level Requirement"
+      Lore:
+        - "&7Required Level: &a%level%"
+    WOODCUTTING:
+      Slot: 11
+      Material: DIAMOND_AXE
+      Display: "&9Woodcutting Level Requirement"
+      Lore:
+        - "&7Required Level: &a%level%"
+    EXCAVATION:
+      Slot: 12
+      Material: DIAMOND_SHOVEL
+      Display: "&9Excavation Level Requirement"
+      Lore:
+        - "&7Required Level: &a%level%"
+    HERBALISM:
+      Slot: 13
+      Material: OAK_SAPLING
+      Display: "&9Herbalism Level Requirement"
+      Lore:
+        - "&7Required Level: &a%level%"
+    FISHING:
+      Slot: 14
+      Material: FISHING_ROD
+      Display: "&9Fishing Level Requirement"
+      Lore:
+        - "&7Required Level: &a%level%"
+    SWORDS:
+      Slot: 19
+      Material: DIAMOND_SWORD
+      Display: "&9Swords Level Requirement"
+      Lore:
+        - "&7Required Level: &a%level%"
+    AXES:
+      Slot: 20
+      Material: DIAMOND_AXE
+      Display: "&9Axes Level Requirement"
+      Lore:
+        - "&7Required Level: &a%level%"
+    ARCHERY:
+      Slot: 21
+      Material: BOW
+      Display: "&9Archery Level Requirement"
+      Lore:
+        - "&7Required Level: &a%level%"
+    UNARMED:
+      Slot: 22
+      Material: BLAZE_ROD
+      Display: "&9Unarmed Level Requirement"
+      Lore:
+        - "&7Required Level: &a%level%"
+    ACROBATICS:
+      Slot: 23
+      Material: FEATHER
+      Display: "&9Acrobatics Level Requirement"
+      Lore:
+        - "&7Required Level: &a%level%"
+    TAMING:
+      Slot: 24
+      Material: LEAD
+      Display: "&9Taming Level Requirement"
+      Lore:
+        - "&7Required Level: &a%level%"
+    MACES:
+      Slot: 28
+      Material: MACE
+      Display: "&9Maces Level Requirement"
+      Lore:
+        - "&7Required Level: &a%level%"
+    SPEARS:
+      Slot: 29
+      Material: DIAMOND_SPEAR
+      Display: "&9Spears Level Requirement"
+      Lore:
+        - "&7Required Level: &a%level%"
+    TRIDENTS:
+      Slot: 30
+      Material: TRIDENT
+      Display: "&9Tridents Level Requirement"
+      Lore:
+        - "&7Required Level: &a%level%"
+    CROSSBOWS:
+      Slot: 31
+      Material: CROSSBOW
+      Display: "&9Crossbows Level Requirement"
+      Lore:
+        - "&7Required Level: &a%level%"
+    ALCHEMY:
+      Slot: 32
+      Material: BREWING_STAND
+      Display: "&9Alchemy Level Requirement"
+      Lore:
+        - "&7Required Level: &a%level%"
+    SMELTING:
+      Slot: 33
+      Material: BLAST_FURNACE
+      Display: "&9Smelting Level Requirement"
+      Lore:
+        - "&7Required Level: &a%level%"
+    REPAIR:
+      Slot: 34
+      Material: ANVIL
+      Display: "&9Repair Level Requirement"
+      Lore:
+        - "&7Required Level: &a%level%"
+    SALVAGE:
+      Slot: 35
+      Material: GRINDSTONE
+      Display: "&9Salvage Level Requirement"
+      Lore:
+        - "&7Required Level: &a%level%"

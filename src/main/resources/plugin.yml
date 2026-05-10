@@ -1,7 +1,7 @@
 name: McMMOParties
 version: '${project.version}'
-main: net.maksy.mcmmoparties.spigot.McMMOParties
-api-version: 1.18
+main: net.maksy.mcmmoparties.McMMOParties
+api-version: 1.21
 authors: [ MaksyKun ]
 commands:
   party:

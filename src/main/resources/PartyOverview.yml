@@ -1,0 +1,68 @@
+w Title: "McMMO Party Overview"
+InvSize: 54
+Icons:
+  PartyInfo:
+    Slot: 4
+    Material: BOOK
+    Display: "&9Party Information"
+    Lore:
+      - "&eParty: &a%party_id%"
+      - "&eDisplay: &a%party_display%"
+      - "&eOwner: &a%owner_name%"
+      - "&eMembers: &a%member_count%"
+  PartyStats:
+    Slot: 11
+    Material: COMMAND_BLOCK
+    Display: "&9Party Statistics"
+    Lore:
+      - "&eLevel: &a%party_level%"
+      - "&eExperience: &a%party_exp% / %party_needed%"
+      - "&ePower: &a%cumulative_power%"
+  PlayersMember:
+    Slot: 20
+    Material: PLAYER_HEAD
+    Display: "&9Members"
+    Lore:
+      - "&7Click to view member list"
+      - "&e%member_name%"
+  SkillStats:
+    Slot: 29
+    Material: DIAMOND_PICKAXE
+    Display: "&9Skill Statistics"
+    Lore:
+      - "&eView cumulative skill levels"
+      - "&7Click to view details"
+  PartyBuffs:
+    Slot: 38
+    Material: ENCHANTED_GOLDEN_APPLE
+    Display: "&9Party Buffs"
+    Lore:
+      - "&eView active party buffs"
+      - "&7Click to view details"
+  EditParty:
+    Slot: 47
+    Material: WRITABLE_BOOK
+    Display: "&aEdit Party"
+    Lore:
+      - "&7[&aClick&7] &eEdit your party settings"
+      - "&7(Owner only)"
+  Back:
+    Slot: 52
+    Material: BARRIER
+    Display: "&cBack"
+    Lore:
+      - "&7Click to close"
+  SkillsDisplay:
+    Slot: 10
+    Material: STONE
+    Display: "&9%skill_name%"
+    Lore:
+      - "&eCumulative Level: &a%skill_level%"
+  BuffsDisplay:
+    Slot: 10
+    Material: POTION
+    Display: "&9%buff_name%"
+    Lore:
+      - "&eEffect: &a%buff_effect%"
+      - "&eStatus: &a%buff_status%"
+
