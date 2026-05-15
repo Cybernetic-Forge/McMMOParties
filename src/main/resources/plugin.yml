@@ -3,9 +3,14 @@ version: '${project.version}'
 main: net.maksy.mcmmoparties.McMMOParties
 api-version: 1.21
 authors: [ MaksyKun ]
+softdepend: [Vault]
 commands:
   party:
     description: Party command
     usage: /party
     aliases:
       - pa
+permissions:
+  mcmmoparties.admin:
+    description: Allows use of /party reload
+    default: op

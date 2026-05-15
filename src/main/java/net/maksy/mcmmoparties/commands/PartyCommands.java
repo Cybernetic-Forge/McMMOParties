@@ -19,6 +19,11 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
 
+        if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
+            PartyCommandUtils.reloadPartyCommand(sender);
+            return true;
+        }
+
         if(!(sender instanceof Player player))
             return true;
 
@@ -65,6 +70,9 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
             if("leave".startsWith(args[0])) first.add("leave");
             if("kick".startsWith(args[0])) first.add("kick");
             if("newleader".startsWith(args[0])) first.add("newleader");
+            if ((player.isOp() || player.hasPermission("mcmmoparties.admin")) && "reload".startsWith(args[0])) {
+                first.add("reload");
+            }
             return first;
         }
         if(args.length == 2) {

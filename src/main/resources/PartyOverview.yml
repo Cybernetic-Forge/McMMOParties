@@ -10,42 +10,55 @@ Icons:
       - "&eDisplay: &a%party_display%"
       - "&eOwner: &a%owner_name%"
       - "&eMembers: &a%member_count%"
-  PartyStats:
-    Slot: 11
-    Material: COMMAND_BLOCK
-    Display: "&9Party Statistics"
-    Lore:
-      - "&eLevel: &a%party_level%"
-      - "&eExperience: &a%party_exp% / %party_needed%"
-      - "&ePower: &a%cumulative_power%"
   PlayersMember:
-    Slot: 20
+    Slot: 10
     Material: PLAYER_HEAD
     Display: "&9Members"
     Lore:
       - "&7Click to view member list"
       - "&e%member_name%"
-  SkillStats:
-    Slot: 29
+  PartyStats:
+    Slot: 12
     Material: DIAMOND_PICKAXE
     Display: "&9Skill Statistics"
     Lore:
       - "&eView cumulative skill levels"
       - "&7Click to view details"
   PartyBuffs:
-    Slot: 38
+    Slot: 14
     Material: ENCHANTED_GOLDEN_APPLE
     Display: "&9Party Buffs"
     Lore:
       - "&eView active party buffs"
       - "&7Click to view details"
+  PartyProgress:
+    Slot: 16
+    Material: EXPERIENCE_BOTTLE
+    Display: "&9Progress"
+    Lore:
+      - "&eView current party progress towards the next level"
+      - "&7Click to view details"
+  PartyWaypoint:
+    Slot: 29
+    Material: LECTERN
+    Display: "&aParty Waypoint"
+    Lore:
+      - "&7[&aClick&7] &eTeleport to your party's waypoint"
   EditParty:
-    Slot: 47
+    Slot: 31
     Material: WRITABLE_BOOK
     Display: "&aEdit Party"
     Lore:
       - "&7[&aClick&7] &eEdit your party settings"
       - "&7(Owner only)"
+  PartyTresor:
+    Slot: 33
+    Material: BUNDLE
+    Display: "&aParty Tresor"
+    Lore:
+      - "&eBalance: &a%party_balance%"
+      - "&7[&aLeft-Click&7] &eDeposit Money"
+      - "&7[&aRight-Click&7] &eWithdraw Money"
   Back:
     Slot: 52
     Material: BARRIER
@@ -58,6 +71,121 @@ Icons:
     Display: "&9%skill_name%"
     Lore:
       - "&eCumulative Level: &a%skill_level%"
+  CumulatedSkills:
+    MINING:
+      Slot: 10
+      Material: DIAMOND_PICKAXE
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    WOODCUTTING:
+      Slot: 11
+      Material: DIAMOND_AXE
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    EXCAVATION:
+      Slot: 12
+      Material: DIAMOND_SHOVEL
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    HERBALISM:
+      Slot: 13
+      Material: OAK_SAPLING
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    FISHING:
+      Slot: 14
+      Material: FISHING_ROD
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    SWORDS:
+      Slot: 19
+      Material: DIAMOND_SWORD
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    AXES:
+      Slot: 20
+      Material: DIAMOND_AXE
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    ARCHERY:
+      Slot: 21
+      Material: BOW
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    UNARMED:
+      Slot: 22
+      Material: BLAZE_ROD
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    ACROBATICS:
+      Slot: 23
+      Material: FEATHER
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    TAMING:
+      Slot: 24
+      Material: LEAD
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    MACES:
+      Slot: 28
+      Material: MACE
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    SPEARS:
+      Slot: 29
+      Material: DIAMOND_SPEAR
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    TRIDENTS:
+      Slot: 30
+      Material: TRIDENT
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    CROSSBOWS:
+      Slot: 31
+      Material: CROSSBOW
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    ALCHEMY:
+      Slot: 32
+      Material: BREWING_STAND
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    SMELTING:
+      Slot: 33
+      Material: BLAST_FURNACE
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    REPAIR:
+      Slot: 34
+      Material: ANVIL
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    SALVAGE:
+      Slot: 35
+      Material: GRINDSTONE
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
   BuffsDisplay:
     Slot: 10
     Material: POTION
@@ -65,4 +193,3 @@ Icons:
     Lore:
       - "&eEffect: &a%buff_effect%"
       - "&eStatus: &a%buff_status%"
-

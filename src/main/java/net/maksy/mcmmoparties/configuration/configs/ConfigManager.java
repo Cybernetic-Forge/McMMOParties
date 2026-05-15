@@ -31,6 +31,16 @@ public class ConfigManager {
     public void init() {
         file = new File(plugin.getDataFolder(), "config.yml");
         configuration = plugin.getConfig();
+        if (!configuration.isSet("Party.BaseMemberSlots"))
+            configuration.set("Party.BaseMemberSlots", 10);
+        if (!configuration.isSet("Buffs.DisplayNames.EXP_SHARING_RATE"))
+            configuration.set("Buffs.DisplayNames.EXP_SHARING_RATE", "&aExp Sharing Rate");
+        if (!configuration.isSet("Buffs.DisplayNames.EXP_SHARING_RADIUS"))
+            configuration.set("Buffs.DisplayNames.EXP_SHARING_RADIUS", "&aExp Sharing Radius");
+        if (!configuration.isSet("Buffs.DisplayNames.MEMBER_SLOTS"))
+            configuration.set("Buffs.DisplayNames.MEMBER_SLOTS", "&aMember Slots");
+        if (!configuration.isSet("Buffs.DisplayNames.ABILITY_DURATION"))
+            configuration.set("Buffs.DisplayNames.ABILITY_DURATION", "&aAbility Duration");
         if (!configuration.isSet("Experience.LevelCurve"))
             configuration.set("Experience.LevelCurve", "x * 50 * Math.pow(x,2)");
 
@@ -54,6 +64,15 @@ public class ConfigManager {
 
     public float getScaledExp(PrimarySkillType skill, float exp) {
         return (float) (exp * configuration.getDouble("Experience.Scaling." + skill.name()));
+    }
+
+    public int getBaseMemberSlots() {
+        return configuration.getInt("Party.BaseMemberSlots", 10);
+    }
+
+    public String getBuffDisplayName(String key, String fallback) {
+        String value = configuration.getString("Buffs.DisplayNames." + key, fallback);
+        return value == null ? fallback : value.replace("&", "§");
     }
 
     public float getPastExp(long level) {

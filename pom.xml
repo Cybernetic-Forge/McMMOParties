@@ -110,5 +110,11 @@
             <scope>system</scope>
             <systemPath>${basedir}/libs/MythicDungeons-2.0.1-SNAPSHOT.jar</systemPath>
         </dependency>
+        <dependency>
+            <groupId>com.github.MilkBowl</groupId>
+            <artifactId>VaultAPI</artifactId>
+            <version>1.7</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 </project>

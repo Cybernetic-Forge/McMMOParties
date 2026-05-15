@@ -6,5 +6,12 @@ SQL:
   Password: /
   Port: /
 
+Party:
+  BaseMemberSlots: 10
 
-
+Buffs:
+  DisplayNames:
+    EXP_SHARING_RATE: "&aExp Sharing Rate"
+    EXP_SHARING_RADIUS: "&aExp Sharing Radius"
+    MEMBER_SLOTS: "&aMember Slots"
+    ABILITY_DURATION: "&aAbility Duration"

@@ -7,6 +7,7 @@ import net.maksy.mcmmoparties.configuration.enums.PartyState;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.configuration.models.PartySettings;
 import net.maksy.mcmmoparties.configuration.models.SkillRequirement;
+import net.maksy.mcmmoparties.configuration.sql.tables.PartyPlayerShareTableSQL;
 import net.maksy.mcmmoparties.configuration.sql.tables.PartyTableSQL;
 import net.maksy.mcmmoparties.configuration.sql.tables.PlayerTableSQL;
 import net.maksy.mcmmoparties.configuration.sql.tables.SettingsTableSQL;
@@ -46,6 +47,7 @@ public class SQLManager {
     private final PlayerTableSQL playerTable;
     private final SettingsTableSQL settingsTable;
     private final SkillRequirementTableSQL skillTable;
+    private final PartyPlayerShareTableSQL partyShareTable;
 
     public SQLManager() {
         try {
@@ -54,6 +56,7 @@ public class SQLManager {
             playerTable = new PlayerTableSQL();
             settingsTable = new SettingsTableSQL();
             skillTable = new SkillRequirementTableSQL();
+            partyShareTable = new PartyPlayerShareTableSQL();
 
             try (Connection connection = connection()) {
                 skillTable.migrateSkillColumnsIfPresent(connection);
@@ -251,6 +254,104 @@ public class SQLManager {
             plugin.getLogger().log(Level.SEVERE, "[SQL] Could not update party " + party.getPartyID(), e);
         }
     }
+
+    public boolean depositPartyBalance(String partyID, UUID playerUuid, double amount) {
+        if (amount <= 0.0) {
+            return false;
+        }
+        String normalizedPartyID = normalizePartyID(partyID);
+
+        try (Connection connection = connection()) {
+            connection.setAutoCommit(false);
+            try {
+                if (!partyTable.exists(connection, normalizedPartyID)) {
+                    connection.rollback();
+                    return false;
+                }
+
+                double currentBalance = partyTable.getBalance(connection, normalizedPartyID);
+                double newBalance = currentBalance + amount;
+                partyTable.updateBalance(connection, normalizedPartyID, newBalance);
+
+                double currentShare = partyShareTable.getShareAmount(connection, normalizedPartyID, playerUuid);
+                partyShareTable.upsertShare(connection, normalizedPartyID, playerUuid, currentShare + amount);
+
+                connection.commit();
+                return true;
+            } catch (SQLException e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not deposit party balance for " + partyID, e);
+        }
+        return false;
+    }
+
+    public boolean withdrawPartyBalance(String partyID, UUID playerUuid, double amount) {
+        if (amount <= 0.0) {
+            return false;
+        }
+        String normalizedPartyID = normalizePartyID(partyID);
+
+        try (Connection connection = connection()) {
+            connection.setAutoCommit(false);
+            try {
+                if (!partyTable.exists(connection, normalizedPartyID)) {
+                    connection.rollback();
+                    return false;
+                }
+
+                PartyState state = playerTable.getPartyState(connection, playerUuid, normalizedPartyID);
+                if (state == null || state == PartyState.NONE || state == PartyState.PENDING) {
+                    connection.rollback();
+                    return false;
+                }
+
+                double currentBalance = partyTable.getBalance(connection, normalizedPartyID);
+                if (currentBalance < amount) {
+                    connection.rollback();
+                    return false;
+                }
+
+                double currentShare = partyShareTable.getShareAmount(connection, normalizedPartyID, playerUuid);
+                if (state != PartyState.OWNER && currentShare < amount) {
+                    connection.rollback();
+                    return false;
+                }
+
+                double newBalance = currentBalance - amount;
+                partyTable.updateBalance(connection, normalizedPartyID, newBalance);
+
+                double newShare = Math.max(0.0, currentShare - amount);
+                partyShareTable.upsertShare(connection, normalizedPartyID, playerUuid, newShare);
+
+                connection.commit();
+                return true;
+            } catch (SQLException e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not withdraw party balance for " + partyID, e);
+        }
+        return false;
+    }
+
+    public double getPartyBalance(String partyID) {
+        String normalizedPartyID = normalizePartyID(partyID);
+        try (Connection connection = connection()) {
+            return partyTable.getBalance(connection, normalizedPartyID);
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not load party balance for " + partyID, e);
+        }
+        return 0.0;
+    }
+
 
     public void sendRequest(UUID uuid, String partyID) {
         String normalizedPartyID = normalizePartyID(partyID);

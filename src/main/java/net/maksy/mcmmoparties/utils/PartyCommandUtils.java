@@ -11,6 +11,7 @@ import net.maksy.mcmmoparties.creation.PartyOverview;
 import net.maksy.mcmmoparties.events.PartyEventHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.UUID;
@@ -20,6 +21,7 @@ import static net.maksy.mcmmoparties.configuration.enums.Lang.*;
 public class PartyCommandUtils {
     static PartyLoader partyLoader = McMMOParties.getPartyLoader();
     static PartyEventHandler partyEventHandler = McMMOParties.getPartyEventHandler();
+    private static final String ADMIN_PERMISSION = "mcmmoparties.admin";
 
     public static void createPartyCommand(Player player, String[] args) {
         String partyID = args[1].toLowerCase();
@@ -47,6 +49,11 @@ public class PartyCommandUtils {
         McMMOParty party = partyLoader.getParty(partyID);
         if (party == null) {
             player.sendMessage(LanguageConfig.get().getMessage(PARTY_NOT_EXISTS));
+            return;
+        }
+
+        if (party.getMembers().size() >= party.getMaxMembers()) {
+            player.sendMessage("Party is full.");
             return;
         }
 
@@ -80,6 +87,11 @@ public class PartyCommandUtils {
 
         if (party == null) {
             player.sendMessage(LanguageConfig.get().getMessage(NOT_IN_PARTY));
+            return;
+        }
+
+        if (party.getMembers().size() >= party.getMaxMembers()) {
+            player.sendMessage("Party is full.");
             return;
         }
 
@@ -206,5 +218,24 @@ public class PartyCommandUtils {
     public static void addMember(Player player, String partyID) {
         partyLoader.getParty(partyID).getMembers().add(player.getUniqueId());
         McMMOParties.getPartyLoader().update(partyLoader.getParty(partyID));
+    }
+
+    public static void reloadPartyCommand(CommandSender sender) {
+        if (sender instanceof Player player) {
+            if (!player.isOp() && !player.hasPermission(ADMIN_PERMISSION)) {
+                player.sendMessage("You do not have permission to use this command.");
+                return;
+            }
+        }
+
+        McMMOParties.getInstance().reloadConfig();
+        McMMOParties.getConfigManager().init();
+        net.maksy.mcmmoparties.configuration.YamlParser.reloadAll(true);
+        McMMOParties.getPartyLoader().reload();
+        for (McMMOParty party : McMMOParties.getPartyLoader().getParties()) {
+            party.refreshBuffs();
+        }
+
+        sender.sendMessage("McMMOParties configuration reloaded.");
     }
 }

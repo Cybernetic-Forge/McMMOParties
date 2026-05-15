@@ -1,7 +1,9 @@
 package net.maksy.mcmmoparties.configuration.models;
 
+import lombok.Getter;
+import lombok.Setter;
 import net.maksy.mcmmoparties.McMMOParties;
-import net.maksy.mcmmoparties.configuration.configs.ExpShareConfig;
+import net.maksy.mcmmoparties.configuration.PartyBuffHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 
@@ -11,16 +13,29 @@ import java.util.UUID;
 
 public class McMMOParty {
 
+    @Getter
     private final String partyID;
+    @Getter
     private final String display;
     private float experience;
+    @Getter
+    @Setter
     private float currentExperience;
+    @Getter
+    @Setter
     private float neededExperience;
+    @Getter
+    @Setter
     private long level;
+    @Getter
+    @Setter
     private UUID owner;
+    @Getter
     private final List<UUID> members;
 
+    @Getter
     private final PartySettings partySettings;
+    private final PartyBuffHandler buffHandler;
 
     public McMMOParty(String partyID, String display, float experience, long level, UUID owner, List<UUID> members, PartySettings partySettings) {
         this.partyID = partyID;
@@ -32,15 +47,12 @@ public class McMMOParty {
         this.owner = owner;
         this.members = members;
         this.partySettings = partySettings;
-        this.partySettings.setExpSharing(ExpShareConfig.get().getExpSharingOfParty(this));
+        this.buffHandler = new PartyBuffHandler(this);
+        refreshBuffs();
     }
 
-    public String getPartyID() {
-        return partyID;
-    }
-
-    public String getDisplay() {
-        return display;
+    public double getBalance() {
+        return McMMOParties.getSQL().getPartyBalance(partyID);
     }
 
     public void setExperience(float experience) {
@@ -56,32 +68,8 @@ public class McMMOParty {
         return experience;
     }
 
-    public void setCurrentExperience(float currentExperience) { this.currentExperience = currentExperience; }
-
-    public float getCurrentExperience() { return currentExperience; }
-
-    public void setNeededExperience(float neededExperience) { this.neededExperience = neededExperience; }
-
-    public float getNeededExperience() { return neededExperience; }
-
-    public void setLevel(long level) { this.level = level; }
-
-    public long getLevel() {
-        return level;
-    }
-
     public boolean isOwner(UUID uuid) {
         return owner.equals(uuid);
-    }
-
-    public void setOwner(UUID uuid) { this.owner = uuid; }
-
-    public UUID getOwner() {
-        return owner;
-    }
-
-    public List<UUID> getMembers() {
-        return members;
     }
 
     public void announceToMembers(String message) {
@@ -99,4 +87,15 @@ public class McMMOParty {
     }
 
     public PartySettings getPartySettings() { return partySettings; }
+
+    public PartyBuffHandler getBuffHandler() { return buffHandler; }
+
+    public int getMaxMembers() {
+        return McMMOParties.getConfigManager().getBaseMemberSlots() + buffHandler.getMemberSlotBonus();
+    }
+
+    public void refreshBuffs() {
+        buffHandler.reload();
+        partySettings.setExpSharing(new ExpSharing(buffHandler.getExpSharingRateBonus(), buffHandler.getExpSharingRadius()));
+    }
 }

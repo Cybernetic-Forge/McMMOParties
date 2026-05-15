@@ -14,7 +14,7 @@ import java.util.Locale;
 import java.util.logging.Level;
 public class PartyTableSQL {
     private final JavaPlugin plugin = McMMOParties.getInstance();
-    public record PartyRow(String partyID, String display, float experience, long level) {
+    public record PartyRow(String partyID, String display, float experience, long level, double balance) {
     }
     public PartyTableSQL() {
         createTable();
@@ -22,10 +22,11 @@ public class PartyTableSQL {
     public void createTable() {
         try (Connection connection = SQLManager.connection();
              PreparedStatement create = connection.prepareStatement("CREATE TABLE IF NOT EXISTS " + SQLTables.PARTY_TABLE + " ("
-                     + "PartyID varchar(36) PRIMARY KEY,"
+                     + " PartyID varchar(36) PRIMARY KEY,"
                      + " Display varchar(255),"
                      + " Experience DOUBLE,"
-                     + " `Level` BIGINT)")) {
+                     + " Level BIGINT,"
+                     + " Balance DOUBLE)")) {
             create.execute();
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "[SQL:PartyTableSQL] Could not create party table", e);
@@ -40,7 +41,7 @@ public class PartyTableSQL {
         }
     }
     public void insertParty(Connection connection, String partyID, String display) throws SQLException {
-        try (PreparedStatement insert = connection.prepareStatement("INSERT INTO " + SQLTables.PARTY_TABLE + " (PartyID,Display,Experience,`Level`) VALUES(?,?,0,0)")) {
+        try (PreparedStatement insert = connection.prepareStatement("INSERT INTO " + SQLTables.PARTY_TABLE + " (PartyID,Display,Experience,`Level`,Balance) VALUES(?,?,0,0,0.0)")) {
             insert.setString(1, normalizePartyID(partyID));
             insert.setString(2, display);
             insert.executeUpdate();
@@ -55,6 +56,27 @@ public class PartyTableSQL {
             update.executeUpdate();
         }
     }
+
+    public void updateBalance(Connection connection, String partyID, double balance) throws SQLException {
+        try (PreparedStatement update = connection.prepareStatement("UPDATE " + SQLTables.PARTY_TABLE + " SET Balance=? WHERE PartyID=?")) {
+            update.setDouble(1, balance);
+            update.setString(2, normalizePartyID(partyID));
+            update.executeUpdate();
+        }
+    }
+
+    public double getBalance(Connection connection, String partyID) throws SQLException {
+        try (PreparedStatement select = connection.prepareStatement("SELECT Balance FROM " + SQLTables.PARTY_TABLE + " WHERE PartyID=?")) {
+            select.setString(1, normalizePartyID(partyID));
+            try (ResultSet result = select.executeQuery()) {
+                if (!result.next()) {
+                    return 0.0;
+                }
+                return result.getDouble("Balance");
+            }
+        }
+    }
+
     public PartyRow getParty(Connection connection, String partyID) throws SQLException {
         try (PreparedStatement select = connection.prepareStatement("SELECT * FROM " + SQLTables.PARTY_TABLE + " WHERE PartyID=?")) {
             select.setString(1, normalizePartyID(partyID));
@@ -66,7 +88,8 @@ public class PartyTableSQL {
                         result.getString("PartyID"),
                         result.getString("Display"),
                         result.getFloat("Experience"),
-                        result.getLong("Level")
+                        result.getLong("Level"),
+                        result.getDouble("Balance")
                 );
             }
         }

@@ -9,7 +9,9 @@ import net.maksy.mcmmoparties.configuration.configs.PartyEditorCfg;
 import net.maksy.mcmmoparties.configuration.configs.PartyOverviewCfg;
 import net.maksy.mcmmoparties.configuration.sql.SQLManager;
 import net.maksy.mcmmoparties.events.PartyEventHandler;
+import net.maksy.mcmmoparties.hooks.EconomyHook;
 import net.maksy.mcmmoparties.hooks.HookManager;
+import net.maksy.mcmmoparties.listeners.AbilityBuffListener;
 import net.maksy.mcmmoparties.listeners.ExpEvents;
 import net.maksy.mcmmoparties.utils.ChatUT;
 import org.bukkit.Bukkit;
@@ -39,6 +41,7 @@ public final class McMMOParties extends JavaPlugin {
     public void onEnable() {
         instance = this;
         hookManager = new HookManager();
+        EconomyHook.init(this);
         configManager = new ConfigManager();
         configManager.init();
         partyEditorCfg = new PartyEditorCfg();
@@ -52,6 +55,7 @@ public final class McMMOParties extends JavaPlugin {
         partyEventHandler = new PartyEventHandler();
 
         getServer().getPluginManager().registerEvents(new ExpEvents(), this);
+        getServer().getPluginManager().registerEvents(new AbilityBuffListener(), this);
     }
 
     @Override

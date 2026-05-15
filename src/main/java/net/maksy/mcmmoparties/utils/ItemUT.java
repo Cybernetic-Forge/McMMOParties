@@ -33,6 +33,7 @@ public class ItemUT {
             meta.displayName(ChatUT.deserialize(name));
         if (lore != null)
             meta.lore(Arrays.stream(lore).map(ChatUT::deserialize).toList());
+        meta.addItemFlags(ItemFlag.values());
         item.setItemMeta(meta);
         return item;
     }
@@ -44,6 +45,7 @@ public class ItemUT {
             meta.displayName(ChatUT.deserialize(name).decoration(TextDecoration.ITALIC, false));
         if (lore != null)
             meta.lore(lore.stream().map(ChatUT::deserialize).map(c -> c.decoration(TextDecoration.ITALIC, false)).toList());
+        meta.addItemFlags(ItemFlag.values());
         item.setItemMeta(meta);
         return item;
     }
@@ -63,6 +65,7 @@ public class ItemUT {
             meta.addEnchant(Enchantment.UNBREAKING, 1, false);
             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         }
+        meta.addItemFlags(ItemFlag.values());
         item.setItemMeta(meta);
         return item;
     }

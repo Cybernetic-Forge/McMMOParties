@@ -1,0 +1,33 @@
+# Party level buffs configuration
+# Each top-level key is a party level.
+# Each entry under a level is a buff definition in the form:
+#   BUFF_TYPE: VALUE
+# or for ability duration:
+#   ABILITY_DURATION:
+#     <ABILITY>: <AMOUNT>
+#
+# Examples:
+# 1:
+#   EXP_SHARING_RATE: 5
+#   EXP_SHARING_RADIUS: 25
+# 3:
+#   MEMBER_SLOTS: 2
+# 7:
+#   ABILITY_DURATION:
+#     SUPER_BREAKER: 10
+#
+# Supported (suggested) buff keys:
+# - EXP_SHARING_RATE: <percent>
+# - EXP_SHARING_RADIUS: <blocks>
+# - MEMBER_SLOTS: <count>
+# - ABILITY_DURATION: <ability>: <seconds>
+
+1:
+ EXP_SHARING_RATE: 5
+ EXP_SHARING_RADIUS: 25
+3:
+ MEMBER_SLOTS: 2
+7:
+ ABILITY_DURATION:
+   SUPER_BREAKER: 10
+ MEMBER_SLOTS: 1

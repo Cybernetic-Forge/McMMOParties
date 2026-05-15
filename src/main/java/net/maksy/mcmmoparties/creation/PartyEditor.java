@@ -218,4 +218,3 @@ public class PartyEditor implements Listener {
         click(event);
     }
 }
-

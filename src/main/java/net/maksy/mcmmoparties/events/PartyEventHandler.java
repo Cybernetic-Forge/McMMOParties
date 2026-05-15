@@ -37,6 +37,7 @@ public class PartyEventHandler {
             party.setLevel(party.getLevel() + 1);
             party.setCurrentExperience(party.getTotalExperience() - McMMOParties.getConfigManager().getPastExp(party.getLevel()));
             party.setNeededExperience(McMMOParties.getConfigManager().getNeededExperience(party.getLevel() + 1));
+            party.refreshBuffs();
 
             party.announceToMembers(LanguageConfig.get().getMessage(Lang.PARTY_LEVELUP, new Replaceable("%level%", String.valueOf(party.getLevel()))));
         }
@@ -80,6 +81,12 @@ public class PartyEventHandler {
         PartyMemberJoinEvent event = new PartyMemberJoinEvent(party, newComer);
         Bukkit.getPluginManager().callEvent(event);
         if (!event.isCancelled()) {
+            if (party.getMembers().size() >= party.getMaxMembers()) {
+                if (newComer.isOnline()) {
+                    Objects.requireNonNull(newComer.getPlayer()).sendMessage("Party is full.");
+                }
+                return;
+            }
             if (instant) {
                 PartyCommandUtils.addMember(Objects.requireNonNull(newComer.getPlayer()), party.getPartyID());
             } else {
