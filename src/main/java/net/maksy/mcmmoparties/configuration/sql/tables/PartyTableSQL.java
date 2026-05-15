@@ -14,7 +14,7 @@ import java.util.Locale;
 import java.util.logging.Level;
 public class PartyTableSQL {
     private final JavaPlugin plugin = McMMOParties.getInstance();
-    public record PartyRow(String partyID, String display, float experience, long level, double balance) {
+    public record PartyRow(String partyID, String display, float experience, long level, int skillPoints, double balance) {
     }
     public PartyTableSQL() {
         createTable();
@@ -26,6 +26,7 @@ public class PartyTableSQL {
                      + " Display varchar(255),"
                      + " Experience DOUBLE,"
                      + " Level BIGINT,"
+                     + " SkillPoints numeric,"
                      + " Balance DOUBLE)")) {
             create.execute();
         } catch (SQLException e) {
@@ -41,7 +42,7 @@ public class PartyTableSQL {
         }
     }
     public void insertParty(Connection connection, String partyID, String display) throws SQLException {
-        try (PreparedStatement insert = connection.prepareStatement("INSERT INTO " + SQLTables.PARTY_TABLE + " (PartyID,Display,Experience,`Level`,Balance) VALUES(?,?,0,0,0.0)")) {
+        try (PreparedStatement insert = connection.prepareStatement("INSERT INTO " + SQLTables.PARTY_TABLE + " (PartyID,Display,Experience,`Level`,SkillPoints,Balance) VALUES(?,?,0,0,0,0.0)")) {
             insert.setString(1, normalizePartyID(partyID));
             insert.setString(2, display);
             insert.executeUpdate();
@@ -65,6 +66,14 @@ public class PartyTableSQL {
         }
     }
 
+    public void updateSkillPoints(Connection connection, String partyID, int skillPoints) throws SQLException {
+        try (PreparedStatement update = connection.prepareStatement("UPDATE " + SQLTables.PARTY_TABLE + " SET SkillPoints=? WHERE PartyID=?")) {
+            update.setInt(1, skillPoints);
+            update.setString(2, normalizePartyID(partyID));
+            update.executeUpdate();
+        }
+    }
+
     public double getBalance(Connection connection, String partyID) throws SQLException {
         try (PreparedStatement select = connection.prepareStatement("SELECT Balance FROM " + SQLTables.PARTY_TABLE + " WHERE PartyID=?")) {
             select.setString(1, normalizePartyID(partyID));
@@ -73,6 +82,18 @@ public class PartyTableSQL {
                     return 0.0;
                 }
                 return result.getDouble("Balance");
+            }
+        }
+    }
+
+    public int getSkillPoints(Connection connection, String partyID) throws SQLException {
+        try (PreparedStatement select = connection.prepareStatement("SELECT SkillPoints FROM " + SQLTables.PARTY_TABLE + " WHERE PartyID=?")) {
+            select.setString(1, normalizePartyID(partyID));
+            try (ResultSet result = select.executeQuery()) {
+                if (!result.next()) {
+                    return 0;
+                }
+                return result.getInt("SkillPoints");
             }
         }
     }
@@ -89,6 +110,7 @@ public class PartyTableSQL {
                         result.getString("Display"),
                         result.getFloat("Experience"),
                         result.getLong("Level"),
+                        result.getInt("SkillPoints"),
                         result.getDouble("Balance")
                 );
             }

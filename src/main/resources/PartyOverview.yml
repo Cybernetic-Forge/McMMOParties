@@ -16,7 +16,20 @@ Icons:
     Display: "&9Members"
     Lore:
       - "&7Click to view member list"
-      - "&e%member_name%"
+  MemberEntry:
+    Slot: 0
+    Material: PLAYER_HEAD
+    Display: "&9%member_name%"
+    Lore:
+      - "&eStatus: %member_status%"
+      - "&eShare: &a%member_share%"
+  MemberSort:
+    Slot: 49
+    Material: HOPPER
+    Display: "&bSort: %member_filter%"
+    Lore:
+      - "&eClick to change filter"
+      - "&7Current: &f%member_filter%"
   PartyStats:
     Slot: 12
     Material: DIAMOND_PICKAXE
@@ -191,5 +204,34 @@ Icons:
     Material: POTION
     Display: "&9%buff_name%"
     Lore:
-      - "&eEffect: &a%buff_effect%"
-      - "&eStatus: &a%buff_status%"
+      - "&eTotal: &a%current_amount%"
+      - "&eNext Upgrade: &a%current_amount% &m->&r %next_amount%"
+  BuffsDisplaySkillpoints:
+    Slot: 10
+    Material: POTION
+    Display: "&9%buff_name% &7(%spent_points%/%max_points%)"
+    Lore:
+      - "&eTotal: &a%current_amount%"
+      - "&eNext Upgrade: &a%current_amount% &m->&r %next_amount%"
+  BuffsDisplayLevel:
+    Slot: 10
+    Material: POTION
+    Display: "&9%buff_name%"
+    Lore:
+      - "&eTotal: &a%current_amount%"
+      - "&eNext Upgrade: &a%current_amount% &m->&r %next_amount%"
+  BuffModeLevel:
+    Slot: 45
+    Material: EXPERIENCE_BOTTLE
+    Display: "&aLevel Buffs"
+    Lore:
+      - "&7Handler: &fLevel"
+      - "&7Party Level: &f%party_level%"
+  BuffModeSkillpoints:
+    Slot: 45
+    Material: NETHER_STAR
+    Display: "&aSkillpoint Buffs"
+    Lore:
+      - "&7Handler: &fSkillpoints"
+      - "&7Total: &f%skillpoints_total%"
+      - "&7Available: &f%skillpoints_available%"

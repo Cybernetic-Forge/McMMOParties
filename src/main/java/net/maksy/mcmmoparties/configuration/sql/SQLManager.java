@@ -3,10 +3,12 @@ package net.maksy.mcmmoparties.configuration.sql;
 import net.maksy.mcmmoparties.McMMOParties;
 import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
 import net.maksy.mcmmoparties.configuration.enums.DatabaseType;
+import net.maksy.mcmmoparties.configuration.enums.PartyBuffType;
 import net.maksy.mcmmoparties.configuration.enums.PartyState;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.configuration.models.PartySettings;
 import net.maksy.mcmmoparties.configuration.models.SkillRequirement;
+import net.maksy.mcmmoparties.configuration.sql.tables.PartyBuffSkillPointsTableSQL;
 import net.maksy.mcmmoparties.configuration.sql.tables.PartyPlayerShareTableSQL;
 import net.maksy.mcmmoparties.configuration.sql.tables.PartyTableSQL;
 import net.maksy.mcmmoparties.configuration.sql.tables.PlayerTableSQL;
@@ -48,6 +50,7 @@ public class SQLManager {
     private final SettingsTableSQL settingsTable;
     private final SkillRequirementTableSQL skillTable;
     private final PartyPlayerShareTableSQL partyShareTable;
+    private final PartyBuffSkillPointsTableSQL buffSkillPointsTable;
 
     public SQLManager() {
         try {
@@ -57,6 +60,7 @@ public class SQLManager {
             settingsTable = new SettingsTableSQL();
             skillTable = new SkillRequirementTableSQL();
             partyShareTable = new PartyPlayerShareTableSQL();
+            buffSkillPointsTable = new PartyBuffSkillPointsTableSQL();
 
             try (Connection connection = connection()) {
                 skillTable.migrateSkillColumnsIfPresent(connection);
@@ -352,6 +356,101 @@ public class SQLManager {
         return 0.0;
     }
 
+    public double getPartyBalanceShare(String partyId, UUID playerUuid) {
+        String normalizedPartyID = normalizePartyID(partyId);
+        try (Connection connection = connection()) {
+            return partyShareTable.getShareAmount(connection, normalizedPartyID, playerUuid);
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not load party balance for " + partyId, e);
+        }
+        return 0.0;
+    }
+
+    public int getPartySkillPoints(String partyID) {
+        String normalizedPartyID = normalizePartyID(partyID);
+        try (Connection connection = connection()) {
+            return partyTable.getSkillPoints(connection, normalizedPartyID);
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not load party skill points for " + partyID, e);
+        }
+        return 0;
+    }
+
+    public void updatePartySkillPoints(String partyID, int skillPoints) {
+        String normalizedPartyID = normalizePartyID(partyID);
+        try (Connection connection = connection()) {
+            partyTable.updateSkillPoints(connection, normalizedPartyID, Math.max(0, skillPoints));
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not update party skill points for " + partyID, e);
+        }
+    }
+
+    public void addPartySkillPoints(String partyID, int delta) {
+        if (delta == 0) {
+            return;
+        }
+        String normalizedPartyID = normalizePartyID(partyID);
+        try (Connection connection = connection()) {
+            int current = partyTable.getSkillPoints(connection, normalizedPartyID);
+            partyTable.updateSkillPoints(connection, normalizedPartyID, Math.max(0, current + delta));
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not add party skill points for " + partyID, e);
+        }
+    }
+
+    public Map<String, Integer> getBuffSkillPoints(String partyID) {
+        String normalizedPartyID = normalizePartyID(partyID);
+        try (Connection connection = connection()) {
+            return buffSkillPointsTable.getSpentPointsByParty(connection, normalizedPartyID);
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not load buff skill points for " + partyID, e);
+        }
+        return new HashMap<>();
+    }
+
+    public int getTotalSpentBuffSkillPoints(String partyID) {
+        String normalizedPartyID = normalizePartyID(partyID);
+        try (Connection connection = connection()) {
+            return buffSkillPointsTable.getTotalSpentPoints(connection, normalizedPartyID);
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not load total buff skill points for " + partyID, e);
+        }
+        return 0;
+    }
+
+    public boolean spendBuffSkillPoint(String partyID, PartyBuffType type, String ability, int maxPoints) {
+        String normalizedPartyID = normalizePartyID(partyID);
+        try (Connection connection = connection()) {
+            connection.setAutoCommit(false);
+            try {
+                int totalSkillPoints = partyTable.getSkillPoints(connection, normalizedPartyID);
+                int totalSpent = buffSkillPointsTable.getTotalSpentPoints(connection, normalizedPartyID);
+                int available = totalSkillPoints - totalSpent;
+                if (available <= 0) {
+                    connection.rollback();
+                    return false;
+                }
+
+                int current = buffSkillPointsTable.getSpentPoints(connection, normalizedPartyID, type.name(), ability);
+                if (maxPoints > 0 && current + 1 > maxPoints) {
+                    connection.rollback();
+                    return false;
+                }
+
+                buffSkillPointsTable.upsertSpentPoints(connection, normalizedPartyID, type.name(), ability, current + 1);
+                connection.commit();
+                return true;
+            } catch (SQLException e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not spend buff skill point for " + partyID, e);
+        }
+        return false;
+    }
 
     public void sendRequest(UUID uuid, String partyID) {
         String normalizedPartyID = normalizePartyID(partyID);

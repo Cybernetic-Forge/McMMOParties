@@ -2,6 +2,7 @@ package net.maksy.mcmmoparties.configuration.configs;
 
 import com.gmail.nossr50.datatypes.skills.PrimarySkillType;
 import net.maksy.mcmmoparties.McMMOParties;
+import net.maksy.mcmmoparties.configuration.enums.BuffHandlerMode;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.utils.Replaceable;
 import net.maksy.mcmmoparties.utils.Utils;
@@ -41,6 +42,10 @@ public class ConfigManager {
             configuration.set("Buffs.DisplayNames.MEMBER_SLOTS", "&aMember Slots");
         if (!configuration.isSet("Buffs.DisplayNames.ABILITY_DURATION"))
             configuration.set("Buffs.DisplayNames.ABILITY_DURATION", "&aAbility Duration");
+        if (!configuration.isSet("Buffs.Handler"))
+            configuration.set("Buffs.Handler", "LEVEL");
+        if (!configuration.isSet("Buffs.SkillPointsPerLevel"))
+            configuration.set("Buffs.SkillPointsPerLevel", 1);
         if (!configuration.isSet("Experience.LevelCurve"))
             configuration.set("Experience.LevelCurve", "x * 50 * Math.pow(x,2)");
 
@@ -73,6 +78,15 @@ public class ConfigManager {
     public String getBuffDisplayName(String key, String fallback) {
         String value = configuration.getString("Buffs.DisplayNames." + key, fallback);
         return value == null ? fallback : value.replace("&", "§");
+    }
+
+    public BuffHandlerMode getBuffHandlerMode() {
+        String handler = configuration.getString("Buffs.Handler", configuration.getString("BuffHandler", "LEVEL"));
+        return BuffHandlerMode.fromString(handler);
+    }
+
+    public int getSkillPointsPerLevel() {
+        return configuration.getInt("Buffs.SkillPointsPerLevel", 1);
     }
 
     public float getPastExp(long level) {

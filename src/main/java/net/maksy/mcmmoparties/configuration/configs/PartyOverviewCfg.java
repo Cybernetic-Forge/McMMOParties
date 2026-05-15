@@ -10,6 +10,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class PartyOverviewCfg {
@@ -30,20 +31,56 @@ public class PartyOverviewCfg {
 
     public Pair<Integer, ItemStack> getIcon(String iconPath, Replaceable... replaceables) {
         int slot = config.getInt("Icons." + iconPath + ".Slot", 0);
-        Material material = Material.valueOf(config.getString("Icons." + iconPath + ".Material", "STONE"));
-        String display = config.getString("Icons." + iconPath + ".Display", "DisplayName error");
-        final List<String> lore = config.getStringList("Icons." + iconPath + ".Lore", List.of());
+        return Pair.of(slot, getItem(iconPath, replaceables));
+    }
 
-        if(replaceables != null) {
-            for(var replace : replaceables) {
-                if(replace.getK() != null && replace.getV() != null) {
-                    display = display.replace(replace.getK(), replace.getV());
-                    lore.forEach(l -> lore.set(lore.indexOf(l), l.replace(replace.getK(), replace.getV())));
-                }
+    public ItemStack getItem(String iconPath, Replaceable... replaceables) {
+        Material material = getMaterial(iconPath, Material.STONE);
+        String display = getFormattedString("Icons." + iconPath + ".Display", "DisplayName error", replaceables);
+        List<String> lore = getFormattedStringList("Icons." + iconPath + ".Lore", List.of(), replaceables);
+        return ItemUT.getItem(material, display, lore);
+    }
+
+    public Material getMaterial(String iconPath, Material def) {
+        String fallback = def == null ? "STONE" : def.name();
+        String materialName = config.getString("Icons." + iconPath + ".Material", fallback);
+        try {
+            return Material.valueOf(materialName);
+        } catch (IllegalArgumentException ignored) {
+            return def;
+        }
+    }
+
+    public String getFormattedString(String path, String def, Replaceable... replaceables) {
+        return applyReplaceables(config.getString(path, def), replaceables);
+    }
+
+    public List<String> getFormattedStringList(String path, List<String> def, Replaceable... replaceables) {
+        return applyReplaceables(config.getStringList(path, def), replaceables);
+    }
+
+    private String applyReplaceables(String value, Replaceable... replaceables) {
+        String result = value;
+        if (replaceables == null) {
+            return result;
+        }
+        for (Replaceable replace : replaceables) {
+            if (replace != null && replace.getK() != null && replace.getV() != null) {
+                result = result.replace(replace.getK(), replace.getV());
             }
         }
+        return result;
+    }
 
-        return Pair.of(slot, ItemUT.getItem(material, display, lore));
+    private List<String> applyReplaceables(List<String> values, Replaceable... replaceables) {
+        List<String> result = new ArrayList<>(values);
+        if (replaceables == null) {
+            return result;
+        }
+        for (int i = 0; i < result.size(); i++) {
+            result.set(i, applyReplaceables(result.get(i), replaceables));
+        }
+        return result;
     }
 }
 

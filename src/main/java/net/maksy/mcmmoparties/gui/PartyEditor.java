@@ -1,4 +1,4 @@
-package net.maksy.mcmmoparties.creation;
+package net.maksy.mcmmoparties.gui;
 
 import com.gmail.nossr50.datatypes.skills.PrimarySkillType;
 import net.maksy.mcmmoparties.McMMOParties;
@@ -24,6 +24,7 @@ import java.util.Map;
 
 import static net.maksy.mcmmoparties.configuration.enums.Lang.NOT_A_NUMBER;
 import static net.maksy.mcmmoparties.configuration.enums.Lang.PARTY_CREATED;
+import static net.maksy.mcmmoparties.configuration.enums.Lang.PARTY_UPDATED;
 
 public class PartyEditor implements Listener {
 
@@ -37,6 +38,7 @@ public class PartyEditor implements Listener {
     private final Map<Integer, SkillRequirement> slots = new HashMap<>();
     private boolean locked;
     private String password = "";
+    private boolean editingExisting;
 
     public PartyEditor(Player player) {
         this.player = player;
@@ -65,13 +67,16 @@ public class PartyEditor implements Listener {
         var lockedIcon = McMMOParties.getPartyEditorCfg().getIcon("PartyLocked");
         var lockableIcon = locked ? lockedIcon : unlockedIcon;
         var passwordIcon = McMMOParties.getPartyEditorCfg().getIcon("PartyPassword", new Replaceable("%party_password%", password));
-        var creationIcon = McMMOParties.getPartyEditorCfg().getIcon("Create");
-        var cancelIcon = McMMOParties.getPartyEditorCfg().getIcon("Cancel");
+        var actionIcon = McMMOParties.getPartyEditorCfg().getIcon(editingExisting ? "Save" : "Create");
+        var cancelIcon = McMMOParties.getPartyEditorCfg().getIcon(editingExisting ? "CancelEdit" : "Cancel");
+        if (cancelIcon.getKey() <= 0) {
+            cancelIcon = McMMOParties.getPartyEditorCfg().getIcon("Cancel");
+        }
         inventory.setItem(partyIdIcon.getKey(), partyIdIcon.getValue());
         inventory.setItem(displayNameIcon.getKey(), displayNameIcon.getValue());
         inventory.setItem(lockableIcon.getKey(), lockableIcon.getValue());
         inventory.setItem(passwordIcon.getKey(), passwordIcon.getValue());
-        inventory.setItem(creationIcon.getKey(), creationIcon.getValue());
+        inventory.setItem(actionIcon.getKey(), actionIcon.getValue());
         inventory.setItem(cancelIcon.getKey(), cancelIcon.getValue());
     }
 
@@ -122,13 +127,14 @@ public class PartyEditor implements Listener {
 
     public void open(String partyID) {
         this.partyID = partyID;
-        loadPartyData(partyID);
+        McMMOParty existingParty = McMMOParties.getPartyLoader().getParty(partyID);
+        this.editingExisting = existingParty != null;
+        loadPartyData(existingParty);
         initInventory();
         player.openInventory(inventory);
     }
 
-    private void loadPartyData(String partyID) {
-        McMMOParty party = McMMOParties.getPartyLoader().getParty(partyID);
+    private void loadPartyData(McMMOParty party) {
         if (party != null) {
             this.display = party.getDisplay();
             this.locked = party.getPartySettings().isLocked();
@@ -153,7 +159,6 @@ public class PartyEditor implements Listener {
         int slot = event.getSlot();
 
         switch (slot) {
-            case 47 -> ValueMessenger.get().open(player,47);
             case 48 -> ValueMessenger.get().open(player,48);
             case 49 -> setValue(49, null);
             case 50 -> ValueMessenger.get().open(player, 50);
@@ -184,7 +189,7 @@ public class PartyEditor implements Listener {
                 }
                 McMMOParties.getPartyLoader().reload();
                 player.closeInventory();
-                player.sendMessage(LanguageConfig.get().getMessage(PARTY_CREATED, new Replaceable("%party%", partyID + " | " + display)));
+                player.sendMessage(LanguageConfig.get().getMessage(existingParty != null ? PARTY_UPDATED : PARTY_CREATED, new Replaceable("%party%", partyID + " | " + display)));
             }
             default -> {
                 if (slots.containsKey(slot))
@@ -195,7 +200,9 @@ public class PartyEditor implements Listener {
 
     public void setValue(int slot, String value) {
         switch (slot) {
-            case 47 -> setPartyID(value);
+            case 47 -> {
+                // Party ID is read-only for both create and edit.
+            }
             case 48 -> setDisplay(value);
             case 49 -> setLocked(!locked);
             case 50 -> setPassword(value);

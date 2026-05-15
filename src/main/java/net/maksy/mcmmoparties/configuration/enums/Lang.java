@@ -17,6 +17,7 @@ public enum Lang {
     NEW_OWNER,
     REQUEST_SEND,
     PARTY_CREATED,
+    PARTY_UPDATED,
     PARTY_JOINED,
     PARTY_LEVELUP,
 

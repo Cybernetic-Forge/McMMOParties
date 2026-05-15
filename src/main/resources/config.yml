@@ -10,6 +10,8 @@ Party:
   BaseMemberSlots: 10
 
 Buffs:
+  Handler: LEVEL
+  SkillPointsPerLevel: 1
   DisplayNames:
     EXP_SHARING_RATE: "&aExp Sharing Rate"
     EXP_SHARING_RADIUS: "&aExp Sharing Radius"

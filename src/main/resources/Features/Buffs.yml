@@ -22,12 +22,34 @@
 # - MEMBER_SLOTS: <count>
 # - ABILITY_DURATION: <ability>: <seconds>
 
-1:
- EXP_SHARING_RATE: 5
- EXP_SHARING_RADIUS: 25
-3:
- MEMBER_SLOTS: 2
-7:
- ABILITY_DURATION:
-   SUPER_BREAKER: 10
- MEMBER_SLOTS: 1
+# Level-based buffs (default)
+Level:
+  1:
+    EXP_SHARING_RATE: 5
+    EXP_SHARING_RADIUS: 25
+  3:
+    MEMBER_SLOTS: 2
+  7:
+    ABILITY_DURATION:
+      SUPER_BREAKER: 10
+    MEMBER_SLOTS: 1
+
+# Skillpoint-based buffs (spent points map to levels below)
+Skillpoints:
+  EXP_SHARING_RATE:
+    1: 5
+    2: 10
+    3: 15
+  EXP_SHARING_RADIUS:
+    1: 25
+    2: 40
+    3: 60
+  ABILITY_DURATION:
+    SUPER_BREAKER:
+      1: 3
+      2: 6
+      3: 9
+  MEMBER_SLOTS:
+    1: 2
+    2: 2
+    3: 3

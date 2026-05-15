@@ -1,4 +1,4 @@
-package net.maksy.mcmmoparties.creation;
+package net.maksy.mcmmoparties.gui;
 
 import org.bukkit.entity.Player;
 

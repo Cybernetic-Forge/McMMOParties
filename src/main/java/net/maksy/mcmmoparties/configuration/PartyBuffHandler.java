@@ -2,11 +2,13 @@ package net.maksy.mcmmoparties.configuration;
 
 import lombok.Getter;
 import net.maksy.mcmmoparties.McMMOParties;
+import net.maksy.mcmmoparties.configuration.enums.BuffHandlerMode;
 import net.maksy.mcmmoparties.configuration.enums.PartyBuffType;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -20,6 +22,11 @@ public class PartyBuffHandler {
     private final YamlParser config;
     private final Logger logger;
 
+    private BuffHandlerMode mode;
+    private int skillPointsPerLevel;
+    private int totalSkillPoints;
+    private int availableSkillPoints;
+
     private double expSharingRatePercent;
     @Getter
     private int expSharingRadius;
@@ -31,6 +38,10 @@ public class PartyBuffHandler {
     private final Map<Integer, Integer> expSharingRadiusByLevel = new TreeMap<>();
     private final Map<Integer, Integer> memberSlotsByLevel = new TreeMap<>();
     private final Map<Integer, Map<String, Integer>> abilityDurationByLevel = new TreeMap<>();
+    private final Map<String, TreeMap<Integer, Integer>> abilityDurationPointLevels = new HashMap<>();
+
+    private final Map<PartyBuffType, Integer> spentPointsByBuff = new EnumMap<>(PartyBuffType.class);
+    private final Map<String, Integer> spentPointsByAbility = new HashMap<>();
 
     public PartyBuffHandler(McMMOParty party) {
         this.party = party;
@@ -48,8 +59,30 @@ public class PartyBuffHandler {
         expSharingRadiusByLevel.clear();
         memberSlotsByLevel.clear();
         abilityDurationByLevel.clear();
+        abilityDurationPointLevels.clear();
+        spentPointsByBuff.clear();
+        spentPointsByAbility.clear();
 
-        Set<String> keys = config.getKeys(false);
+        mode = McMMOParties.getConfigManager().getBuffHandlerMode();
+        skillPointsPerLevel = McMMOParties.getConfigManager().getSkillPointsPerLevel();
+        totalSkillPoints = McMMOParties.getSQL().getPartySkillPoints(party.getPartyID());
+        availableSkillPoints = totalSkillPoints;
+
+        if (mode == BuffHandlerMode.SKILLPOINTS) {
+            loadSkillPointBuffs();
+            return;
+        }
+
+        loadLevelBuffs();
+    }
+
+    private void loadLevelBuffs() {
+        ConfigurationSection levelRoot = config.getConfigurationSection("Level");
+        if (levelRoot == null) {
+            levelRoot = config;
+        }
+
+        Set<String> keys = levelRoot.getKeys(false);
         for (String key : keys) {
             int level;
             try {
@@ -59,21 +92,167 @@ public class PartyBuffHandler {
             }
 
             if (level <= party.getLevel()) {
-                applyLevelBuffs(level);
+                applyLevelBuffs(level, levelRoot);
             }
         }
     }
 
-    private void applyLevelBuffs(int level) {
+    private void loadSkillPointBuffs() {
+        ConfigurationSection skillpoints = config.getConfigurationSection("Skillpoints");
+        if (skillpoints == null) {
+            return;
+        }
+
+        loadSpentSkillPoints();
+
+        ConfigurationSection rateSection = skillpoints.getConfigurationSection(PartyBuffType.EXP_SHARING_RATE.name());
+        if (rateSection != null) {
+            loadDoubleLevels(rateSection, expSharingRateByLevel);
+        }
+
+        ConfigurationSection radiusSection = skillpoints.getConfigurationSection(PartyBuffType.EXP_SHARING_RADIUS.name());
+        if (radiusSection != null) {
+            loadIntLevels(radiusSection, expSharingRadiusByLevel);
+        }
+
+        ConfigurationSection slotsSection = skillpoints.getConfigurationSection(PartyBuffType.MEMBER_SLOTS.name());
+        if (slotsSection != null) {
+            loadIntLevels(slotsSection, memberSlotsByLevel);
+        }
+
+        ConfigurationSection abilitySection = skillpoints.getConfigurationSection(PartyBuffType.ABILITY_DURATION.name());
+        if (abilitySection != null) {
+            for (String ability : abilitySection.getKeys(false)) {
+                ConfigurationSection abilityLevels = abilitySection.getConfigurationSection(ability);
+                if (abilityLevels == null) {
+                    continue;
+                }
+                TreeMap<Integer, Integer> levels = new TreeMap<>();
+                for (String levelKey : abilityLevels.getKeys(false)) {
+                    int level = parsePositiveInt(levelKey);
+                    if (level <= 0) {
+                        continue;
+                    }
+                    int seconds = abilityLevels.getInt(levelKey);
+                    levels.put(level, seconds);
+                    abilityDurationByLevel.computeIfAbsent(level, unused -> new HashMap<>())
+                            .merge(ability.toUpperCase(Locale.ROOT), seconds, Integer::sum);
+                }
+                abilityDurationPointLevels.put(ability.toUpperCase(Locale.ROOT), levels);
+            }
+        }
+
+        expSharingRatePercent = getValueForPointsDouble(expSharingRateByLevel, getSpentPoints(PartyBuffType.EXP_SHARING_RATE)) / 100.0;
+        expSharingRadius = getValueForPointsInt(expSharingRadiusByLevel, getSpentPoints(PartyBuffType.EXP_SHARING_RADIUS));
+        memberSlotBonus = getValueForPointsInt(memberSlotsByLevel, getSpentPoints(PartyBuffType.MEMBER_SLOTS));
+
+        for (Map.Entry<String, TreeMap<Integer, Integer>> entry : abilityDurationPointLevels.entrySet()) {
+            int spent = getSpentPoints(PartyBuffType.ABILITY_DURATION, entry.getKey());
+            int seconds = getValueForPointsInt(entry.getValue(), spent);
+            if (seconds > 0) {
+                abilityDurationBonus.put(entry.getKey(), seconds);
+            }
+        }
+
+        availableSkillPoints = Math.max(0, totalSkillPoints - getTotalSpentPoints());
+    }
+
+    private void loadSpentSkillPoints() {
+        Map<String, Integer> stored = McMMOParties.getSQL().getBuffSkillPoints(party.getPartyID());
+        for (Map.Entry<String, Integer> entry : stored.entrySet()) {
+            String key = entry.getKey();
+            int points = Math.max(0, entry.getValue());
+            String[] parts = key.split("::", 2);
+            PartyBuffType type = PartyBuffType.fromString(parts[0]);
+            if (type == null) {
+                continue;
+            }
+            if (parts.length > 1 && !parts[1].isEmpty()) {
+                spentPointsByAbility.put(parts[1].toUpperCase(Locale.ROOT), points);
+            } else {
+                spentPointsByBuff.put(type, points);
+            }
+        }
+    }
+
+    private void loadIntLevels(ConfigurationSection section, Map<Integer, Integer> target) {
+        for (String levelKey : section.getKeys(false)) {
+            int level = parsePositiveInt(levelKey);
+            if (level <= 0) {
+                continue;
+            }
+            target.put(level, section.getInt(levelKey));
+        }
+    }
+
+    private void loadDoubleLevels(ConfigurationSection section, Map<Integer, Double> target) {
+        for (String levelKey : section.getKeys(false)) {
+            int level = parsePositiveInt(levelKey);
+            if (level <= 0) {
+                continue;
+            }
+            target.put(level, section.getDouble(levelKey));
+        }
+    }
+
+    private int parsePositiveInt(String value) {
+        try {
+            int parsed = Integer.parseInt(value.trim());
+            return parsed <= 0 ? -1 : parsed;
+        } catch (NumberFormatException ex) {
+            return -1;
+        }
+    }
+
+    private int getValueForPointsInt(Map<Integer, Integer> levels, int spentPoints) {
+        if (levels.isEmpty() || spentPoints <= 0) {
+            return 0;
+        }
+        int value = 0;
+        for (Map.Entry<Integer, Integer> entry : levels.entrySet()) {
+            if (entry.getKey() > spentPoints) {
+                break;
+            }
+            value = entry.getValue();
+        }
+        return value;
+    }
+
+    private double getValueForPointsDouble(Map<Integer, Double> levels, int spentPoints) {
+        if (levels.isEmpty() || spentPoints <= 0) {
+            return 0.0;
+        }
+        double value = 0.0;
+        for (Map.Entry<Integer, Double> entry : levels.entrySet()) {
+            if (entry.getKey() > spentPoints) {
+                break;
+            }
+            value = entry.getValue();
+        }
+        return value;
+    }
+
+    private int getTotalSpentPoints() {
+        int total = 0;
+        for (int points : spentPointsByBuff.values()) {
+            total += points;
+        }
+        for (int points : spentPointsByAbility.values()) {
+            total += points;
+        }
+        return total;
+    }
+
+    private void applyLevelBuffs(int level, ConfigurationSection levelRoot) {
         String levelPath = String.valueOf(level);
-        ConfigurationSection section = config.getConfigurationSection(levelPath);
+        ConfigurationSection section = levelRoot.getConfigurationSection(levelPath);
         if (section != null) {
             applySectionBuffs(level, section);
             return;
         }
 
         // Backward-compatible support for legacy list entries
-        for (String entry : config.getStringList(levelPath)) {
+        for (String entry : levelRoot.getStringList(levelPath)) {
             if (entry == null || entry.isEmpty()) {
                 continue;
             }
@@ -216,5 +395,67 @@ public class PartyBuffHandler {
             copy.put(entry.getKey(), Collections.unmodifiableMap(entry.getValue()));
         }
         return Collections.unmodifiableMap(copy);
+    }
+
+    public Map<String, Map<Integer, Integer>> getAbilityDurationPointLevels() {
+        Map<String, Map<Integer, Integer>> copy = new HashMap<>();
+        for (Map.Entry<String, TreeMap<Integer, Integer>> entry : abilityDurationPointLevels.entrySet()) {
+            copy.put(entry.getKey(), Collections.unmodifiableMap(entry.getValue()));
+        }
+        return Collections.unmodifiableMap(copy);
+    }
+
+    public boolean isSkillPointsMode() {
+        return mode == BuffHandlerMode.SKILLPOINTS;
+    }
+
+    public int getSkillPointsPerLevel() {
+        return skillPointsPerLevel;
+    }
+
+    public int getTotalSkillPoints() {
+        return totalSkillPoints;
+    }
+
+    public int getAvailableSkillPoints() {
+        return availableSkillPoints;
+    }
+
+    public int getSpentPoints(PartyBuffType type) {
+        return spentPointsByBuff.getOrDefault(type, 0);
+    }
+
+    public int getSpentPoints(PartyBuffType type, String ability) {
+        if (ability == null) {
+            return getSpentPoints(type);
+        }
+        return spentPointsByAbility.getOrDefault(ability.toUpperCase(Locale.ROOT), 0);
+    }
+
+    public int getMaxPoints(PartyBuffType type) {
+        return switch (type) {
+            case EXP_SHARING_RATE -> getMaxPointKey(expSharingRateByLevel);
+            case EXP_SHARING_RADIUS -> getMaxPointKey(expSharingRadiusByLevel);
+            case MEMBER_SLOTS -> getMaxPointKey(memberSlotsByLevel);
+            case ABILITY_DURATION -> 0;
+        };
+    }
+
+    public int getMaxPoints(PartyBuffType type, String ability) {
+        if (type != PartyBuffType.ABILITY_DURATION || ability == null) {
+            return getMaxPoints(type);
+        }
+        TreeMap<Integer, Integer> levels = abilityDurationPointLevels.get(ability.toUpperCase(Locale.ROOT));
+        return levels == null ? 0 : getMaxPointKey(levels);
+    }
+
+    private int getMaxPointKey(Map<Integer, ?> levels) {
+        int max = 0;
+        for (int key : levels.keySet()) {
+            if (key > max) {
+                max = key;
+            }
+        }
+        return max;
     }
 }

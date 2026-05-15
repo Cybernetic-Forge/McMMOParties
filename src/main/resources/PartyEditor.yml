@@ -7,7 +7,7 @@ Icons:
     Display: "&9Party ID"
     Lore:
       - "&a%party_id%"
-      - "&eCancel and re-create to change your party id"
+      - "&7Party ID is read-only"
   PartyDisplayName:
     Slot: 48
     Material: NAME_TAG
@@ -42,12 +42,24 @@ Icons:
     Display: "&cCancel"
     Lore:
       - "&7Click to cancel party creation"
+  CancelEdit:
+    Slot: 53
+    Material: BARRIER
+    Display: "&cCancel"
+    Lore:
+      - "&7Click to cancel party editing"
   Create:
     Slot: 52
     Material: GREEN_STAINED_GLASS_PANE
     Display: "&aCreate Party"
     Lore:
       - "&7Click to create your party"
+  Save:
+    Slot: 52
+    Material: LIME_STAINED_GLASS_PANE
+    Display: "&aSave Changes"
+    Lore:
+      - "&7Click to save your party changes"
   Requirements:
     MINING:
       Slot: 10

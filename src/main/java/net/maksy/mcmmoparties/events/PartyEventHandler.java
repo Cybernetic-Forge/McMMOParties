@@ -37,6 +37,9 @@ public class PartyEventHandler {
             party.setLevel(party.getLevel() + 1);
             party.setCurrentExperience(party.getTotalExperience() - McMMOParties.getConfigManager().getPastExp(party.getLevel()));
             party.setNeededExperience(McMMOParties.getConfigManager().getNeededExperience(party.getLevel() + 1));
+            if (McMMOParties.getConfigManager().getBuffHandlerMode() == net.maksy.mcmmoparties.configuration.enums.BuffHandlerMode.SKILLPOINTS) {
+                McMMOParties.getSQL().addPartySkillPoints(party.getPartyID(), McMMOParties.getConfigManager().getSkillPointsPerLevel());
+            }
             party.refreshBuffs();
 
             party.announceToMembers(LanguageConfig.get().getMessage(Lang.PARTY_LEVELUP, new Replaceable("%level%", String.valueOf(party.getLevel()))));
