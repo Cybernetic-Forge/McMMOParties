@@ -1,15 +1,19 @@
 package net.maksy.mcmmoparties.configuration;
 
+import com.gmail.nossr50.datatypes.skills.PrimarySkillType;
 import lombok.Getter;
 import net.maksy.mcmmoparties.McMMOParties;
 import net.maksy.mcmmoparties.configuration.enums.BuffHandlerMode;
 import net.maksy.mcmmoparties.configuration.enums.PartyBuffType;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
+import net.maksy.mcmmoparties.configuration.models.SkillRequirement;
 import org.bukkit.configuration.ConfigurationSection;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -39,6 +43,8 @@ public class PartyBuffHandler {
     private final Map<Integer, Integer> memberSlotsByLevel = new TreeMap<>();
     private final Map<Integer, Map<String, Integer>> abilityDurationByLevel = new TreeMap<>();
     private final Map<String, TreeMap<Integer, Integer>> abilityDurationPointLevels = new HashMap<>();
+    private final Map<String, TreeMap<Integer, Double>> skillPointUpgradeCosts = new HashMap<>();
+    private final Map<String, Map<Integer, List<SkillRequirement>>> skillPointUpgradeConditions = new HashMap<>();
 
     private final Map<PartyBuffType, Integer> spentPointsByBuff = new EnumMap<>(PartyBuffType.class);
     private final Map<String, Integer> spentPointsByAbility = new HashMap<>();
@@ -60,6 +66,8 @@ public class PartyBuffHandler {
         memberSlotsByLevel.clear();
         abilityDurationByLevel.clear();
         abilityDurationPointLevels.clear();
+        skillPointUpgradeCosts.clear();
+        skillPointUpgradeConditions.clear();
         spentPointsByBuff.clear();
         spentPointsByAbility.clear();
 
@@ -108,16 +116,19 @@ public class PartyBuffHandler {
         ConfigurationSection rateSection = skillpoints.getConfigurationSection(PartyBuffType.EXP_SHARING_RATE.name());
         if (rateSection != null) {
             loadDoubleLevels(rateSection, expSharingRateByLevel);
+            loadSkillPointUpgradeConfig(rateSection, buildSkillPointKey(PartyBuffType.EXP_SHARING_RATE, null));
         }
 
         ConfigurationSection radiusSection = skillpoints.getConfigurationSection(PartyBuffType.EXP_SHARING_RADIUS.name());
         if (radiusSection != null) {
             loadIntLevels(radiusSection, expSharingRadiusByLevel);
+            loadSkillPointUpgradeConfig(radiusSection, buildSkillPointKey(PartyBuffType.EXP_SHARING_RADIUS, null));
         }
 
         ConfigurationSection slotsSection = skillpoints.getConfigurationSection(PartyBuffType.MEMBER_SLOTS.name());
         if (slotsSection != null) {
             loadIntLevels(slotsSection, memberSlotsByLevel);
+            loadSkillPointUpgradeConfig(slotsSection, buildSkillPointKey(PartyBuffType.MEMBER_SLOTS, null));
         }
 
         ConfigurationSection abilitySection = skillpoints.getConfigurationSection(PartyBuffType.ABILITY_DURATION.name());
@@ -138,7 +149,9 @@ public class PartyBuffHandler {
                     abilityDurationByLevel.computeIfAbsent(level, unused -> new HashMap<>())
                             .merge(ability.toUpperCase(Locale.ROOT), seconds, Integer::sum);
                 }
-                abilityDurationPointLevels.put(ability.toUpperCase(Locale.ROOT), levels);
+                String normalizedAbility = ability.toUpperCase(Locale.ROOT);
+                abilityDurationPointLevels.put(normalizedAbility, levels);
+                loadSkillPointUpgradeConfig(abilityLevels, buildSkillPointKey(PartyBuffType.ABILITY_DURATION, normalizedAbility));
             }
         }
 
@@ -192,6 +205,58 @@ public class PartyBuffHandler {
                 continue;
             }
             target.put(level, section.getDouble(levelKey));
+        }
+    }
+
+    private void loadSkillPointUpgradeConfig(ConfigurationSection section, String key) {
+        ConfigurationSection configuration = section.getConfigurationSection("Configuration");
+        if (configuration == null) {
+            return;
+        }
+
+        ConfigurationSection costsSection = configuration.getConfigurationSection("Costs");
+        if (costsSection != null) {
+            TreeMap<Integer, Double> costs = new TreeMap<>();
+            for (String levelKey : costsSection.getKeys(false)) {
+                int level = parsePositiveInt(levelKey);
+                if (level <= 0) {
+                    continue;
+                }
+                costs.put(level, costsSection.getDouble(levelKey));
+            }
+            if (!costs.isEmpty()) {
+                skillPointUpgradeCosts.put(key, costs);
+            }
+        }
+
+        ConfigurationSection conditionsSection = configuration.getConfigurationSection("Conditions");
+        if (conditionsSection != null) {
+            Map<Integer, List<SkillRequirement>> conditionsByLevel = new HashMap<>();
+            for (String levelKey : conditionsSection.getKeys(false)) {
+                int level = parsePositiveInt(levelKey);
+                if (level <= 0) {
+                    continue;
+                }
+                ConfigurationSection skillSection = conditionsSection.getConfigurationSection(levelKey);
+                if (skillSection == null) {
+                    continue;
+                }
+                List<SkillRequirement> requirements = new ArrayList<>();
+                for (String skillKey : skillSection.getKeys(false)) {
+                    try {
+                        PrimarySkillType skill = PrimarySkillType.valueOf(skillKey.toUpperCase(Locale.ROOT));
+                        requirements.add(new SkillRequirement(skill, skillSection.getInt(skillKey)));
+                    } catch (IllegalArgumentException ignored) {
+                        logger.warning("Unknown PrimarySkillType in buff condition: " + skillKey);
+                    }
+                }
+                if (!requirements.isEmpty()) {
+                    conditionsByLevel.put(level, requirements);
+                }
+            }
+            if (!conditionsByLevel.isEmpty()) {
+                skillPointUpgradeConditions.put(key, conditionsByLevel);
+            }
         }
     }
 
@@ -447,6 +512,29 @@ public class PartyBuffHandler {
         }
         TreeMap<Integer, Integer> levels = abilityDurationPointLevels.get(ability.toUpperCase(Locale.ROOT));
         return levels == null ? 0 : getMaxPointKey(levels);
+    }
+
+    public double getNextUpgradeCost(PartyBuffType type, String ability) {
+        TreeMap<Integer, Double> costs = skillPointUpgradeCosts.get(buildSkillPointKey(type, ability));
+        if (costs == null || costs.isEmpty()) {
+            return 0.0;
+        }
+        int nextPoint = getSpentPoints(type, ability) + 1;
+        return Math.max(0.0, costs.getOrDefault(nextPoint, 0.0));
+    }
+
+    public List<SkillRequirement> getNextUpgradeConditions(PartyBuffType type, String ability) {
+        Map<Integer, List<SkillRequirement>> conditions = skillPointUpgradeConditions.get(buildSkillPointKey(type, ability));
+        if (conditions == null || conditions.isEmpty()) {
+            return List.of();
+        }
+        int nextPoint = getSpentPoints(type, ability) + 1;
+        List<SkillRequirement> requirements = conditions.get(nextPoint);
+        return requirements == null ? List.of() : List.copyOf(requirements);
+    }
+
+    private String buildSkillPointKey(PartyBuffType type, String ability) {
+        return type.name() + "::" + (ability == null ? "" : ability.toUpperCase(Locale.ROOT));
     }
 
     private int getMaxPointKey(Map<Integer, ?> levels) {

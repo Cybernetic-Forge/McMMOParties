@@ -213,6 +213,14 @@ Icons:
     Lore:
       - "&eTotal: &a%current_amount%"
       - "&eNext Upgrade: &a%current_amount% &m->&r %next_amount%"
+      - " "
+      - "&5✦: &d%highlight_count%"
+      - "&ePreferred: %preferred_text%"
+      - "&eYour Highlight: %player_highlighted%"
+      - " "
+      - "&7[&aLeft-Click&7] &fUpgrade (owner only)"
+      - "&7[&aRight-Click&7] &fHighlight this buff"
+      - " "
   BuffsDisplayLevel:
     Slot: 10
     Material: POTION
@@ -235,3 +243,11 @@ Icons:
       - "&7Handler: &fSkillpoints"
       - "&7Total: &f%skillpoints_total%"
       - "&7Available: &f%skillpoints_available%"
+BuffValidation:
+  Costs:
+    - "&eCost: &a%cost_amount%"
+    - "&7Current Balance: &f%party_balance%"
+  ConditionsHeader:
+    - "&eConditions:"
+  ConditionEntry:
+    - "&7- &f%skill_name%: &a%skill_current%&7/&a%skill_required%"

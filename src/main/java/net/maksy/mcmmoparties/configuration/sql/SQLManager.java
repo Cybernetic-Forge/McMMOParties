@@ -9,6 +9,7 @@ import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.configuration.models.PartySettings;
 import net.maksy.mcmmoparties.configuration.models.SkillRequirement;
 import net.maksy.mcmmoparties.configuration.sql.tables.PartyBuffSkillPointsTableSQL;
+import net.maksy.mcmmoparties.configuration.sql.tables.PartyBuffSuggestionTableSQL;
 import net.maksy.mcmmoparties.configuration.sql.tables.PartyPlayerShareTableSQL;
 import net.maksy.mcmmoparties.configuration.sql.tables.PartyTableSQL;
 import net.maksy.mcmmoparties.configuration.sql.tables.PlayerTableSQL;
@@ -51,6 +52,7 @@ public class SQLManager {
     private final SkillRequirementTableSQL skillTable;
     private final PartyPlayerShareTableSQL partyShareTable;
     private final PartyBuffSkillPointsTableSQL buffSkillPointsTable;
+    private final PartyBuffSuggestionTableSQL buffSuggestionTable;
 
     public SQLManager() {
         try {
@@ -61,6 +63,7 @@ public class SQLManager {
             skillTable = new SkillRequirementTableSQL();
             partyShareTable = new PartyPlayerShareTableSQL();
             buffSkillPointsTable = new PartyBuffSkillPointsTableSQL();
+            buffSuggestionTable = new PartyBuffSuggestionTableSQL();
 
             try (Connection connection = connection()) {
                 skillTable.migrateSkillColumnsIfPresent(connection);
@@ -408,6 +411,26 @@ public class SQLManager {
         return new HashMap<>();
     }
 
+    public Map<String, Integer> getBuffSuggestionCounts(String partyID) {
+        String normalizedPartyID = normalizePartyID(partyID);
+        try (Connection connection = connection()) {
+            return buffSuggestionTable.getSuggestionCounts(connection, normalizedPartyID);
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not load buff suggestion counts for " + partyID, e);
+        }
+        return new HashMap<>();
+    }
+
+    public String getPlayerBuffSuggestionKey(String partyID, UUID playerUuid) {
+        String normalizedPartyID = normalizePartyID(partyID);
+        try (Connection connection = connection()) {
+            return buffSuggestionTable.getPlayerSuggestionKey(connection, normalizedPartyID, playerUuid);
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not load player buff suggestion for " + partyID, e);
+        }
+        return null;
+    }
+
     public int getTotalSpentBuffSkillPoints(String partyID) {
         String normalizedPartyID = normalizePartyID(partyID);
         try (Connection connection = connection()) {
@@ -418,7 +441,7 @@ public class SQLManager {
         return 0;
     }
 
-    public boolean spendBuffSkillPoint(String partyID, PartyBuffType type, String ability, int maxPoints) {
+    public boolean spendBuffSkillPoint(String partyID, PartyBuffType type, String ability, int maxPoints, double treasuryCost) {
         String normalizedPartyID = normalizePartyID(partyID);
         try (Connection connection = connection()) {
             connection.setAutoCommit(false);
@@ -437,7 +460,17 @@ public class SQLManager {
                     return false;
                 }
 
+                if (treasuryCost > 0.0) {
+                    double currentBalance = partyTable.getBalance(connection, normalizedPartyID);
+                    if (currentBalance < treasuryCost) {
+                        connection.rollback();
+                        return false;
+                    }
+                    partyTable.updateBalance(connection, normalizedPartyID, currentBalance - treasuryCost);
+                }
+
                 buffSkillPointsTable.upsertSpentPoints(connection, normalizedPartyID, type.name(), ability, current + 1);
+                buffSuggestionTable.deleteByParty(connection, normalizedPartyID);
                 connection.commit();
                 return true;
             } catch (SQLException e) {
@@ -511,6 +544,45 @@ public class SQLManager {
         return false;
     }
 
+    public boolean suggestBuffUpgrade(String partyID, UUID playerUuid, PartyBuffType type, String ability) {
+        String normalizedPartyID = normalizePartyID(partyID);
+        try (Connection connection = connection()) {
+            connection.setAutoCommit(false);
+            try {
+                if (!partyTable.exists(connection, normalizedPartyID)) {
+                    connection.rollback();
+                    return false;
+                }
+                PartyState state = playerTable.getPartyState(connection, playerUuid, normalizedPartyID);
+                if (state == null || state == PartyState.NONE || state == PartyState.PENDING) {
+                    connection.rollback();
+                    return false;
+                }
+
+                buffSuggestionTable.upsertSuggestion(connection, normalizedPartyID, playerUuid, type.name(), ability);
+                connection.commit();
+                return true;
+            } catch (SQLException e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not save buff suggestion for " + partyID, e);
+        }
+        return false;
+    }
+
+    public void clearBuffSuggestions(String partyID) {
+        String normalizedPartyID = normalizePartyID(partyID);
+        try (Connection connection = connection()) {
+            buffSuggestionTable.deleteByParty(connection, normalizedPartyID);
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not clear buff suggestions for " + partyID, e);
+        }
+    }
+
     public boolean disbandParty(String partyID) {
         String normalizedPartyID = normalizePartyID(partyID);
 
@@ -523,6 +595,7 @@ public class SQLManager {
                 }
 
                 buffSkillPointsTable.deleteByParty(connection, normalizedPartyID);
+                buffSuggestionTable.deleteByParty(connection, normalizedPartyID);
                 partyShareTable.deleteByParty(connection, normalizedPartyID);
                 skillTable.deleteByParty(connection, normalizedPartyID);
                 settingsTable.deleteByParty(connection, normalizedPartyID);

@@ -11,6 +11,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
+import net.maksy.mcmmoparties.configuration.enums.PartyBuffType;
 
 public class SQLAsyncManager {
 
@@ -74,6 +75,15 @@ public class SQLAsyncManager {
     public static void disbandParty(String partyID, Consumer<Boolean> consumer) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             boolean success = sql.disbandParty(partyID);
+            if (consumer != null) {
+                consumer.accept(success);
+            }
+        });
+    }
+
+    public static void suggestBuffUpgrade(String partyID, UUID playerUuid, PartyBuffType type, String ability, Consumer<Boolean> consumer) {
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            boolean success = sql.suggestBuffUpgrade(partyID, playerUuid, type, ability);
             if (consumer != null) {
                 consumer.accept(success);
             }
