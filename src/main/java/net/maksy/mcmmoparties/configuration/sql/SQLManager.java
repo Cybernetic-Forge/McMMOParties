@@ -7,11 +7,13 @@ import net.maksy.mcmmoparties.configuration.enums.PartyBuffType;
 import net.maksy.mcmmoparties.configuration.enums.PartyState;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.configuration.models.PartySettings;
+import net.maksy.mcmmoparties.configuration.models.PartyWaypoint;
 import net.maksy.mcmmoparties.configuration.models.SkillRequirement;
 import net.maksy.mcmmoparties.configuration.sql.tables.PartyBuffSkillPointsTableSQL;
 import net.maksy.mcmmoparties.configuration.sql.tables.PartyBuffSuggestionTableSQL;
 import net.maksy.mcmmoparties.configuration.sql.tables.PartyPlayerShareTableSQL;
 import net.maksy.mcmmoparties.configuration.sql.tables.PartyTableSQL;
+import net.maksy.mcmmoparties.configuration.sql.tables.PartyWaypointTableSQL;
 import net.maksy.mcmmoparties.configuration.sql.tables.PlayerTableSQL;
 import net.maksy.mcmmoparties.configuration.sql.tables.SettingsTableSQL;
 import net.maksy.mcmmoparties.configuration.sql.tables.SkillRequirementTableSQL;
@@ -53,6 +55,7 @@ public class SQLManager {
     private final PartyPlayerShareTableSQL partyShareTable;
     private final PartyBuffSkillPointsTableSQL buffSkillPointsTable;
     private final PartyBuffSuggestionTableSQL buffSuggestionTable;
+    private final PartyWaypointTableSQL waypointTable;
 
     public SQLManager() {
         try {
@@ -64,6 +67,7 @@ public class SQLManager {
             partyShareTable = new PartyPlayerShareTableSQL();
             buffSkillPointsTable = new PartyBuffSkillPointsTableSQL();
             buffSuggestionTable = new PartyBuffSuggestionTableSQL();
+            waypointTable = new PartyWaypointTableSQL();
 
             try (Connection connection = connection()) {
                 skillTable.migrateSkillColumnsIfPresent(connection);
@@ -359,6 +363,35 @@ public class SQLManager {
         return 0.0;
     }
 
+    public PartyWaypoint getPartyWaypoint(String partyID) {
+        String normalizedPartyID = normalizePartyID(partyID);
+        try (Connection connection = connection()) {
+            return waypointTable.getWaypoint(connection, normalizedPartyID);
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not load party waypoint for " + partyID, e);
+        }
+        return null;
+    }
+
+    public void setPartyWaypoint(PartyWaypoint waypoint) {
+        String normalizedPartyID = normalizePartyID(waypoint.partyID());
+        PartyWaypoint normalized = new PartyWaypoint(
+                normalizedPartyID,
+                waypoint.server(),
+                waypoint.world(),
+                waypoint.x(),
+                waypoint.y(),
+                waypoint.z(),
+                waypoint.yaw(),
+                waypoint.pitch()
+        );
+        try (Connection connection = connection()) {
+            waypointTable.upsertWaypoint(connection, normalized);
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not save party waypoint for " + waypoint.partyID(), e);
+        }
+    }
+
     public double getPartyBalanceShare(String partyId, UUID playerUuid) {
         String normalizedPartyID = normalizePartyID(partyId);
         try (Connection connection = connection()) {
@@ -596,6 +629,7 @@ public class SQLManager {
 
                 buffSkillPointsTable.deleteByParty(connection, normalizedPartyID);
                 buffSuggestionTable.deleteByParty(connection, normalizedPartyID);
+                waypointTable.deleteByParty(connection, normalizedPartyID);
                 partyShareTable.deleteByParty(connection, normalizedPartyID);
                 skillTable.deleteByParty(connection, normalizedPartyID);
                 settingsTable.deleteByParty(connection, normalizedPartyID);

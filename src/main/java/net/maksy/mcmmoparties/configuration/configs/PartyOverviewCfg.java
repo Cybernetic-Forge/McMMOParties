@@ -19,6 +19,8 @@ public class PartyOverviewCfg {
 
     public PartyOverviewCfg() {
         this.config = YamlParser.loadOrExtract(McMMOParties.getInstance(), "PartyOverview.yml");
+        this.config.mergeMissingFromResource("PartyOverview.yml");
+        this.config.saveChanges();
     }
 
     public Component getPartyOverviewTitle() {

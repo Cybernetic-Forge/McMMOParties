@@ -1,4 +1,4 @@
-w Title: "McMMO Party Overview"
+Title: "McMMO Party Overview"
 InvSize: 54
 Icons:
   PartyInfo:
@@ -56,7 +56,8 @@ Icons:
     Material: LECTERN
     Display: "&aParty Waypoint"
     Lore:
-      - "&7[&aClick&7] &eTeleport to your party's waypoint"
+      - "&7[&aLeft-Click&7] &eTeleport to your party's waypoint"
+      - "&7[&aRight-Click&7] &eSet the waypoint to your current location"
   EditParty:
     Slot: 31
     Material: WRITABLE_BOOK
@@ -214,7 +215,7 @@ Icons:
       - "&eTotal: &a%current_amount%"
       - "&eNext Upgrade: &a%current_amount% &m->&r %next_amount%"
       - " "
-      - "&5✦: &d%highlight_count%"
+      - "&5*: &d%highlight_count%"
       - "&ePreferred: %preferred_text%"
       - "&eYour Highlight: %player_highlighted%"
       - " "

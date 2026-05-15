@@ -4,6 +4,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.maksy.mcmmoparties.McMMOParties;
 import net.maksy.mcmmoparties.utils.FileUT;
+import org.bukkit.ChatColor;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -12,18 +13,28 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.logging.Logger;
 
 @SuppressWarnings("unused")
 public class YamlParser extends YamlConfiguration implements IValuesReloadable {
 
     private static final Logger logger = McMMOParties.getInstance().getLogger();
+    private static final List<IValuesReloadable> valuesReloadables = new LinkedList<>();
+
     private final File file;
     private boolean isChanged;
-
-    private static final List<IValuesReloadable> valuesReloadables = new LinkedList<>();
 
     public YamlParser(@NotNull File file) {
         this.isChanged = false;
@@ -40,12 +51,12 @@ public class YamlParser extends YamlConfiguration implements IValuesReloadable {
     public void save() {
         try {
             this.save(this.file);
-        } catch (IOException var2) {
+        } catch (IOException ex) {
             logger.warning("Could not save config: " + this.file.getName());
         }
-
     }
 
+    @Override
     public void set(@NotNull String path, @Nullable Object value) {
         super.set(path, value);
         isChanged = true;
@@ -62,10 +73,9 @@ public class YamlParser extends YamlConfiguration implements IValuesReloadable {
         try {
             this.load(this.file);
             this.isChanged = false;
-        } catch (IOException | InvalidConfigurationException var3) {
-            logger.warning("The reload went wrong: " + var3.getMessage());
+        } catch (IOException | InvalidConfigurationException ex) {
+            logger.warning("The reload went wrong: " + ex.getMessage());
         }
-
     }
 
     public static FileConfiguration getDefaultConfig(String filePath) {
@@ -82,17 +92,16 @@ public class YamlParser extends YamlConfiguration implements IValuesReloadable {
             filePath = "/" + filePath;
         }
 
-        File var10002 = plugin.getDataFolder();
-        File file = new File(var10002 + filePath);
+        File file = new File(plugin.getDataFolder() + filePath);
         if (!file.exists()) {
             FileUT.create(file);
-
             try {
                 InputStream input = plugin.getClass().getResourceAsStream(filePath);
-                if (input != null)
+                if (input != null) {
                     FileUT.copy(input, file);
-            } catch (Exception var4) {
-                logger.warning("The loading or extraction went wrong: " + var4.getMessage());
+                }
+            } catch (Exception ex) {
+                logger.warning("The loading or extraction went wrong: " + ex.getMessage());
             }
         }
 
@@ -102,17 +111,36 @@ public class YamlParser extends YamlConfiguration implements IValuesReloadable {
     public void addMissing(@NotNull String path, @Nullable Object val) {
         if (!this.contains(path)) {
             this.set(path, val);
-            isChanged = true;
+        }
+    }
+
+    public void mergeMissingFromResource(@NotNull String filePath) {
+        mergeMissingFrom(YamlParser.getDefaultConfig(filePath));
+    }
+
+    public void mergeMissingFrom(@NotNull FileConfiguration defaults) {
+        mergeSection(defaults, "");
+    }
+
+    private void mergeSection(@NotNull ConfigurationSection source, @NotNull String pathPrefix) {
+        for (String key : source.getKeys(false)) {
+            String fullPath = pathPrefix.isEmpty() ? key : pathPrefix + "." + key;
+            Object value = source.get(key);
+            if (value instanceof ConfigurationSection section) {
+                addMissing(fullPath, new LinkedHashMap<>());
+                mergeSection(section, fullPath);
+                continue;
+            }
+            addMissing(fullPath, value);
         }
     }
 
     public boolean remove(@NotNull String path) {
         if (!this.contains(path)) {
             return false;
-        } else {
-            this.set(path, null);
-            return true;
         }
+        this.set(path, null);
+        return true;
     }
 
     public @NotNull Set<String> getSection(@NotNull String path) {
@@ -121,9 +149,11 @@ public class YamlParser extends YamlConfiguration implements IValuesReloadable {
     }
 
     public String getString(@NotNull String path) {
-        if (!isSet(path)) return "";
+        if (!isSet(path)) {
+            return "";
+        }
         String str = super.getString(path);
-        return str != null && !str.isEmpty() ? str.replace("&", "§") : "";
+        return str != null && !str.isEmpty() ? ChatColor.translateAlternateColorCodes('&', str) : "";
     }
 
     public String getString(@NotNull String path, @Nullable String def) {
@@ -131,12 +161,16 @@ public class YamlParser extends YamlConfiguration implements IValuesReloadable {
     }
 
     public @NotNull List<String> getStringList(@NotNull String path) {
-        if (!isSet(path)) return List.of();
+        if (!isSet(path)) {
+            return List.of();
+        }
         return super.getStringList(path);
     }
 
     public List<String> getStringList(@NotNull String path, List<String> def) {
-        if (!isSet(path)) return def;
+        if (!isSet(path)) {
+            return def;
+        }
         return super.getStringList(path);
     }
 
@@ -151,16 +185,18 @@ public class YamlParser extends YamlConfiguration implements IValuesReloadable {
     }
 
     public static void reload(String config) {
-        for (IValuesReloadable reloadable : valuesReloadables)
+        for (IValuesReloadable reloadable : valuesReloadables) {
             if (reloadable.getConfig().equals(config)) {
                 reloadable.reloadValues();
                 return;
             }
+        }
     }
 
     public static void reloadAll(boolean message) {
-        if (message)
+        if (message) {
             McMMOParties.consoleMessage(Component.text("Reloading Configuration..", NamedTextColor.GRAY));
+        }
         for (IValuesReloadable reloadable : valuesReloadables) {
             reloadable.reloadValues();
         }
@@ -168,8 +204,9 @@ public class YamlParser extends YamlConfiguration implements IValuesReloadable {
 
     public static List<String> getConfigNames() {
         List<String> entries = new ArrayList<>();
-        for (IValuesReloadable reloadable : valuesReloadables)
+        for (IValuesReloadable reloadable : valuesReloadables) {
             entries.add(reloadable.getConfig());
+        }
         return entries;
     }
 }

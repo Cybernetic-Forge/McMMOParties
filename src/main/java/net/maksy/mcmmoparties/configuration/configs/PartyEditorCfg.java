@@ -10,6 +10,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class PartyEditorCfg {
@@ -18,6 +19,8 @@ public class PartyEditorCfg {
 
     public PartyEditorCfg() {
         this.config = YamlParser.loadOrExtract(McMMOParties.getInstance(), "PartyEditor.yml");
+        this.config.mergeMissingFromResource("PartyEditor.yml");
+        this.config.saveChanges();
     }
 
     public Component getPartyEditorTitle() {
@@ -30,21 +33,42 @@ public class PartyEditorCfg {
 
     public Pair<Integer, ItemStack> getIcon(String iconPath, Replaceable... replaceables) {
         int slot = config.getInt("Icons." + iconPath + ".Slot", 0);
-        Material material = Material.valueOf(config.getString("Icons." + iconPath + ".Material", "STONE"));
-        String display = config.getString("Icons." + iconPath + ".Display", "DisplayName error");
-        final List<String> lore = config.getStringList("Icons." + iconPath + ".Lore", List.of());
+        Material material = getMaterial(iconPath, Material.STONE);
+        String display = applyReplaceables(config.getString("Icons." + iconPath + ".Display", "DisplayName error"), replaceables);
+        List<String> lore = applyReplaceables(config.getStringList("Icons." + iconPath + ".Lore", List.of()), replaceables);
+        return Pair.of(slot, ItemUT.getItem(material, display, lore));
+    }
 
-        if(replaceables != null) {
-            for(var replace : replaceables) {
-                // Skip replacements with null values to prevent NullPointerException
-                if(replace.getK() != null && replace.getV() != null) {
-                    display = display.replace(replace.getK(), replace.getV());
-                    lore.forEach(l -> lore.set(lore.indexOf(l), l.replace(replace.getK(), replace.getV())));
-                }
+    private Material getMaterial(String iconPath, Material fallback) {
+        try {
+            return Material.valueOf(config.getString("Icons." + iconPath + ".Material", fallback.name()));
+        } catch (IllegalArgumentException ignored) {
+            return fallback;
+        }
+    }
+
+    private String applyReplaceables(String value, Replaceable... replaceables) {
+        String result = value;
+        if (replaceables == null) {
+            return result;
+        }
+        for (Replaceable replace : replaceables) {
+            if (replace != null && replace.getK() != null && replace.getV() != null) {
+                result = result.replace(replace.getK(), replace.getV());
             }
         }
+        return result;
+    }
 
-        return Pair.of(slot, ItemUT.getItem(material, display, lore));
+    private List<String> applyReplaceables(List<String> values, Replaceable... replaceables) {
+        List<String> result = new ArrayList<>(values);
+        if (replaceables == null) {
+            return result;
+        }
+        for (int i = 0; i < result.size(); i++) {
+            result.set(i, applyReplaceables(result.get(i), replaceables));
+        }
+        return result;
     }
 }
 

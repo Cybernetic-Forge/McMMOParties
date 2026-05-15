@@ -13,8 +13,10 @@ import net.maksy.mcmmoparties.hooks.EconomyHook;
 import net.maksy.mcmmoparties.hooks.HookManager;
 import net.maksy.mcmmoparties.listeners.AbilityBuffListener;
 import net.maksy.mcmmoparties.listeners.ExpEvents;
+import net.maksy.mcmmoparties.network.ProxyTeleportListener;
 import net.maksy.mcmmoparties.utils.ChatUT;
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Objects;
@@ -37,6 +39,8 @@ public final class McMMOParties extends JavaPlugin {
     private static PartyEditorCfg partyEditorCfg;
     @Getter
     private static PartyOverviewCfg partyOverviewCfg;
+    private ProxyTeleportListener proxyTeleportListener;
+
     @Override
     public void onEnable() {
         instance = this;
@@ -56,12 +60,26 @@ public final class McMMOParties extends JavaPlugin {
 
         partyEventHandler = new PartyEventHandler();
 
+        NamespacedKey teleportChannel = NamespacedKey.fromString(configManager.getTeleportChannel());
+        if (teleportChannel != null) {
+            proxyTeleportListener = new ProxyTeleportListener();
+            getServer().getMessenger().registerOutgoingPluginChannel(this, teleportChannel.toString());
+            getServer().getMessenger().registerIncomingPluginChannel(this, teleportChannel.toString(), proxyTeleportListener);
+        } else {
+            getLogger().warning("Invalid teleport channel configured: " + configManager.getTeleportChannel());
+        }
+
         getServer().getPluginManager().registerEvents(new ExpEvents(), this);
         getServer().getPluginManager().registerEvents(new AbilityBuffListener(), this);
     }
 
     @Override
     public void onDisable() {
+        NamespacedKey teleportChannel = configManager != null ? NamespacedKey.fromString(configManager.getTeleportChannel()) : null;
+        if (teleportChannel != null && proxyTeleportListener != null) {
+            getServer().getMessenger().unregisterIncomingPluginChannel(this, teleportChannel.toString(), proxyTeleportListener);
+            getServer().getMessenger().unregisterOutgoingPluginChannel(this, teleportChannel.toString());
+        }
         if (partyLoader != null) {
             try {
                 partyLoader.saveParties();

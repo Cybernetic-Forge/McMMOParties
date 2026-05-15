@@ -19,8 +19,10 @@ import net.maksy.mcmmoparties.McMMOParties;
 import net.maksy.mcmmoparties.configuration.enums.PartyBuffType;
 import net.maksy.mcmmoparties.configuration.enums.PartyFeature;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
+import net.maksy.mcmmoparties.configuration.models.PartyWaypoint;
 import net.maksy.mcmmoparties.configuration.models.SkillRequirement;
 import net.maksy.mcmmoparties.hooks.EconomyHook;
+import net.maksy.mcmmoparties.network.ProxyTeleportService;
 import net.maksy.mcmmoparties.utils.InventoryUtils;
 import net.maksy.mcmmoparties.utils.ItemUT;
 import net.maksy.mcmmoparties.utils.Replaceable;
@@ -42,6 +44,10 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.*;
+
+import static net.maksy.mcmmoparties.configuration.enums.Lang.NOT_OWNER;
+import static net.maksy.mcmmoparties.configuration.enums.Lang.WAYPOINT_NOT_SET;
+import static net.maksy.mcmmoparties.configuration.enums.Lang.WAYPOINT_UPDATED;
 
 public class PartyOverview implements Listener {
 
@@ -728,8 +734,45 @@ public class PartyOverview implements Listener {
                         openTresorDialog(player, false);
                     }
                 }
-                case PROGRESS, WARP -> {
-                    // TODO: hook up progress/warp sub-guis if available
+                case WARP -> {
+                    if (clickType.isLeftClick()) {
+                        PartyWaypoint waypoint = McMMOParties.getSQL().getPartyWaypoint(party.getPartyID());
+                        if (waypoint == null) {
+                            player.sendMessage(net.maksy.mcmmoparties.configuration.configs.LanguageConfig.get().getMessage(WAYPOINT_NOT_SET));
+                            return;
+                        }
+                        ProxyTeleportService.teleport(
+                                player,
+                                waypoint.server(),
+                                waypoint.world(),
+                                waypoint.x(),
+                                waypoint.y(),
+                                waypoint.z(),
+                                waypoint.yaw(),
+                                waypoint.pitch()
+                        );
+                    } else if (clickType.isRightClick()) {
+                        if (!party.isOwner(playerUuid)) {
+                            player.sendMessage(net.maksy.mcmmoparties.configuration.configs.LanguageConfig.get().getMessage(NOT_OWNER));
+                            return;
+                        }
+                        var location = player.getLocation();
+                        PartyWaypoint waypoint = new PartyWaypoint(
+                                party.getPartyID(),
+                                McMMOParties.getConfigManager().getServerName(),
+                                Objects.requireNonNull(location.getWorld()).getName(),
+                                location.getX(),
+                                location.getY(),
+                                location.getZ(),
+                                location.getYaw(),
+                                location.getPitch()
+                        );
+                        McMMOParties.getSQL().setPartyWaypoint(waypoint);
+                        player.sendMessage(net.maksy.mcmmoparties.configuration.configs.LanguageConfig.get().getMessage(WAYPOINT_UPDATED));
+                    }
+                }
+                case PROGRESS -> {
+                    // TODO: hook up progress sub-gui if available
                 }
             }
             return;

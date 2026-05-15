@@ -1,50 +1,53 @@
 package net.maksy.mcmmoparties.configuration.configs;
 
 import net.maksy.mcmmoparties.McMMOParties;
+import net.maksy.mcmmoparties.configuration.YamlParser;
 import net.maksy.mcmmoparties.configuration.enums.Lang;
 import net.maksy.mcmmoparties.utils.Replaceable;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.ChatColor;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.util.Objects;
+import java.util.Locale;
 
 public class LanguageConfig {
 
-    private final File file;
-    private static FileConfiguration configuration;
-
     private static LanguageConfig instance;
 
-    public static LanguageConfig get() { return instance == null ? new LanguageConfig() : instance; }
+    private final YamlParser config;
+
+    public static LanguageConfig get() {
+        if (instance == null) {
+            instance = new LanguageConfig();
+        }
+        return instance;
+    }
 
     private LanguageConfig() {
-        file = new File(McMMOParties.getInstance().getDataFolder(), "lang.yml");
+        this.config = YamlParser.loadOrExtract(McMMOParties.getInstance(), "lang.yml");
         reload();
     }
 
     public void reload() {
-        configuration = YamlConfiguration.loadConfiguration(file);
-        if(!file.exists()) {
-            try {
-                Reader targetReader = new InputStreamReader(Objects.requireNonNull(McMMOParties.getInstance().getResource("lang.yml")));
-                configuration = YamlConfiguration.loadConfiguration(targetReader);
-                configuration.save(file);
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
+        config.reload();
+        config.mergeMissingFromResource("lang.yml");
+
+        var defaultConfig = YamlParser.getDefaultConfig("lang.yml");
+        for (Lang lang : Lang.values()) {
+            String path = lang.name().toLowerCase(Locale.ROOT);
+            String defaultMessage = defaultConfig.getString(path, "&cMissing language entry: " + path);
+            config.addMissing(path, defaultMessage);
         }
-        configuration = YamlConfiguration.loadConfiguration(file);
+
+        config.saveChanges();
     }
 
     public String getMessage(Lang lang) {
-        return Objects.requireNonNull(configuration.getString(lang.toString().toLowerCase())).replace("&", "§");
+        return ChatColor.translateAlternateColorCodes(
+                '&',
+                config.getString(lang.name().toLowerCase(Locale.ROOT), "&cMissing language entry")
+        );
     }
 
-    public String getMessage(Lang lang, Replaceable replacables) {
-        return Objects.requireNonNull(configuration.getString(lang.toString().toLowerCase())).replace("&", "§").replace(replacables.getK(), replacables.getV());
+    public String getMessage(Lang lang, Replaceable replaceable) {
+        return getMessage(lang).replace(replaceable.getK(), replaceable.getV());
     }
 }

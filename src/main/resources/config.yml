@@ -6,6 +6,10 @@ SQL:
   Password: /
   Port: /
 
+Network:
+  ServerName: paper
+  TeleportChannel: "mcmmoparties:teleport"
+
 Party:
   BaseMemberSlots: 10
 
@@ -17,3 +21,30 @@ Buffs:
     EXP_SHARING_RADIUS: "&aExp Sharing Radius"
     MEMBER_SLOTS: "&aMember Slots"
     ABILITY_DURATION: "&aAbility Duration"
+
+Experience:
+  LevelCurve: "x * 50 * Math.pow(x,2)"
+  Bar:
+    Display: "&b%party%     &9LvL &b%level%     &7[&a%exp%&7/&a%needed%&7]"
+    Color: BLUE
+    Segments: SOLID
+  Scaling:
+    MINING: 0.2
+    WOODCUTTING: 0.2
+    REPAIR: 0.2
+    UNARMED: 0.2
+    HERBALISM: 0.2
+    EXCAVATION: 0.2
+    ARCHERY: 0.2
+    SWORDS: 0.2
+    AXES: 0.2
+    ACROBATICS: 0.2
+    TAMING: 0.2
+    FISHING: 0.2
+    ALCHEMY: 0.2
+    SMELTING: 0.2
+    SALVAGE: 0.2
+    MACES: 0.2
+    TRIDENTS: 0.2
+    CROSSBOWS: 0.2
+    SPEARS: 0.2

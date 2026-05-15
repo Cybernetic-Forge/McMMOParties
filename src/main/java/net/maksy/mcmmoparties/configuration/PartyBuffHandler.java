@@ -52,6 +52,8 @@ public class PartyBuffHandler {
     public PartyBuffHandler(McMMOParty party) {
         this.party = party;
         this.config = YamlParser.loadOrExtract(McMMOParties.getInstance(), "Features/Buffs.yml");
+        this.config.mergeMissingFromResource("Features/Buffs.yml");
+        this.config.saveChanges();
         this.logger = McMMOParties.getInstance().getLogger();
         reload();
     }
