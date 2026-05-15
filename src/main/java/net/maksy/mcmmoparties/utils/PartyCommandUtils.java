@@ -167,7 +167,46 @@ public class PartyCommandUtils {
             return;
         }
 
+        if (party.isOwner(player.getUniqueId())) {
+            player.sendMessage(LanguageConfig.get().getMessage(OWNER_CANNOT_LEAVE));
+            return;
+        }
+
         partyEventHandler.callPartyMemberLeaveEvent(party, player);
+    }
+
+    public static void disbandPartyCommand(Player player) {
+        McMMOParty party = partyLoader.getPartyOfPlayer(player.getUniqueId());
+
+        if (party == null) {
+            player.sendMessage(LanguageConfig.get().getMessage(NOT_IN_PARTY));
+            return;
+        }
+
+        if (!party.isOwner(player.getUniqueId())) {
+            player.sendMessage(LanguageConfig.get().getMessage(NOT_OWNER));
+            return;
+        }
+
+        String partyId = party.getPartyID();
+        SQLAsyncManager.disbandParty(partyId, success -> {
+            Bukkit.getScheduler().runTask(McMMOParties.getInstance(), () -> {
+                if (!success) {
+                    player.sendMessage(LanguageConfig.get().getMessage(PARTY_NOT_EXISTS));
+                    return;
+                }
+
+                String message = LanguageConfig.get().getMessage(PARTY_DISBANDED, new Replaceable("%party%", partyId));
+                for (UUID memberId : party.getMembers()) {
+                    Player member = Bukkit.getPlayer(memberId);
+                    if (member != null && member.isOnline()) {
+                        member.sendMessage(message);
+                    }
+                }
+
+                partyLoader.reload(partyId);
+            });
+        });
     }
 
     public static void setOwnerPartyCommand(Player player, String[] args) {

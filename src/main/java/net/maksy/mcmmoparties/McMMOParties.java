@@ -50,7 +50,9 @@ public final class McMMOParties extends JavaPlugin {
         init();
         sql = new SQLManager();
         partyLoader = new PartyLoader();
-        Objects.requireNonNull(getCommand("party")).setExecutor(new PartyCommands());
+        PartyCommands partyCommands = new PartyCommands();
+        Objects.requireNonNull(getCommand("party")).setExecutor(partyCommands);
+        Objects.requireNonNull(getCommand("party")).setTabCompleter(partyCommands);
 
         partyEventHandler = new PartyEventHandler();
 

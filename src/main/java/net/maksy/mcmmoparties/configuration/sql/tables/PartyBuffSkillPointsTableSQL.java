@@ -103,6 +103,13 @@ public class PartyBuffSkillPointsTableSQL {
         }
     }
 
+    public void deleteByParty(Connection connection, String partyID) throws SQLException {
+        try (PreparedStatement delete = connection.prepareStatement("DELETE FROM " + SQLTables.BUFF_SKILLPOINTS_TABLE + " WHERE PartyID=?")) {
+            delete.setString(1, normalizePartyID(partyID));
+            delete.executeUpdate();
+        }
+    }
+
     private String normalizePartyID(String partyID) {
         return partyID == null ? null : partyID.toLowerCase(Locale.ROOT);
     }

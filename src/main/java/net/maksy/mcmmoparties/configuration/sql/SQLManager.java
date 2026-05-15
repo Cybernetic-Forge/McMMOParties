@@ -511,6 +511,38 @@ public class SQLManager {
         return false;
     }
 
+    public boolean disbandParty(String partyID) {
+        String normalizedPartyID = normalizePartyID(partyID);
+
+        try (Connection connection = connection()) {
+            connection.setAutoCommit(false);
+            try {
+                if (!partyTable.exists(connection, normalizedPartyID)) {
+                    connection.rollback();
+                    return false;
+                }
+
+                buffSkillPointsTable.deleteByParty(connection, normalizedPartyID);
+                partyShareTable.deleteByParty(connection, normalizedPartyID);
+                skillTable.deleteByParty(connection, normalizedPartyID);
+                settingsTable.deleteByParty(connection, normalizedPartyID);
+                playerTable.deleteByParty(connection, normalizedPartyID);
+                partyTable.deleteParty(connection, normalizedPartyID);
+
+                connection.commit();
+                return true;
+            } catch (SQLException e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not disband party " + partyID, e);
+        }
+        return false;
+    }
+
 
     private String normalizePartyID(String partyID) {
         return partyID == null ? null : partyID.toLowerCase(Locale.ROOT);

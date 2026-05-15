@@ -70,4 +70,13 @@ public class SQLAsyncManager {
                 runnable.run();
         });
     }
+
+    public static void disbandParty(String partyID, Consumer<Boolean> consumer) {
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            boolean success = sql.disbandParty(partyID);
+            if (consumer != null) {
+                consumer.accept(success);
+            }
+        });
+    }
 }

@@ -55,15 +55,20 @@ public class PartyEventHandler {
             party.setExperience(a);
 
             barMap.putIfAbsent(party.getPartyID(), McMMOParties.getConfigManager().getLevelBar(party));
-            barMap.get(party.getPartyID()).setProgress(Utils.round(party.getCurrentExperience()) / party.getNeededExperience());
-            barMap.get(party.getPartyID()).setTitle(McMMOParties.getConfigManager().getBossBarTitle(party));
+            BossBar bar = barMap.get(party.getPartyID());
+            double neededExperience = party.getNeededExperience();
+            double currentExperience = Utils.round(party.getCurrentExperience());
+            double progress = neededExperience <= 0.0 ? 0.0 : currentExperience / neededExperience;
+
+            bar.setProgress(Math.max(0.0, Math.min(1.0, progress)));
+            bar.setTitle(McMMOParties.getConfigManager().getBossBarTitle(party));
 
             if (!playerSet.contains(player)) {
-                barMap.get(party.getPartyID()).addPlayer(player);
+                bar.addPlayer(player);
                 playerSet.add(player);
 
                 Bukkit.getScheduler().runTaskLater(McMMOParties.getInstance(), () -> {
-                    barMap.get(party.getPartyID()).removePlayer(player);
+                    bar.removePlayer(player);
                     playerSet.remove(player);
                 }, 100L);
             }

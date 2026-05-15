@@ -16,8 +16,9 @@ public class PartyLoader {
 
     public void reload() {
         SQLAsyncManager.getMcMMOParties(parties -> {
+            partyMap.clear();
             for (McMMOParty party : parties) {
-                partyMap.putIfAbsent(party.getPartyID(), party);
+                partyMap.put(party.getPartyID(), party);
             }
         });
     }
@@ -50,7 +51,13 @@ public class PartyLoader {
         reload();
     }
     public void reload(String partyID) {
-        SQLAsyncManager.getMcMMOParty(partyID, party -> partyMap.put(partyID, party));
+        SQLAsyncManager.getMcMMOParty(partyID, party -> {
+            if (party == null) {
+                partyMap.remove(partyID);
+                return;
+            }
+            partyMap.put(partyID, party);
+        });
     }
 
     public void saveParties() {

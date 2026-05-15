@@ -121,6 +121,13 @@ public class PlayerTableSQL {
         return false;
     }
 
+    public void deleteByParty(Connection connection, String partyID) throws SQLException {
+        try (PreparedStatement delete = connection.prepareStatement("DELETE FROM " + SQLTables.PLAYER_TABLE + " WHERE PartyID=?")) {
+            delete.setString(1, normalizePartyID(partyID));
+            delete.executeUpdate();
+        }
+    }
+
     private PartyState parsePartyState(String state) {
         if (state == null) {
             return PartyState.NONE;

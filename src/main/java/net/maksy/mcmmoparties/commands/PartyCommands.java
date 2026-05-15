@@ -33,6 +33,7 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
             case 1:
                 switch(args[0]) {
                     case "leave" -> PartyCommandUtils.leavePartyCommand(player);
+                    case "disband" -> PartyCommandUtils.disbandPartyCommand(player);
                     case "info" -> PartyCommandUtils.infoPartyCommand(player, args);
                 }
                 break;
@@ -63,6 +64,8 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
 
         if(args.length == 1) {
             List<String> first = new ArrayList<>();
+            McMMOParty party = McMMOParties.getPartyLoader().getPartyOfPlayer(player.getUniqueId());
+            boolean isOwner = party != null && party.isOwner(player.getUniqueId());
             if("create".startsWith(args[0])) first.add("create");
             if("info".startsWith(args[0])) first.add("info");
             if("join".startsWith(args[0])) first.add("join");
@@ -70,6 +73,7 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
             if("leave".startsWith(args[0])) first.add("leave");
             if("kick".startsWith(args[0])) first.add("kick");
             if("newleader".startsWith(args[0])) first.add("newleader");
+            if (isOwner && "disband".startsWith(args[0])) first.add("disband");
             if ((player.isOp() || player.hasPermission("mcmmoparties.admin")) && "reload".startsWith(args[0])) {
                 first.add("reload");
             }
