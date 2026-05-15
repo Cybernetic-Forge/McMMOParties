@@ -58,10 +58,13 @@ public class McMMOParty {
     public void setExperience(float experience) {
         this.experience += experience;
         this.currentExperience += experience;
-        if(currentExperience < neededExperience)
-            return;
 
-        McMMOParties.getPartyEventHandler().callPartyLevelChangedEvent(this);
+        // Handle multiple level ups if the added experience spans more than one level
+        while (this.currentExperience >= this.neededExperience && this.neededExperience > 0) {
+            McMMOParties.getPartyEventHandler().callPartyLevelChangedEvent(this);
+            // After the handler runs, party's level, currentExperience and neededExperience are updated
+            // Loop will continue if there's enough experience for further levels
+        }
     }
 
     public float getTotalExperience() {

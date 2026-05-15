@@ -23,6 +23,28 @@ Buffs:
     MEMBER_SLOTS: "&aMember Slots"
     ABILITY_DURATION: "&aAbility Duration"
 
+Skills:
+  DisplayNames:
+    MINING: "Mining"
+    WOODCUTTING: "Woodcutting"
+    REPAIR: "Repair"
+    UNARMED: "Unarmed"
+    HERBALISM: "Herbalism"
+    EXCAVATION: "Excavation"
+    ARCHERY: "Archery"
+    SWORDS: "Swords"
+    AXES: "Axes"
+    ACROBATICS: "Acrobatics"
+    TAMING: "Taming"
+    FISHING: "Fishing"
+    ALCHEMY: "Alchemy"
+    SMELTING: "Smelting"
+    SALVAGE: "Salvage"
+    MACES: "Maces"
+    TRIDENTS: "Tridents"
+    CROSSBOWS: "Crossbows"
+    SPEARS: "Spears"
+
 Experience:
   LevelCurve: "x * 50 * Math.pow(x,2)"
   Bar:

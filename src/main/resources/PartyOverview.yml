@@ -244,6 +244,109 @@ Icons:
       - "&7Handler: &fSkillpoints"
       - "&7Total: &f%skillpoints_total%"
       - "&7Available: &f%skillpoints_available%"
+  PartyTop:
+    Header:
+      Slot: 44
+      Material: NETHER_STAR
+      Display: "&6Party Rankings"
+      Lore:
+        - "&7Open the full party ranking list"
+        - "&7Total parties: &f%total_parties%"
+        - "&7Click to view page %page%/%max_page%"
+    Empty:
+      Slot: 22
+      Material: BARRIER
+      Display: "&cNo Parties Found"
+      Lore:
+        - "&7There are no parties to show."
+    EntrySlots:
+      - 10
+      - 11
+      - 12
+      - 13
+      - 14
+      - 15
+      - 16
+      - 19
+      - 20
+      - 21
+      - 22
+      - 23
+      - 24
+      - 28
+      - 29
+      - 30
+      - 31
+      - 32
+      - 33
+      - 34
+      - 35
+      - 36
+      - 37
+      - 38
+      - 39
+      - 40
+      - 41
+      - 42
+      - 43
+    OverviewSlots:
+      - 36
+      - 37
+      - 38
+      - 39
+      - 40
+      - 41
+      - 42
+      - 43
+      - 45
+      - 46
+      - 47
+    Entry:
+      Material: PAPER
+      Display: "&e#%rank% &f%party_display%"
+      Lore:
+        - "&7Party: &f%party_id%"
+        - "&7Owner: &f%owner_name%"
+        - "&7Members: &f%member_count%"
+        - "&7Online: &f%online_member_count%"
+        - "&7Total score: &a%party_score%"
+        - "&7Power: &a%party_power%"
+        - "&7Click to inspect this party"
+    EntryOwn:
+      Material: PLAYER_HEAD
+      Display: "&b#%rank% &f%party_display%"
+      Lore:
+        - "&7Party: &f%party_id%"
+        - "&7Owner: &f%owner_name%"
+        - "&7Members: &f%member_count%"
+        - "&7Online: &f%online_member_count%"
+        - "&7Total score: &a%party_score%"
+        - "&7Power: &a%party_power%"
+        - "&7Click to inspect this party"
+    SkillHeader:
+      - "&7Cumulative skill stats:"
+    SkillLine:
+      - "&7- &f%skill_name%: &a%skill_level%"
+    PageTitle: "&6Party Top &7| &fPage %page%/%max_page%"
+    PrevPage:
+      Slot: 45
+      Material: ARROW
+      Display: "&aPrevious Page"
+      Lore:
+        - "&7Go to the previous page"
+    PageInfo:
+      Slot: 49
+      Material: BOOK
+      Display: "&ePage %page%/%max_page%"
+      Lore:
+        - "&7Total parties: &f%total_parties%"
+        - "&7Entries per page: &f%page_size%"
+    NextPage:
+      Slot: 53
+      Material: ARROW
+      Display: "&aNext Page"
+      Lore:
+        - "&7Go to the next page"
 BuffValidation:
   Costs:
     - "&eCost: &a%cost_amount%"

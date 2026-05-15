@@ -16,8 +16,10 @@ import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickCallback;
 import net.maksy.mcmmoparties.McMMOParties;
+import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
 import net.maksy.mcmmoparties.configuration.enums.PartyBuffType;
 import net.maksy.mcmmoparties.configuration.enums.PartyFeature;
+import net.maksy.mcmmoparties.configuration.enums.Lang;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.configuration.models.PartyWaypoint;
 import net.maksy.mcmmoparties.configuration.models.SkillRequirement;
@@ -25,6 +27,8 @@ import net.maksy.mcmmoparties.hooks.EconomyHook;
 import net.maksy.mcmmoparties.network.ProxyTeleportService;
 import net.maksy.mcmmoparties.utils.InventoryUtils;
 import net.maksy.mcmmoparties.utils.ItemUT;
+import net.maksy.mcmmoparties.utils.PartyRankingRenderer;
+import net.maksy.mcmmoparties.utils.PartyRankingService;
 import net.maksy.mcmmoparties.utils.Replaceable;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
@@ -45,9 +49,7 @@ import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.*;
 
-import static net.maksy.mcmmoparties.configuration.enums.Lang.NOT_OWNER;
-import static net.maksy.mcmmoparties.configuration.enums.Lang.WAYPOINT_NOT_SET;
-import static net.maksy.mcmmoparties.configuration.enums.Lang.WAYPOINT_UPDATED;
+import static net.maksy.mcmmoparties.configuration.enums.Lang.*;
 
 public class PartyOverview implements Listener {
 
@@ -60,6 +62,10 @@ public class PartyOverview implements Listener {
     private int memberSortFilter = 0; // 0 = All, 1 = Online, 2 = Offline#
     private final Map<Integer, PartyFeature> mainSlots = new HashMap<>();
     private final Map<Integer, BuffKey> buffSlots = new HashMap<>();
+    private final Map<Integer, String> rankingSlots = new HashMap<>();
+    private int rankingHeaderSlot = -1;
+
+    private static final List<Integer> DEFAULT_RANKING_OVERVIEW_SLOTS = List.of(36, 37, 38, 39, 40, 41, 42, 43, 45, 46, 47);
 
     private record BuffKey(PartyBuffType type, String ability) {
     }
@@ -96,7 +102,7 @@ public class PartyOverview implements Listener {
         var partyInfoIcon = McMMOParties.getPartyOverviewCfg().getIcon("PartyInfo",
                 new Replaceable("%party_id%", party.getPartyID()),
                 new Replaceable("%party_display%", party.getDisplay()),
-                new Replaceable("%owner_name%", owner.getName() != null ? owner.getName() : "Unknown"),
+                new Replaceable("%owner_name%", owner.getName() != null ? owner.getName() : LanguageConfig.get().getMessage(UNKNOWN_PLAYER_NAME)),
                 new Replaceable("%member_count%", String.valueOf(party.getMembers().size()))
         );
 
@@ -150,8 +156,8 @@ public class PartyOverview implements Listener {
         for (UUID memberUuid : membersToDisplay) {
             if (slot > 43) break;
             OfflinePlayer member = Bukkit.getOfflinePlayer(memberUuid);
-            String statusDisplay = member.isOnline() ? "&aOnline" : "&cOffline";
-            String memberName = member.getName() != null ? member.getName() : "Unknown";
+            String statusDisplay = LanguageConfig.get().getMessage(member.isOnline() ? MEMBER_STATUS_ONLINE : MEMBER_STATUS_OFFLINE);
+            String memberName = member.getName() != null ? member.getName() : LanguageConfig.get().getMessage(UNKNOWN_PLAYER_NAME);
             double shareAmount = McMMOParties.getSQL().getPartyBalanceShare(party.getPartyID(), memberUuid);
 
             var memberIcon = McMMOParties.getPartyOverviewCfg().getIcon("MemberEntry",
@@ -174,8 +180,11 @@ public class PartyOverview implements Listener {
         }
 
         // Sort button - shows current filter mode
-        String filterText = memberSortFilter == 0 ? "All Players" :
-                memberSortFilter == 1 ? "Online Only" : "Offline Only";
+        String filterText = switch (memberSortFilter) {
+            case 1 -> LanguageConfig.get().getMessage(MEMBER_FILTER_ONLINE);
+            case 2 -> LanguageConfig.get().getMessage(MEMBER_FILTER_OFFLINE);
+            default -> LanguageConfig.get().getMessage(MEMBER_FILTER_ALL);
+        };
         var sortIcon = McMMOParties.getPartyOverviewCfg().getIcon("MemberSort",
                 new Replaceable("%member_filter%", filterText)
         );
@@ -208,8 +217,8 @@ public class PartyOverview implements Listener {
                 return p1Online ? -1 : 1; // Online players first
             }
 
-            String name1 = p1.getName() != null ? p1.getName() : "Unknown";
-            String name2 = p2.getName() != null ? p2.getName() : "Unknown";
+            String name1 = p1.getName() != null ? p1.getName() : LanguageConfig.get().getMessage(UNKNOWN_PLAYER_NAME);
+            String name2 = p2.getName() != null ? p2.getName() : LanguageConfig.get().getMessage(UNKNOWN_PLAYER_NAME);
             return name1.compareTo(name2);
         });
 
@@ -224,7 +233,7 @@ public class PartyOverview implements Listener {
 
             // Try to get a dedicated CumulatedSkills entry from PartyOverview.yml
             var pair = McMMOParties.getPartyOverviewCfg().getIcon("CumulatedSkills." + skill.name().toUpperCase(),
-                    new Replaceable("%skill_name%", skill.name()),
+                    new Replaceable("%skill_name%", McMMOParties.getConfigManager().getSkillDisplayName(skill)),
                     new Replaceable("%skill_level%", String.valueOf(cumulativeLevel))
             );
 
@@ -241,6 +250,58 @@ public class PartyOverview implements Listener {
 
         var backIcon = McMMOParties.getPartyOverviewCfg().getIcon("Back");
         inventory.setItem(backIcon.getKey(), backIcon.getValue());
+
+        displayPartyRanking();
+    }
+
+    private void displayPartyRanking() {
+        rankingSlots.clear();
+        rankingHeaderSlot = -1;
+
+        List<PartyRankingService.PartyRankingEntry> rankings = PartyRankingService.getRankedParties();
+        if (rankings.isEmpty()) {
+            return;
+        }
+
+        List<Integer> slots = McMMOParties.getPartyOverviewCfg().getIntegerList("Icons.PartyTop.OverviewSlots", DEFAULT_RANKING_OVERVIEW_SLOTS);
+        if (slots.isEmpty()) {
+            slots = DEFAULT_RANKING_OVERVIEW_SLOTS;
+        }
+
+        var header = McMMOParties.getPartyOverviewCfg().getIcon("PartyTop.Header",
+                new Replaceable("%page%", "1"),
+                new Replaceable("%max_page%", "1"),
+                new Replaceable("%total_parties%", String.valueOf(rankings.size()))
+        );
+        rankingHeaderSlot = header.getKey();
+        inventory.setItem(header.getKey(), header.getValue());
+
+        String viewerPartyId = party.getPartyID();
+        PartyRankingService.PartyRankingEntry viewerEntry = null;
+        int visibleCount = Math.min(10, rankings.size());
+
+        int slotIndex = 0;
+        for (int i = 0; i < visibleCount && slotIndex < slots.size(); i++) {
+            PartyRankingService.PartyRankingEntry entry = rankings.get(i);
+            if (entry.party().getPartyID().equalsIgnoreCase(viewerPartyId)) {
+                viewerEntry = entry;
+            }
+
+            int slot = slots.get(slotIndex++);
+            boolean ownParty = entry.party().getPartyID().equalsIgnoreCase(viewerPartyId);
+            inventory.setItem(slot, PartyRankingRenderer.createItem(ownParty ? "PartyTop.EntryOwn" : "PartyTop.Entry", entry, false));
+            rankingSlots.put(slot, entry.party().getPartyID());
+        }
+
+        if (viewerEntry == null) {
+            viewerEntry = PartyRankingService.getPartyEntry(viewerPartyId);
+        }
+
+        if (viewerEntry != null && viewerEntry.rank() > visibleCount && slotIndex < slots.size()) {
+            int slot = slots.get(slotIndex);
+            inventory.setItem(slot, PartyRankingRenderer.createItem("PartyTop.EntryOwn", viewerEntry, false));
+            rankingSlots.put(slot, viewerEntry.party().getPartyID());
+        }
     }
 
     private void displayBuffs() {
@@ -309,8 +370,8 @@ public class PartyOverview implements Listener {
                             skillPointsMode,
                             buffKey,
                             name,
-                            totalRadius + " blocks",
-                            nextRadius + " blocks",
+                            formatAmount(BUFF_AMOUNT_BLOCKS, totalRadius),
+                            formatAmount(BUFF_AMOUNT_BLOCKS, nextRadius),
                             spentPoints,
                             maxPoints,
                             suggestionCounts,
@@ -337,8 +398,8 @@ public class PartyOverview implements Listener {
                             skillPointsMode,
                             buffKey,
                             name,
-                            "+" + totalSlots + " slots",
-                            "+" + nextSlots + " slots",
+                            formatAmount(BUFF_AMOUNT_SLOTS, totalSlots),
+                            formatAmount(BUFF_AMOUNT_SLOTS, nextSlots),
                             spentPoints,
                             maxPoints,
                             suggestionCounts,
@@ -365,8 +426,8 @@ public class PartyOverview implements Listener {
                                 true,
                                 buffKey,
                                 baseName + " &7(" + ability.getLocalizedName() + ")",
-                                "+" + totalSeconds + "s",
-                                "+" + nextSeconds + "s",
+                                formatAmount(BUFF_AMOUNT_SECONDS, totalSeconds),
+                                formatAmount(BUFF_AMOUNT_SECONDS, nextSeconds),
                                 spentPoints,
                                 maxPoints,
                                 suggestionCounts,
@@ -388,8 +449,8 @@ public class PartyOverview implements Listener {
                                 false,
                                 new BuffKey(PartyBuffType.ABILITY_DURATION, ability),
                                 baseName + " &7(" + ability + ")",
-                                "+" + totalSeconds + "s",
-                                "+" + nextSeconds + "s",
+                                formatAmount(BUFF_AMOUNT_SECONDS, totalSeconds),
+                                formatAmount(BUFF_AMOUNT_SECONDS, nextSeconds),
                                 0,
                                 0,
                                 suggestionCounts,
@@ -427,8 +488,8 @@ public class PartyOverview implements Listener {
                 new Replaceable("%spent_points%", String.valueOf(spentPoints)),
                 new Replaceable("%max_points%", String.valueOf(maxPoints)),
                 new Replaceable("%highlight_count%", String.valueOf(highlightCount)),
-                new Replaceable("%preferred_text%", isPreferred ? "&aPreferred next upgrade" : "&7No active priority"),
-                new Replaceable("%player_highlighted%", playerHighlighted ? "&aYes" : "&7No")
+                new Replaceable("%preferred_text%", LanguageConfig.get().getMessage(isPreferred ? BUFF_PREFERRED_NEXT : BUFF_PREFERRED_NONE)),
+                new Replaceable("%player_highlighted%", LanguageConfig.get().getMessage(playerHighlighted ? COMMON_YES : COMMON_NO))
         ));
 
         if (skillPointsMode) {
@@ -446,8 +507,8 @@ public class PartyOverview implements Listener {
                         new Replaceable("%spent_points%", String.valueOf(spentPoints)),
                         new Replaceable("%max_points%", String.valueOf(maxPoints)),
                         new Replaceable("%highlight_count%", String.valueOf(highlightCount)),
-                        new Replaceable("%preferred_text%", isPreferred ? "&aPreferred next upgrade" : "&7No active priority"),
-                        new Replaceable("%player_highlighted%", playerHighlighted ? "&aYes" : "&7No")
+                        new Replaceable("%preferred_text%", LanguageConfig.get().getMessage(isPreferred ? BUFF_PREFERRED_NEXT : BUFF_PREFERRED_NONE)),
+                        new Replaceable("%player_highlighted%", LanguageConfig.get().getMessage(playerHighlighted ? COMMON_YES : COMMON_NO))
                 ),
                 lore
         );
@@ -484,7 +545,7 @@ public class PartyOverview implements Listener {
                 lore.addAll(McMMOParties.getPartyOverviewCfg().getFormattedStringList(
                         "BuffValidation.ConditionEntry",
                         List.of(),
-                        new Replaceable("%skill_name%", requirement.getSkill().name()),
+                        new Replaceable("%skill_name%", McMMOParties.getConfigManager().getSkillDisplayName(requirement.getSkill())),
                         new Replaceable("%skill_current%", String.valueOf(currentLevel)),
                         new Replaceable("%skill_required%", String.valueOf(requirement.getAmount()))
                 ));
@@ -501,6 +562,10 @@ public class PartyOverview implements Listener {
         return true;
     }
 
+    private boolean isPartyMember(UUID uuid) {
+        return uuid != null && party.getMembers().contains(uuid);
+    }
+
     private int placeBuffItem(ItemStack item, int slot, BuffKey key) {
         if (slot > 43) {
             return slot;
@@ -514,6 +579,10 @@ public class PartyOverview implements Listener {
 
     private String formatPercent(double value) {
         return String.format(Locale.US, "%.2f%%", value);
+    }
+
+    private String formatAmount(Lang key, int amount) {
+        return LanguageConfig.get().getMessage(key, new Replaceable("%amount%", String.valueOf(amount)));
     }
 
     private int getSkillPointIntValue(Map<Integer, Integer> levels, int points, int fallback) {
@@ -728,6 +797,9 @@ public class PartyOverview implements Listener {
                     }
                 }
                 case TRESOR -> {
+                    if (!isPartyMember(playerUuid)) {
+                        return;
+                    }
                     if (clickType.isLeftClick()) {
                         openTresorDialog(player, true);
                     } else if (clickType.isRightClick()) {
@@ -735,10 +807,13 @@ public class PartyOverview implements Listener {
                     }
                 }
                 case WARP -> {
+                    if (!isPartyMember(playerUuid)) {
+                        return;
+                    }
                     if (clickType.isLeftClick()) {
                         PartyWaypoint waypoint = McMMOParties.getSQL().getPartyWaypoint(party.getPartyID());
                         if (waypoint == null) {
-                            player.sendMessage(net.maksy.mcmmoparties.configuration.configs.LanguageConfig.get().getMessage(WAYPOINT_NOT_SET));
+                            player.sendMessage(LanguageConfig.get().getMessage(WAYPOINT_NOT_SET));
                             return;
                         }
                         ProxyTeleportService.teleport(
@@ -753,7 +828,7 @@ public class PartyOverview implements Listener {
                         );
                     } else if (clickType.isRightClick()) {
                         if (!party.isOwner(playerUuid)) {
-                            player.sendMessage(net.maksy.mcmmoparties.configuration.configs.LanguageConfig.get().getMessage(NOT_OWNER));
+                            player.sendMessage(LanguageConfig.get().getMessage(NOT_OWNER));
                             return;
                         }
                         var location = player.getLocation();
@@ -768,7 +843,7 @@ public class PartyOverview implements Listener {
                                 location.getPitch()
                         );
                         McMMOParties.getSQL().setPartyWaypoint(waypoint);
-                        player.sendMessage(net.maksy.mcmmoparties.configuration.configs.LanguageConfig.get().getMessage(WAYPOINT_UPDATED));
+                        player.sendMessage(LanguageConfig.get().getMessage(WAYPOINT_UPDATED));
                     }
                 }
                 case PROGRESS -> {
@@ -789,10 +864,8 @@ public class PartyOverview implements Listener {
         }
 
         final String key = "amount";
-        final String title = isDeposit ? "Deposit Money" : "Withdraw Money";
-        final String prompt = isDeposit
-                ? "Enter the amount to deposit and press Save."
-                : "Enter the amount to withdraw and press Save.";
+        final String title = LanguageConfig.get().getMessage(isDeposit ? TRESOR_DIALOG_DEPOSIT_TITLE : TRESOR_DIALOG_WITHDRAW_TITLE);
+        final String prompt = LanguageConfig.get().getMessage(isDeposit ? TRESOR_DIALOG_DEPOSIT_PROMPT : TRESOR_DIALOG_WITHDRAW_PROMPT);
 
         Dialog dialog = Dialog.create(factory -> {
             var builder = factory.empty();
@@ -803,10 +876,10 @@ public class PartyOverview implements Listener {
                     false,
                     DialogBase.DialogAfterAction.CLOSE,
                     List.of(DialogBody.plainMessage(Component.text(prompt))),
-                    List.of(DialogInput.text(key, 240, Component.text("Amount"), true, "", 32, null))
+                    List.of(DialogInput.text(key, 240, Component.text(LanguageConfig.get().getMessage(TRESOR_DIALOG_INPUT_AMOUNT)), true, "", 32, null))
             ));
             builder.type(DialogType.notice(ActionButton.create(
-                    Component.text("Save"),
+                    Component.text(LanguageConfig.get().getMessage(COMMON_SAVE)),
                     null,
                     96,
                     DialogAction.customClick((response, audience) -> handleTresorResponse(response, audience, isDeposit, key), ClickCallback.Options.builder().uses(1).build())
@@ -831,56 +904,62 @@ public class PartyOverview implements Listener {
         try {
             amount = Double.parseDouble(value);
         } catch (NumberFormatException ex) {
-            player.sendMessage("Â§cPlease enter a valid number.");
+            player.sendMessage(LanguageConfig.get().getMessage(INVALID_DECIMAL_NUMBER));
             return;
         }
 
         if (amount <= 0.0) {
-            player.sendMessage("Â§cAmount must be greater than 0.");
+            player.sendMessage(LanguageConfig.get().getMessage(AMOUNT_MUST_BE_POSITIVE));
             return;
         }
 
         Economy economy = EconomyHook.getEconomy();
         if (economy == null) {
-            player.sendMessage("Â§cEconomy is not available (Vault missing).");
+            player.sendMessage(LanguageConfig.get().getMessage(ECONOMY_NOT_AVAILABLE));
             return;
         }
 
         boolean success;
         if (isDeposit) {
             if (!economy.has(player, amount)) {
-                player.sendMessage("Â§cYou do not have enough money.");
+                player.sendMessage(LanguageConfig.get().getMessage(ECONOMY_NOT_ENOUGH_MONEY));
                 return;
             }
             EconomyResponse withdrawResponse = economy.withdrawPlayer(player, amount);
             if (!withdrawResponse.transactionSuccess()) {
-                player.sendMessage("Â§cFailed to withdraw from your balance.");
+                player.sendMessage(LanguageConfig.get().getMessage(ECONOMY_WITHDRAW_FAILED));
                 return;
             }
 
             success = McMMOParties.getSQL().depositPartyBalance(party.getPartyID(), player.getUniqueId(), amount);
             if (!success) {
                 economy.depositPlayer(player, amount);
-                player.sendMessage("Â§cFailed to deposit into party balance.");
+                player.sendMessage(LanguageConfig.get().getMessage(PARTY_TRESOR_DEPOSIT_FAILED));
                 return;
             }
 
-            player.sendMessage("Â§aDeposited Â§f" + amount + "Â§a into party balance.");
+            player.sendMessage(LanguageConfig.get().getMessage(
+                    PARTY_TRESOR_DEPOSIT_SUCCESS,
+                    new Replaceable("%amount%", String.format(Locale.US, "%.2f", amount))
+            ));
         } else {
             success = McMMOParties.getSQL().withdrawPartyBalance(party.getPartyID(), player.getUniqueId(), amount);
             if (!success) {
-                player.sendMessage("Â§cYou cannot withdraw that amount.");
+                player.sendMessage(LanguageConfig.get().getMessage(PARTY_TRESOR_WITHDRAW_NOT_ALLOWED));
                 return;
             }
 
             EconomyResponse depositResponse = economy.depositPlayer(player, amount);
             if (!depositResponse.transactionSuccess()) {
                 McMMOParties.getSQL().depositPartyBalance(party.getPartyID(), player.getUniqueId(), amount);
-                player.sendMessage("Â§cFailed to deposit to your balance.");
+                player.sendMessage(LanguageConfig.get().getMessage(PARTY_TRESOR_PLAYER_DEPOSIT_FAILED));
                 return;
             }
 
-            player.sendMessage("Â§aWithdrew Â§f" + amount + "Â§a from party balance.");
+            player.sendMessage(LanguageConfig.get().getMessage(
+                    PARTY_TRESOR_WITHDRAW_SUCCESS,
+                    new Replaceable("%amount%", String.format(Locale.US, "%.2f", amount))
+            ));
         }
 
         inventory.clear();
@@ -888,17 +967,32 @@ public class PartyOverview implements Listener {
     }
 
     private void handleViewClick(Player player, int slot, ClickType clickType) {
-        if (slot == 52) { // Back
+        if (slot == 52) {
             currentView = 0;
             inventory.clear();
             initInventory();
         } else if (currentView == 1) {
             int sortSlot = McMMOParties.getPartyOverviewCfg().getIcon("MemberSort").getKey();
             if (slot == sortSlot) {
-                memberSortFilter = (memberSortFilter + 1) % 3; // Cycle through 0, 1, 2
+                memberSortFilter = (memberSortFilter + 1) % 3;
                 inventory.clear();
                 InventoryUtils.setFillerItem(inventory, Material.GRAY_STAINED_GLASS_PANE);
                 displayMembers();
+            }
+        } else if (currentView == 2) {
+            if (slot == rankingHeaderSlot) {
+                player.closeInventory();
+                new PartyTopGUI(player, 1).open();
+                return;
+            }
+
+            String partyId = rankingSlots.get(slot);
+            if (partyId != null) {
+                McMMOParty rankingParty = McMMOParties.getPartyLoader().getParty(partyId);
+                if (rankingParty != null) {
+                    player.closeInventory();
+                    new PartyOverview(player.getUniqueId(), rankingParty).open();
+                }
             }
         } else if (currentView == 3) {
             var handler = party.getBuffHandler();
@@ -911,18 +1005,21 @@ public class PartyOverview implements Listener {
             }
             if (isBuffMaxed(handler, key)) {
                 McMMOParties.getSQL().clearBuffSuggestions(party.getPartyID());
-                player.sendMessage("\u00A7cThis buff is already maxed out.");
+                player.sendMessage(LanguageConfig.get().getMessage(BUFF_ALREADY_MAXED));
                 inventory.clear();
                 InventoryUtils.setFillerItem(inventory, Material.GRAY_STAINED_GLASS_PANE);
                 displayBuffs();
                 return;
             }
             if (clickType.isRightClick()) {
+                if (!isPartyMember(playerUuid)) {
+                    return;
+                }
                 McMMOParties.getInstance().getServer().getScheduler().runTaskAsynchronously(McMMOParties.getInstance(), () -> {
                     boolean success = McMMOParties.getSQL().suggestBuffUpgrade(party.getPartyID(), playerUuid, key.type(), key.ability());
                     Bukkit.getScheduler().runTask(McMMOParties.getInstance(), () -> {
                         if (!success) {
-                            player.sendMessage("\u00A7cCould not save your buff highlight.");
+                            player.sendMessage(LanguageConfig.get().getMessage(BUFF_HIGHLIGHT_SAVE_FAILED));
                             return;
                         }
                         inventory.clear();
@@ -937,11 +1034,11 @@ public class PartyOverview implements Listener {
             }
             double treasuryCost = handler.getNextUpgradeCost(key.type(), key.ability());
             if (treasuryCost > 0.0 && party.getBalance() < treasuryCost) {
-                player.sendMessage("\u00A7cThe party treasury does not have enough money for this upgrade.");
+                player.sendMessage(LanguageConfig.get().getMessage(BUFF_TREASURY_NOT_ENOUGH));
                 return;
             }
             if (!meetsUpgradeConditions(key)) {
-                player.sendMessage("\u00A7cYour party does not meet the required cumulative skill levels for this upgrade.");
+                player.sendMessage(LanguageConfig.get().getMessage(BUFF_CONDITIONS_NOT_MET));
                 return;
             }
             int maxPoints = key.type() == PartyBuffType.ABILITY_DURATION
@@ -949,7 +1046,7 @@ public class PartyOverview implements Listener {
                     : handler.getMaxPoints(key.type());
             boolean success = McMMOParties.getSQL().spendBuffSkillPoint(party.getPartyID(), key.type(), key.ability(), maxPoints, treasuryCost);
             if (!success) {
-                player.sendMessage("\u00A7cNot enough skill points or already at max.");
+                player.sendMessage(LanguageConfig.get().getMessage(BUFF_UPGRADE_FAILED));
                 return;
             }
             party.refreshBuffs();

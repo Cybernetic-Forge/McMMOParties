@@ -35,6 +35,9 @@ public class ConfigManager {
         config.addMissing("Buffs.DisplayNames.EXP_SHARING_RADIUS", "&aExp Sharing Radius");
         config.addMissing("Buffs.DisplayNames.MEMBER_SLOTS", "&aMember Slots");
         config.addMissing("Buffs.DisplayNames.ABILITY_DURATION", "&aAbility Duration");
+        for (PrimarySkillType skill : PrimarySkillType.values()) {
+            config.addMissing("Skills.DisplayNames." + skill.name(), toReadableName(skill.name()));
+        }
         config.addMissing("Experience.LevelCurve", "x * 50 * Math.pow(x,2)");
         config.addMissing("Experience.Bar.Display", "&b%party%     &9LvL &b%level%     &7[&a%exp%&7/&a%needed%&7]");
         config.addMissing("Experience.Bar.Color", "BLUE");
@@ -62,6 +65,14 @@ public class ConfigManager {
         return ChatColor.translateAlternateColorCodes(
                 '&',
                 config.getString("Buffs.DisplayNames." + key, fallback)
+        );
+    }
+
+    public String getSkillDisplayName(PrimarySkillType skill) {
+        String fallback = toReadableName(skill.name());
+        return ChatColor.translateAlternateColorCodes(
+                '&',
+                config.getString("Skills.DisplayNames." + skill.name(), fallback)
         );
     }
 
@@ -129,5 +140,20 @@ public class ConfigManager {
             title = title.replace(rep.getK(), rep.getV());
         }
         return ChatColor.translateAlternateColorCodes('&', title);
+    }
+
+    private String toReadableName(String key) {
+        String[] parts = key.toLowerCase().split("_");
+        StringBuilder builder = new StringBuilder();
+        for (String part : parts) {
+            if (part.isEmpty()) {
+                continue;
+            }
+            if (!builder.isEmpty()) {
+                builder.append(' ');
+            }
+            builder.append(Character.toUpperCase(part.charAt(0))).append(part.substring(1));
+        }
+        return builder.toString();
     }
 }

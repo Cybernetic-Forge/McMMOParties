@@ -36,6 +36,7 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
                     case "disband" -> PartyCommandUtils.disbandPartyCommand(player);
                     case "chat" -> PartyCommandUtils.chatPartyCommand(player, args);
                     case "info" -> PartyCommandUtils.infoPartyCommand(player, args);
+                    case "top" -> PartyCommandUtils.topPartyCommand(player, args);
                 }
                 break;
             case 2:
@@ -47,6 +48,7 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
                     case "accept" -> PartyCommandUtils.acceptPartyCommand(player, args);
                     case "kick" -> PartyCommandUtils.kickPartyCommand(player, args);
                     case "newleader" -> PartyCommandUtils.setOwnerPartyCommand(player, args);
+                    case "top" -> PartyCommandUtils.topPartyCommand(player, args);
                 }
                 break;
             case 3:
@@ -58,6 +60,8 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
             default:
                 if ("chat".equalsIgnoreCase(args[0])) {
                     PartyCommandUtils.chatPartyCommand(player, args);
+                } else if ("top".equalsIgnoreCase(args[0])) {
+                    PartyCommandUtils.topPartyCommand(player, args);
                 }
                 break;
         }
@@ -82,6 +86,7 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
             if("chat".startsWith(args[0])) first.add("chat");
             if("kick".startsWith(args[0])) first.add("kick");
             if("newleader".startsWith(args[0])) first.add("newleader");
+            if("top".startsWith(args[0])) first.add("top");
             if (isOwner && "disband".startsWith(args[0])) first.add("disband");
             if ((player.isOp() || player.hasPermission("mcmmoparties.admin")) && "reload".startsWith(args[0])) {
                 first.add("reload");
@@ -94,6 +99,7 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
             if("join".startsWith(args[0])) second.addAll(McMMOParties.getPartyLoader().getPartyNames());
             if("info".startsWith(args[0])) second.addAll(McMMOParties.getPartyLoader().getPartyNames());
             if("newleader".startsWith(args[0])) second.addAll(party != null ? party.getMemberNames() : List.of(""));
+            if ("top".startsWith(args[0])) second.add("1");
             return second;
         }
         return null;

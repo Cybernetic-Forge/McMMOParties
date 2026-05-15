@@ -1,6 +1,8 @@
 package net.maksy.mcmmoparties.network;
 
 import net.maksy.mcmmoparties.McMMOParties;
+import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
+import net.maksy.mcmmoparties.configuration.enums.Lang;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -42,7 +44,7 @@ public final class ProxyTeleportService {
         if (McMMOParties.getConfigManager().getServerName().equalsIgnoreCase(server)) {
             World targetWorld = Bukkit.getWorld(world);
             if (targetWorld == null) {
-                player.sendMessage("§cThe target world could not be found.");
+                player.sendMessage(LanguageConfig.get().getMessage(Lang.TELEPORT_WORLD_NOT_FOUND));
                 return;
             }
             player.teleport(new Location(targetWorld, x, y, z, yaw, pitch));
@@ -81,7 +83,7 @@ public final class ProxyTeleportService {
 
         World world = Bukkit.getWorld(message[3]);
         if (world == null) {
-            player.sendMessage("§cThe target world could not be found.");
+            player.sendMessage(LanguageConfig.get().getMessage(Lang.TELEPORT_WORLD_NOT_FOUND));
             return;
         }
 

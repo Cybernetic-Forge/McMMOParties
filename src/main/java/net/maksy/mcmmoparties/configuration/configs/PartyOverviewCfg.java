@@ -61,6 +61,10 @@ public class PartyOverviewCfg {
         return applyReplaceables(config.getStringList(path, def), replaceables);
     }
 
+    public List<Integer> getIntegerList(String path, List<Integer> def) {
+        return config.isSet(path) ? config.getIntegerList(path) : def;
+    }
+
     private String applyReplaceables(String value, Replaceable... replaceables) {
         String result = value;
         if (replaceables == null) {

@@ -93,7 +93,7 @@ public class PartyEventHandler {
         if (!event.isCancelled()) {
             if (party.getMembers().size() >= party.getMaxMembers()) {
                 if (newComer.isOnline()) {
-                    Objects.requireNonNull(newComer.getPlayer()).sendMessage("Party is full.");
+                    Objects.requireNonNull(newComer.getPlayer()).sendMessage(LanguageConfig.get().getMessage(PARTY_FULL));
                 }
                 return;
             }

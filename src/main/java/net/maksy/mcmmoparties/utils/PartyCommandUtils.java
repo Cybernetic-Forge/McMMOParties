@@ -8,6 +8,7 @@ import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.configuration.sql.SQLAsyncManager;
 import net.maksy.mcmmoparties.gui.EditorRegistry;
 import net.maksy.mcmmoparties.gui.PartyOverview;
+import net.maksy.mcmmoparties.gui.PartyTopGUI;
 import net.maksy.mcmmoparties.events.PartyEventHandler;
 import net.maksy.mcmmoparties.network.ProxyPartyChatService;
 import org.bukkit.Bukkit;
@@ -55,7 +56,7 @@ public class PartyCommandUtils {
         }
 
         if (party.getMembers().size() >= party.getMaxMembers()) {
-            player.sendMessage("Party is full.");
+            player.sendMessage(LanguageConfig.get().getMessage(PARTY_FULL));
             return;
         }
 
@@ -93,7 +94,7 @@ public class PartyCommandUtils {
         }
 
         if (party.getMembers().size() >= party.getMaxMembers()) {
-            player.sendMessage("Party is full.");
+            player.sendMessage(LanguageConfig.get().getMessage(PARTY_FULL));
             return;
         }
 
@@ -280,6 +281,24 @@ public class PartyCommandUtils {
         overview.open();
     }
 
+    public static void topPartyCommand(Player player, String[] args) {
+        int page = 1;
+        if (args.length >= 2) {
+            try {
+                page = Integer.parseInt(args[1]);
+            } catch (NumberFormatException ex) {
+                player.sendMessage(LanguageConfig.get().getMessage(PARTY_TOP_USAGE));
+                return;
+            }
+            if (page < 1) {
+                player.sendMessage(LanguageConfig.get().getMessage(PARTY_TOP_USAGE));
+                return;
+            }
+        }
+
+        new PartyTopGUI(player, page).open();
+    }
+
     public static void addMember(Player player, String partyID) {
         partyLoader.getParty(partyID).getMembers().add(player.getUniqueId());
         McMMOParties.getPartyLoader().update(partyLoader.getParty(partyID));
@@ -288,7 +307,7 @@ public class PartyCommandUtils {
     public static void reloadPartyCommand(CommandSender sender) {
         if (sender instanceof Player player) {
             if (!player.isOp() && !player.hasPermission(ADMIN_PERMISSION)) {
-                player.sendMessage("You do not have permission to use this command.");
+                player.sendMessage(LanguageConfig.get().getMessage(NO_PERMISSION));
                 return;
             }
         }
@@ -302,6 +321,6 @@ public class PartyCommandUtils {
             party.refreshBuffs();
         }
 
-        sender.sendMessage("McMMOParties configuration reloaded.");
+        sender.sendMessage(LanguageConfig.get().getMessage(CONFIG_RELOADED));
     }
 }
