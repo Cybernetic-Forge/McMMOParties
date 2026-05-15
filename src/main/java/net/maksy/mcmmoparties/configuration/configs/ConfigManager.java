@@ -41,6 +41,7 @@ public class ConfigManager {
         config.addMissing("Experience.Bar.Segments", "SOLID");
         config.addMissing("Network.ServerName", "paper");
         config.addMissing("Network.TeleportChannel", "mcmmoparties:teleport");
+        config.addMissing("Network.PartyChatChannel", "mcmmoparties:partychat");
 
         for (PrimarySkillType skill : PrimarySkillType.values()) {
             config.addMissing("Experience.Scaling." + skill.name(), 0.2D);
@@ -79,6 +80,10 @@ public class ConfigManager {
 
     public String getTeleportChannel() {
         return config.getString("Network.TeleportChannel", "mcmmoparties:teleport");
+    }
+
+    public String getPartyChatChannel() {
+        return config.getString("Network.PartyChatChannel", "mcmmoparties:partychat");
     }
 
     public float getPastExp(long level) {

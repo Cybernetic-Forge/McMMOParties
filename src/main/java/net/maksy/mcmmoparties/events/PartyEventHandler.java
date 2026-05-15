@@ -41,6 +41,7 @@ public class PartyEventHandler {
                 McMMOParties.getSQL().addPartySkillPoints(party.getPartyID(), McMMOParties.getConfigManager().getSkillPointsPerLevel());
             }
             party.refreshBuffs();
+            partyLoader.scheduleSave(party);
 
             party.announceToMembers(LanguageConfig.get().getMessage(Lang.PARTY_LEVELUP, new Replaceable("%level%", String.valueOf(party.getLevel()))));
         }
@@ -53,6 +54,7 @@ public class PartyEventHandler {
 
         if (!epEvent.isCancelled()) {
             party.setExperience(a);
+            partyLoader.scheduleSave(party);
 
             barMap.putIfAbsent(party.getPartyID(), McMMOParties.getConfigManager().getLevelBar(party));
             BossBar bar = barMap.get(party.getPartyID());

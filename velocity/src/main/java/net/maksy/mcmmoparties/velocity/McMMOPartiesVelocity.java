@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 )
 public final class McMMOPartiesVelocity {
     public static final MinecraftChannelIdentifier TELEPORT_CHANNEL = MinecraftChannelIdentifier.from("mcmmoparties:teleport");
+    public static final MinecraftChannelIdentifier PARTY_CHAT_CHANNEL = MinecraftChannelIdentifier.from("mcmmoparties:partychat");
 
     private final ProxyServer proxyServer;
     private final Logger logger;
@@ -29,7 +30,9 @@ public final class McMMOPartiesVelocity {
     @Subscribe
     public void onProxyInitialize(ProxyInitializeEvent event) {
         proxyServer.getChannelRegistrar().register(TELEPORT_CHANNEL);
+        proxyServer.getChannelRegistrar().register(PARTY_CHAT_CHANNEL);
         proxyServer.getEventManager().register(this, new TeleportChannel(this, proxyServer, logger));
+        proxyServer.getEventManager().register(this, new PartyChatChannel(proxyServer));
         logger.info("McMMOPartiesVelocity initialized");
     }
 }

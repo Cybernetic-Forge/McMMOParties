@@ -9,12 +9,14 @@ import net.maksy.mcmmoparties.configuration.sql.SQLAsyncManager;
 import net.maksy.mcmmoparties.gui.EditorRegistry;
 import net.maksy.mcmmoparties.gui.PartyOverview;
 import net.maksy.mcmmoparties.events.PartyEventHandler;
+import net.maksy.mcmmoparties.network.ProxyPartyChatService;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static net.maksy.mcmmoparties.configuration.enums.Lang.*;
 
@@ -209,6 +211,30 @@ public class PartyCommandUtils {
         });
     }
 
+    public static void chatPartyCommand(Player player, String[] args) {
+        McMMOParty party = partyLoader.getPartyOfPlayer(player.getUniqueId());
+        if (party == null) {
+            player.sendMessage(LanguageConfig.get().getMessage(NOT_IN_PARTY));
+            return;
+        }
+
+        if (args.length < 2) {
+            player.sendMessage(LanguageConfig.get().getMessage(PARTY_CHAT_USAGE));
+            return;
+        }
+
+        String message = java.util.Arrays.stream(args)
+                .skip(1)
+                .collect(Collectors.joining(" "))
+                .trim();
+        if (message.isEmpty()) {
+            player.sendMessage(LanguageConfig.get().getMessage(PARTY_CHAT_USAGE));
+            return;
+        }
+
+        ProxyPartyChatService.sendPartyChat(player, party, message);
+    }
+
     public static void setOwnerPartyCommand(Player player, String[] args) {
         McMMOParty party = partyLoader.getPartyOfPlayer(player.getUniqueId());
 
@@ -270,6 +296,7 @@ public class PartyCommandUtils {
         McMMOParties.getInstance().reloadConfig();
         McMMOParties.getConfigManager().init();
         net.maksy.mcmmoparties.configuration.YamlParser.reloadAll(true);
+        McMMOParties.getPartyLoader().flushPendingSaves();
         McMMOParties.getPartyLoader().reload();
         for (McMMOParty party : McMMOParties.getPartyLoader().getParties()) {
             party.refreshBuffs();

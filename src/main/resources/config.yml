@@ -9,6 +9,7 @@ SQL:
 Network:
   ServerName: paper
   TeleportChannel: "mcmmoparties:teleport"
+  PartyChatChannel: "mcmmoparties:partychat"
 
 Party:
   BaseMemberSlots: 10

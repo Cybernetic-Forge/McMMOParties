@@ -13,6 +13,7 @@ import net.maksy.mcmmoparties.hooks.EconomyHook;
 import net.maksy.mcmmoparties.hooks.HookManager;
 import net.maksy.mcmmoparties.listeners.AbilityBuffListener;
 import net.maksy.mcmmoparties.listeners.ExpEvents;
+import net.maksy.mcmmoparties.network.ProxyPartyChatListener;
 import net.maksy.mcmmoparties.network.ProxyTeleportListener;
 import net.maksy.mcmmoparties.utils.ChatUT;
 import org.bukkit.Bukkit;
@@ -40,6 +41,7 @@ public final class McMMOParties extends JavaPlugin {
     @Getter
     private static PartyOverviewCfg partyOverviewCfg;
     private ProxyTeleportListener proxyTeleportListener;
+    private ProxyPartyChatListener proxyPartyChatListener;
 
     @Override
     public void onEnable() {
@@ -69,6 +71,15 @@ public final class McMMOParties extends JavaPlugin {
             getLogger().warning("Invalid teleport channel configured: " + configManager.getTeleportChannel());
         }
 
+        NamespacedKey partyChatChannel = NamespacedKey.fromString(configManager.getPartyChatChannel());
+        if (partyChatChannel != null) {
+            proxyPartyChatListener = new ProxyPartyChatListener();
+            getServer().getMessenger().registerOutgoingPluginChannel(this, partyChatChannel.toString());
+            getServer().getMessenger().registerIncomingPluginChannel(this, partyChatChannel.toString(), proxyPartyChatListener);
+        } else {
+            getLogger().warning("Invalid party chat channel configured: " + configManager.getPartyChatChannel());
+        }
+
         getServer().getPluginManager().registerEvents(new ExpEvents(), this);
         getServer().getPluginManager().registerEvents(new AbilityBuffListener(), this);
     }
@@ -79,6 +90,11 @@ public final class McMMOParties extends JavaPlugin {
         if (teleportChannel != null && proxyTeleportListener != null) {
             getServer().getMessenger().unregisterIncomingPluginChannel(this, teleportChannel.toString(), proxyTeleportListener);
             getServer().getMessenger().unregisterOutgoingPluginChannel(this, teleportChannel.toString());
+        }
+        NamespacedKey partyChatChannel = configManager != null ? NamespacedKey.fromString(configManager.getPartyChatChannel()) : null;
+        if (partyChatChannel != null && proxyPartyChatListener != null) {
+            getServer().getMessenger().unregisterIncomingPluginChannel(this, partyChatChannel.toString(), proxyPartyChatListener);
+            getServer().getMessenger().unregisterOutgoingPluginChannel(this, partyChatChannel.toString());
         }
         if (partyLoader != null) {
             try {

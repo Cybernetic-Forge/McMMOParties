@@ -34,12 +34,14 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
                 switch(args[0]) {
                     case "leave" -> PartyCommandUtils.leavePartyCommand(player);
                     case "disband" -> PartyCommandUtils.disbandPartyCommand(player);
+                    case "chat" -> PartyCommandUtils.chatPartyCommand(player, args);
                     case "info" -> PartyCommandUtils.infoPartyCommand(player, args);
                 }
                 break;
             case 2:
                 switch(args[0]) {
                     case "create" -> PartyCommandUtils.createPartyCommand(player, args);
+                    case "chat" -> PartyCommandUtils.chatPartyCommand(player, args);
                     case "info" -> PartyCommandUtils.infoPartyCommand(player, args);
                     case "join" -> PartyCommandUtils.joinPartyCommand(player, args);
                     case "accept" -> PartyCommandUtils.acceptPartyCommand(player, args);
@@ -49,7 +51,13 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
                 break;
             case 3:
                 switch(args[0]) {
+                    case "chat" -> PartyCommandUtils.chatPartyCommand(player, args);
                     case "join" -> PartyCommandUtils.joinPartyCommand(player, args);
+                }
+                break;
+            default:
+                if ("chat".equalsIgnoreCase(args[0])) {
+                    PartyCommandUtils.chatPartyCommand(player, args);
                 }
                 break;
         }
@@ -71,6 +79,7 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
             if("join".startsWith(args[0])) first.add("join");
             if("accept".startsWith(args[0])) first.add("accept");
             if("leave".startsWith(args[0])) first.add("leave");
+            if("chat".startsWith(args[0])) first.add("chat");
             if("kick".startsWith(args[0])) first.add("kick");
             if("newleader".startsWith(args[0])) first.add("newleader");
             if (isOwner && "disband".startsWith(args[0])) first.add("disband");

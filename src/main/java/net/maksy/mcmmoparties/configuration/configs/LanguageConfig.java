@@ -50,4 +50,18 @@ public class LanguageConfig {
     public String getMessage(Lang lang, Replaceable replaceable) {
         return getMessage(lang).replace(replaceable.getK(), replaceable.getV());
     }
+
+    public String getMessage(Lang lang, Replaceable... replaceables) {
+        String message = getMessage(lang);
+        if (replaceables == null) {
+            return message;
+        }
+
+        for (Replaceable replaceable : replaceables) {
+            if (replaceable != null && replaceable.getK() != null && replaceable.getV() != null) {
+                message = message.replace(replaceable.getK(), replaceable.getV());
+            }
+        }
+        return message;
+    }
 }
