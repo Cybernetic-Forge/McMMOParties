@@ -1,6 +1,7 @@
 package net.maksy.mcmmoparties.utils;
 
 import net.maksy.mcmmoparties.McMMOParties;
+import net.maksy.mcmmoparties.api.events.PartyEventHandler;
 import net.maksy.mcmmoparties.configuration.PartyLoader;
 import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
 import net.maksy.mcmmoparties.configuration.enums.PartyState;
@@ -9,7 +10,6 @@ import net.maksy.mcmmoparties.configuration.sql.SQLAsyncManager;
 import net.maksy.mcmmoparties.gui.EditorRegistry;
 import net.maksy.mcmmoparties.gui.PartyOverview;
 import net.maksy.mcmmoparties.gui.PartyTopGUI;
-import net.maksy.mcmmoparties.api.events.PartyEventHandler;
 import net.maksy.mcmmoparties.proxy.ProxyPartyChatService;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;

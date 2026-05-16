@@ -2,11 +2,7 @@ package net.maksy.mcmmoparties.gui;
 
 import net.kyori.adventure.text.Component;
 import net.maksy.mcmmoparties.McMMOParties;
-import net.maksy.mcmmoparties.utils.ChatUT;
-import net.maksy.mcmmoparties.utils.InventoryUtils;
-import net.maksy.mcmmoparties.utils.PartyRankingRenderer;
-import net.maksy.mcmmoparties.utils.PartyRankingService;
-import net.maksy.mcmmoparties.utils.Replaceable;
+import net.maksy.mcmmoparties.utils.*;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;

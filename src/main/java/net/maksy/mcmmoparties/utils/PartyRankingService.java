@@ -10,12 +10,7 @@ import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
+import java.util.*;
 
 public final class PartyRankingService {
 

@@ -2,13 +2,13 @@ package net.maksy.mcmmoparties;
 
 import lombok.Getter;
 import net.kyori.adventure.text.Component;
+import net.maksy.mcmmoparties.api.events.PartyEventHandler;
 import net.maksy.mcmmoparties.commands.PartyCommands;
 import net.maksy.mcmmoparties.configuration.PartyLoader;
 import net.maksy.mcmmoparties.configuration.configs.ConfigManager;
 import net.maksy.mcmmoparties.configuration.configs.PartyEditorCfg;
 import net.maksy.mcmmoparties.configuration.configs.PartyOverviewCfg;
 import net.maksy.mcmmoparties.configuration.sql.SQLManager;
-import net.maksy.mcmmoparties.api.events.PartyEventHandler;
 import net.maksy.mcmmoparties.hooks.EconomyHook;
 import net.maksy.mcmmoparties.hooks.HookManager;
 import net.maksy.mcmmoparties.listeners.AbilityBuffListener;

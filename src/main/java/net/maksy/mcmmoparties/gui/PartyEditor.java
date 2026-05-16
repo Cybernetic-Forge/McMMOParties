@@ -22,9 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static net.maksy.mcmmoparties.configuration.enums.Lang.NOT_A_NUMBER;
-import static net.maksy.mcmmoparties.configuration.enums.Lang.PARTY_CREATED;
-import static net.maksy.mcmmoparties.configuration.enums.Lang.PARTY_UPDATED;
+import static net.maksy.mcmmoparties.configuration.enums.Lang.*;
 
 public class PartyEditor implements Listener {
 

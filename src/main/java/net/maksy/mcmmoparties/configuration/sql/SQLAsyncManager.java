@@ -1,6 +1,7 @@
 package net.maksy.mcmmoparties.configuration.sql;
 
 import net.maksy.mcmmoparties.McMMOParties;
+import net.maksy.mcmmoparties.configuration.enums.PartyBuffType;
 import net.maksy.mcmmoparties.configuration.enums.PartyState;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.configuration.models.SkillRequirement;
@@ -11,7 +12,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
-import net.maksy.mcmmoparties.configuration.enums.PartyBuffType;
 
 public class SQLAsyncManager {
 
