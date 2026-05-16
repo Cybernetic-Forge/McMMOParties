@@ -56,7 +56,7 @@ public class PartyTopGUI implements Listener {
 				new Replaceable("%total_parties%", String.valueOf(rankings.size()))
 		));
 		inventory = Bukkit.createInventory(player, McMMOParties.getPartyOverviewCfg().getInvSize(), title);
-		InventoryUtils.setFillerItem(inventory, Material.GRAY_STAINED_GLASS_PANE);
+        ItemUT.setFillerItem(inventory, Material.GRAY_STAINED_GLASS_PANE);
 		partyBySlot.clear();
 
 		var header = McMMOParties.getPartyOverviewCfg().getIcon("PartyTop.Header",

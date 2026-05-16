@@ -11,6 +11,14 @@ Network:
   TeleportChannel: "mcmmoparties:teleport"
   PartyChatChannel: "mcmmoparties:partychat"
 
+Commands:
+  OverrideMcMMOPartyCommand: true
+  OverrideMythicDungeonsCommand: true
+
+Hooks:
+  ChestShop:
+    Enabled: true
+
 Party:
   BaseMemberSlots: 10
 

@@ -6,12 +6,18 @@ import net.maksy.mcmmoparties.api.events.PartyEventHandler;
 import net.maksy.mcmmoparties.commands.PartyCommands;
 import net.maksy.mcmmoparties.configuration.PartyLoader;
 import net.maksy.mcmmoparties.configuration.configs.ConfigManager;
+import net.maksy.mcmmoparties.configuration.enums.HookType;
 import net.maksy.mcmmoparties.configuration.configs.PartyEditorCfg;
 import net.maksy.mcmmoparties.configuration.configs.PartyOverviewCfg;
 import net.maksy.mcmmoparties.configuration.sql.SQLManager;
 import net.maksy.mcmmoparties.hooks.EconomyHook;
 import net.maksy.mcmmoparties.hooks.HookManager;
+import net.maksy.mcmmoparties.hooks.chestshop.ChestShopPartyAccountProvider;
+import net.maksy.mcmmoparties.hooks.chestshop.ChestShopPartyHook;
 import net.maksy.mcmmoparties.listeners.AbilityBuffListener;
+import net.maksy.mcmmoparties.listeners.ChestShopEconomyListener;
+import net.maksy.mcmmoparties.listeners.ChestShopListener;
+import net.maksy.mcmmoparties.listeners.ChestShopProtectionListener;
 import net.maksy.mcmmoparties.listeners.ExpEvents;
 import net.maksy.mcmmoparties.proxy.ProxyPartyChatListener;
 import net.maksy.mcmmoparties.proxy.ProxyTeleportListener;
@@ -57,10 +63,7 @@ public final class McMMOParties extends JavaPlugin {
         init();
         sql = new SQLManager();
         partyLoader = new PartyLoader();
-        PartyCommands partyCommands = new PartyCommands();
-        PluginCommand partyCommand = Objects.requireNonNull(getCommand("party"));
-        partyCommand.setExecutor(partyCommands);
-        partyCommand.setTabCompleter(partyCommands);
+       Objects.requireNonNull(getCommand("party")).setExecutor(new PartyCommands());
 
         partyEventHandler = new PartyEventHandler();
 
@@ -84,6 +87,7 @@ public final class McMMOParties extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new ExpEvents(), this);
         getServer().getPluginManager().registerEvents(new AbilityBuffListener(), this);
+        registerChestShopIntegration();
     }
 
     @Override
@@ -110,6 +114,22 @@ public final class McMMOParties extends JavaPlugin {
     public void init() {
         getConfig().options().copyDefaults(true);
         saveDefaultConfig();
+    }
+
+    private void registerChestShopIntegration() {
+        if (!configManager.isChestShopEnabled() || !hookManager.isHooked(HookType.ChestShop)) {
+            return;
+        }
+
+        ChestShopPartyAccountProvider accountProvider = new ChestShopPartyAccountProvider();
+        ChestShopPartyHook chestShopHook = new ChestShopPartyHook(accountProvider);
+
+        getServer().getPluginManager().registerEvents(new ChestShopListener(chestShopHook, accountProvider), this);
+        getServer().getPluginManager().registerEvents(new ChestShopProtectionListener(chestShopHook), this);
+        getServer().getPluginManager().registerEvents(new ChestShopEconomyListener(chestShopHook), this);
+
+        getServer().getScheduler().runTaskLater(this, accountProvider::registerLoadedParties, 40L);
+        getLogger().info("Registered ChestShop party integration.");
     }
 
     public static SQLManager getSQL() { return sql; }

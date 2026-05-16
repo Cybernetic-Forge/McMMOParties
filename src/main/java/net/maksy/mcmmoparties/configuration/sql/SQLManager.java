@@ -395,6 +395,71 @@ public class SQLManager {
         return 0.0;
     }
 
+    public boolean depositPartyBalanceDirect(String partyID, double amount) {
+        if (amount <= 0.0) {
+            return false;
+        }
+
+        String normalizedPartyID = normalizePartyID(partyID);
+        try (Connection connection = connection()) {
+            connection.setAutoCommit(false);
+            try {
+                if (!partyTable.exists(connection, normalizedPartyID)) {
+                    connection.rollback();
+                    return false;
+                }
+
+                double currentBalance = partyTable.getBalance(connection, normalizedPartyID);
+                partyTable.updateBalance(connection, normalizedPartyID, currentBalance + amount);
+                connection.commit();
+                return true;
+            } catch (SQLException e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not deposit direct party balance for " + partyID, e);
+        }
+        return false;
+    }
+
+    public boolean withdrawPartyBalanceDirect(String partyID, double amount) {
+        if (amount <= 0.0) {
+            return false;
+        }
+
+        String normalizedPartyID = normalizePartyID(partyID);
+        try (Connection connection = connection()) {
+            connection.setAutoCommit(false);
+            try {
+                if (!partyTable.exists(connection, normalizedPartyID)) {
+                    connection.rollback();
+                    return false;
+                }
+
+                double currentBalance = partyTable.getBalance(connection, normalizedPartyID);
+                if (currentBalance < amount) {
+                    connection.rollback();
+                    return false;
+                }
+
+                partyTable.updateBalance(connection, normalizedPartyID, currentBalance - amount);
+                connection.commit();
+                return true;
+            } catch (SQLException e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not withdraw direct party balance for " + partyID, e);
+        }
+        return false;
+    }
+
     public int getPartySkillPoints(String partyID) {
         String normalizedPartyID = normalizePartyID(partyID);
         try (Connection connection = connection()) {

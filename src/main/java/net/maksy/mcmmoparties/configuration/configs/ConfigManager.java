@@ -45,6 +45,7 @@ public class ConfigManager {
         config.addMissing("Network.ServerName", "paper");
         config.addMissing("Network.TeleportChannel", "mcmmoparties:teleport");
         config.addMissing("Network.PartyChatChannel", "mcmmoparties:partychat");
+        config.addMissing("Hooks.ChestShop.Enabled", true);
 
         for (PrimarySkillType skill : PrimarySkillType.values()) {
             config.addMissing("Experience.Scaling." + skill.name(), 0.2D);
@@ -95,6 +96,10 @@ public class ConfigManager {
 
     public String getPartyChatChannel() {
         return config.getString("Network.PartyChatChannel", "mcmmoparties:partychat");
+    }
+
+    public boolean isChestShopEnabled() {
+        return config.getBoolean("Hooks.ChestShop.Enabled", true);
     }
 
     public float getPastExp(long level) {

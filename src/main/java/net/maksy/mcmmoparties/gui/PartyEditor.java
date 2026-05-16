@@ -6,7 +6,7 @@ import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.configuration.models.PartySettings;
 import net.maksy.mcmmoparties.configuration.models.SkillRequirement;
-import net.maksy.mcmmoparties.utils.InventoryUtils;
+import net.maksy.mcmmoparties.utils.ItemUT;
 import net.maksy.mcmmoparties.utils.Replaceable;
 import net.maksy.mcmmoparties.utils.Utils;
 import org.bukkit.Bukkit;
@@ -49,7 +49,7 @@ public class PartyEditor implements Listener {
     }
 
     private void initInventory() {
-        InventoryUtils.setFillerItem(inventory, Material.GRAY_STAINED_GLASS_PANE);
+        ItemUT.setFillerItem(inventory, Material.GRAY_STAINED_GLASS_PANE);
         slots.clear();
 
         for (SkillRequirement entry : skillRequirements) {

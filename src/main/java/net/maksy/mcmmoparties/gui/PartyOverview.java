@@ -78,7 +78,7 @@ public class PartyOverview implements Listener {
     }
 
     private void initInventory() {
-        InventoryUtils.setFillerItem(inventory, Material.GRAY_STAINED_GLASS_PANE);
+        ItemUT.setFillerItem(inventory, Material.GRAY_STAINED_GLASS_PANE);
 
         if (currentView == 0) {
             displayOverview();
@@ -1001,7 +1001,7 @@ public class PartyOverview implements Listener {
             if (slot == sortSlot) {
                 memberSortFilter = (memberSortFilter + 1) % 3;
                 inventory.clear();
-                InventoryUtils.setFillerItem(inventory, Material.GRAY_STAINED_GLASS_PANE);
+                ItemUT.setFillerItem(inventory, Material.GRAY_STAINED_GLASS_PANE);
                 displayMembers();
             }
         } else if (currentView == 2) {
@@ -1032,7 +1032,7 @@ public class PartyOverview implements Listener {
                 McMMOParties.getSQL().clearBuffSuggestions(party.getPartyID());
                 player.sendMessage(LanguageConfig.get().getMessage(BUFF_ALREADY_MAXED));
                 inventory.clear();
-                InventoryUtils.setFillerItem(inventory, Material.GRAY_STAINED_GLASS_PANE);
+                ItemUT.setFillerItem(inventory, Material.GRAY_STAINED_GLASS_PANE);
                 displayBuffs();
                 return;
             }
@@ -1057,7 +1057,7 @@ public class PartyOverview implements Listener {
                             return;
                         }
                         inventory.clear();
-                        InventoryUtils.setFillerItem(inventory, Material.GRAY_STAINED_GLASS_PANE);
+                        ItemUT.setFillerItem(inventory, Material.GRAY_STAINED_GLASS_PANE);
                         displayBuffs();
                     });
                 });
@@ -1104,7 +1104,7 @@ public class PartyOverview implements Listener {
             }
             party.refreshBuffs();
             inventory.clear();
-            InventoryUtils.setFillerItem(inventory, Material.GRAY_STAINED_GLASS_PANE);
+            ItemUT.setFillerItem(inventory, Material.GRAY_STAINED_GLASS_PANE);
             displayBuffs();
         }
     }
