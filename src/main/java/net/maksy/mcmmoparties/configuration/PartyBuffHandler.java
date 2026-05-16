@@ -28,11 +28,16 @@ public class PartyBuffHandler {
     private int expSharingRadius;
     @Getter
     private int memberSlotBonus;
+    @Getter
+    private int dungeonInstanceSlotBonus;
+    @Getter
+    private boolean dungeonInstanceSlotsInfinite;
     private final Map<String, Integer> abilityDurationBonus = new HashMap<>();
 
     private final Map<Integer, Double> expSharingRateByLevel = new TreeMap<>();
     private final Map<Integer, Integer> expSharingRadiusByLevel = new TreeMap<>();
     private final Map<Integer, Integer> memberSlotsByLevel = new TreeMap<>();
+    private final Map<Integer, Integer> dungeonInstanceSlotsByLevel = new TreeMap<>();
     private final Map<Integer, Map<String, Integer>> abilityDurationByLevel = new TreeMap<>();
     private final Map<String, TreeMap<Integer, Integer>> abilityDurationPointLevels = new HashMap<>();
     private final Map<String, TreeMap<Integer, Double>> skillPointUpgradeCosts = new HashMap<>();
@@ -54,10 +59,13 @@ public class PartyBuffHandler {
         expSharingRatePercent = 0.0;
         expSharingRadius = 0;
         memberSlotBonus = 0;
+        dungeonInstanceSlotBonus = 0;
+        dungeonInstanceSlotsInfinite = false;
         abilityDurationBonus.clear();
         expSharingRateByLevel.clear();
         expSharingRadiusByLevel.clear();
         memberSlotsByLevel.clear();
+        dungeonInstanceSlotsByLevel.clear();
         abilityDurationByLevel.clear();
         abilityDurationPointLevels.clear();
         skillPointUpgradeCosts.clear();
@@ -125,6 +133,12 @@ public class PartyBuffHandler {
             loadSkillPointUpgradeConfig(slotsSection, buildSkillPointKey(PartyBuffType.MEMBER_SLOTS, null));
         }
 
+        ConfigurationSection dungeonSlotsSection = skillpoints.getConfigurationSection(PartyBuffType.DUNGEON_INSTANCE_SLOTS.name());
+        if (dungeonSlotsSection != null) {
+            loadDungeonInstanceLevels(dungeonSlotsSection, dungeonInstanceSlotsByLevel);
+            loadSkillPointUpgradeConfig(dungeonSlotsSection, buildSkillPointKey(PartyBuffType.DUNGEON_INSTANCE_SLOTS, null));
+        }
+
         ConfigurationSection abilitySection = skillpoints.getConfigurationSection(PartyBuffType.ABILITY_DURATION.name());
         if (abilitySection != null) {
             for (String ability : abilitySection.getKeys(false)) {
@@ -152,6 +166,9 @@ public class PartyBuffHandler {
         expSharingRatePercent = getValueForPointsDouble(expSharingRateByLevel, getSpentPoints(PartyBuffType.EXP_SHARING_RATE)) / 100.0;
         expSharingRadius = getValueForPointsInt(expSharingRadiusByLevel, getSpentPoints(PartyBuffType.EXP_SHARING_RADIUS));
         memberSlotBonus = getValueForPointsInt(memberSlotsByLevel, getSpentPoints(PartyBuffType.MEMBER_SLOTS));
+        int dungeonSlotsValue = getValueForPointsInt(dungeonInstanceSlotsByLevel, getSpentPoints(PartyBuffType.DUNGEON_INSTANCE_SLOTS));
+        dungeonInstanceSlotsInfinite = dungeonSlotsValue == Integer.MAX_VALUE;
+        dungeonInstanceSlotBonus = dungeonInstanceSlotsInfinite ? 0 : dungeonSlotsValue;
 
         for (Map.Entry<String, TreeMap<Integer, Integer>> entry : abilityDurationPointLevels.entrySet()) {
             int spent = getSpentPoints(PartyBuffType.ABILITY_DURATION, entry.getKey());
@@ -199,6 +216,22 @@ public class PartyBuffHandler {
                 continue;
             }
             target.put(level, section.getDouble(levelKey));
+        }
+    }
+
+    private void loadDungeonInstanceLevels(ConfigurationSection section, Map<Integer, Integer> target) {
+        for (String levelKey : section.getKeys(false)) {
+            int level = parsePositiveInt(levelKey);
+            if (level <= 0) {
+                continue;
+            }
+            Object rawValue = section.get(levelKey);
+            Integer parsed = parseDungeonInstanceSlotValue(rawValue);
+            if (parsed == null) {
+                logger.warning("Invalid DUNGEON_INSTANCE_SLOTS value at level " + level + ": " + rawValue);
+                continue;
+            }
+            target.put(level, parsed);
         }
     }
 
@@ -332,6 +365,7 @@ public class PartyBuffHandler {
                 case EXP_SHARING_RATE -> parseExpSharingRate(level, entry, parts[1]);
                 case EXP_SHARING_RADIUS -> parseExpSharingRadius(level, entry, parts[1]);
                 case MEMBER_SLOTS -> parseMemberSlots(level, entry, parts[1]);
+                case DUNGEON_INSTANCE_SLOTS -> parseDungeonInstanceSlots(level, entry, parts[1]);
                 case ABILITY_DURATION -> parseAbilityDuration(level, entry, parts);
             }
         }
@@ -346,6 +380,9 @@ public class PartyBuffHandler {
         }
         if (section.contains(PartyBuffType.MEMBER_SLOTS.name())) {
             parseMemberSlots(level, PartyBuffType.MEMBER_SLOTS.name(), section.getString(PartyBuffType.MEMBER_SLOTS.name()));
+        }
+        if (section.contains(PartyBuffType.DUNGEON_INSTANCE_SLOTS.name())) {
+            parseDungeonInstanceSlots(level, PartyBuffType.DUNGEON_INSTANCE_SLOTS.name(), section.getString(PartyBuffType.DUNGEON_INSTANCE_SLOTS.name()));
         }
         if (section.isConfigurationSection(PartyBuffType.ABILITY_DURATION.name())) {
             ConfigurationSection abilities = section.getConfigurationSection(PartyBuffType.ABILITY_DURATION.name());
@@ -403,6 +440,47 @@ public class PartyBuffHandler {
         }
     }
 
+    private void parseDungeonInstanceSlots(int level, String entry, String value) {
+        if (value == null) {
+            logger.warning("Invalid DUNGEON_INSTANCE_SLOTS entry at level " + level + ": " + entry);
+            return;
+        }
+
+        Integer parsed = parseDungeonInstanceSlotValue(value);
+        if (parsed == null) {
+            logger.warning("Invalid DUNGEON_INSTANCE_SLOTS value at level " + level + ": " + entry);
+            return;
+        }
+
+        dungeonInstanceSlotsByLevel.put(level, parsed);
+        if (parsed == Integer.MAX_VALUE) {
+            dungeonInstanceSlotsInfinite = true;
+            dungeonInstanceSlotBonus = 0;
+        } else if (!dungeonInstanceSlotsInfinite) {
+            dungeonInstanceSlotBonus += parsed;
+        }
+    }
+
+    private Integer parseDungeonInstanceSlotValue(Object rawValue) {
+        if (rawValue == null) {
+            return null;
+        }
+        if (rawValue instanceof Number number) {
+            int value = number.intValue();
+            return value < 0 ? Integer.MAX_VALUE : value;
+        }
+        String value = rawValue.toString().trim();
+        if (value.equalsIgnoreCase("infinite") || value.equalsIgnoreCase("infinity") || value.equalsIgnoreCase("unlimited")) {
+            return Integer.MAX_VALUE;
+        }
+        try {
+            int parsed = Integer.parseInt(value);
+            return parsed < 0 ? Integer.MAX_VALUE : parsed;
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
     private void parseAbilityDuration(int level, String entry, String[] parts) {
         if (parts.length < 3) {
             logger.warning("Invalid ABILITY_DURATION entry at level " + level + ": " + entry);
@@ -446,6 +524,10 @@ public class PartyBuffHandler {
 
     public Map<Integer, Integer> getMemberSlotsByLevel() {
         return Collections.unmodifiableMap(memberSlotsByLevel);
+    }
+
+    public Map<Integer, Integer> getDungeonInstanceSlotsByLevel() {
+        return Collections.unmodifiableMap(dungeonInstanceSlotsByLevel);
     }
 
     public Map<Integer, Map<String, Integer>> getAbilityDurationByLevel() {
@@ -496,6 +578,7 @@ public class PartyBuffHandler {
             case EXP_SHARING_RATE -> getMaxPointKey(expSharingRateByLevel);
             case EXP_SHARING_RADIUS -> getMaxPointKey(expSharingRadiusByLevel);
             case MEMBER_SLOTS -> getMaxPointKey(memberSlotsByLevel);
+            case DUNGEON_INSTANCE_SLOTS -> getMaxPointKey(dungeonInstanceSlotsByLevel);
             case ABILITY_DURATION -> 0;
         };
     }

@@ -11,7 +11,7 @@ Icons:
       - "&eOwner: &a%owner_name%"
       - "&eMembers: &a%member_count%"
   PlayersMember:
-    Slot: 10
+    Slot: 20
     Material: PLAYER_HEAD
     Display: "&9Members"
     Lore:
@@ -22,6 +22,7 @@ Icons:
     Display: "&9%member_name%"
     Lore:
       - "&eStatus: %member_status%"
+      - "%member_role_display%"
       - "&eShare: &a%member_share%"
   MemberSort:
     Slot: 49
@@ -31,25 +32,18 @@ Icons:
       - "&eClick to change filter"
       - "&7Current: &f%member_filter%"
   PartyStats:
-    Slot: 12
+    Slot: 22
     Material: DIAMOND_PICKAXE
     Display: "&9Skill Statistics"
     Lore:
       - "&eView cumulative skill levels"
       - "&7Click to view details"
   PartyBuffs:
-    Slot: 14
+    Slot: 24
     Material: ENCHANTED_GOLDEN_APPLE
     Display: "&9Party Buffs"
     Lore:
       - "&eView active party buffs"
-      - "&7Click to view details"
-  PartyProgress:
-    Slot: 16
-    Material: EXPERIENCE_BOTTLE
-    Display: "&9Progress"
-    Lore:
-      - "&eView current party progress towards the next level"
       - "&7Click to view details"
   PartyWaypoint:
     Slot: 29
@@ -58,33 +52,34 @@ Icons:
     Lore:
       - "&7[&aLeft-Click&7] &eTeleport to your party's waypoint"
       - "&7[&aRight-Click&7] &eSet the waypoint to your current location"
-  EditParty:
-    Slot: 31
-    Material: WRITABLE_BOOK
-    Display: "&aEdit Party"
-    Lore:
-      - "&7[&aClick&7] &eEdit your party settings"
-      - "&7(Owner only)"
   PartyTresor:
-    Slot: 33
+    Slot: 31
     Material: BUNDLE
     Display: "&aParty Tresor"
     Lore:
       - "&eBalance: &a%party_balance%"
       - "&7[&aLeft-Click&7] &eDeposit Money"
       - "&7[&aRight-Click&7] &eWithdraw Money"
+  PartyInstances:
+    Slot: 33
+    Material: TRIAL_KEY
+    Display: "&9Dungeon Instance Party"
+    Lore:
+      - "&eManage runtime dungeon entrance groups"
+      - "&7Click to view details"
+  EditParty:
+    Slot: 7
+    Material: WRITABLE_BOOK
+    Display: "&aEdit Party"
+    Lore:
+      - "&7[&aClick&7] &eEdit your party settings"
+      - "&7(Owner only)"
   Back:
-    Slot: 52
+    Slot: 8
     Material: BARRIER
     Display: "&cBack"
     Lore:
       - "&7Click to close"
-  SkillsDisplay:
-    Slot: 10
-    Material: STONE
-    Display: "&9%skill_name%"
-    Lore:
-      - "&eCumulative Level: &a%skill_level%"
   CumulatedSkills:
     MINING:
       Slot: 10
@@ -116,87 +111,88 @@ Icons:
       Display: "&9%skill_name%"
       Lore:
         - "&eTotal Level: &a%skill_level%"
-    SWORDS:
-      Slot: 19
-      Material: DIAMOND_SWORD
-      Display: "&9%skill_name%"
-      Lore:
-        - "&eTotal Level: &a%skill_level%"
-    AXES:
-      Slot: 20
-      Material: DIAMOND_AXE
-      Display: "&9%skill_name%"
-      Lore:
-        - "&eTotal Level: &a%skill_level%"
-    ARCHERY:
-      Slot: 21
-      Material: BOW
-      Display: "&9%skill_name%"
-      Lore:
-        - "&eTotal Level: &a%skill_level%"
-    UNARMED:
-      Slot: 22
-      Material: BLAZE_ROD
-      Display: "&9%skill_name%"
-      Lore:
-        - "&eTotal Level: &a%skill_level%"
-    ACROBATICS:
-      Slot: 23
-      Material: FEATHER
-      Display: "&9%skill_name%"
-      Lore:
-        - "&eTotal Level: &a%skill_level%"
-    TAMING:
-      Slot: 24
-      Material: LEAD
-      Display: "&9%skill_name%"
-      Lore:
-        - "&eTotal Level: &a%skill_level%"
-    MACES:
-      Slot: 28
-      Material: MACE
-      Display: "&9%skill_name%"
-      Lore:
-        - "&eTotal Level: &a%skill_level%"
-    SPEARS:
-      Slot: 29
-      Material: DIAMOND_SPEAR
-      Display: "&9%skill_name%"
-      Lore:
-        - "&eTotal Level: &a%skill_level%"
-    TRIDENTS:
-      Slot: 30
-      Material: TRIDENT
-      Display: "&9%skill_name%"
-      Lore:
-        - "&eTotal Level: &a%skill_level%"
-    CROSSBOWS:
-      Slot: 31
-      Material: CROSSBOW
-      Display: "&9%skill_name%"
-      Lore:
-        - "&eTotal Level: &a%skill_level%"
     ALCHEMY:
-      Slot: 32
+      Slot: 15
       Material: BREWING_STAND
       Display: "&9%skill_name%"
       Lore:
         - "&eTotal Level: &a%skill_level%"
     SMELTING:
-      Slot: 33
+      Slot: 16
       Material: BLAST_FURNACE
       Display: "&9%skill_name%"
       Lore:
         - "&eTotal Level: &a%skill_level%"
     REPAIR:
-      Slot: 34
+      Slot: 19
       Material: ANVIL
       Display: "&9%skill_name%"
       Lore:
         - "&eTotal Level: &a%skill_level%"
     SALVAGE:
-      Slot: 35
+      Slot: 20
       Material: GRINDSTONE
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    ACROBATICS:
+      Slot: 21
+      Material: FEATHER
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+
+    SWORDS:
+      Slot: 23
+      Material: DIAMOND_SWORD
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    AXES:
+      Slot: 24
+      Material: DIAMOND_AXE
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    ARCHERY:
+      Slot: 25
+      Material: BOW
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    UNARMED:
+      Slot: 29
+      Material: BLAZE_ROD
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    TAMING:
+      Slot: 30
+      Material: LEAD
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    MACES:
+      Slot: 31
+      Material: MACE
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    SPEARS:
+      Slot: 32
+      Material: DIAMOND_SPEAR
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    TRIDENTS:
+      Slot: 33
+      Material: TRIDENT
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    CROSSBOWS:
+      Slot: 34
+      Material: CROSSBOW
       Display: "&9%skill_name%"
       Lore:
         - "&eTotal Level: &a%skill_level%"
@@ -219,7 +215,7 @@ Icons:
       - "&ePreferred: %preferred_text%"
       - "&eYour Highlight: %player_highlighted%"
       - " "
-      - "&7[&aLeft-Click&7] &fUpgrade (owner only)"
+      - "&7[&aLeft-Click&7] &fUpgrade (authorized role)"
       - "&7[&aRight-Click&7] &fHighlight this buff"
       - " "
   BuffsDisplayLevel:
@@ -230,14 +226,14 @@ Icons:
       - "&eTotal: &a%current_amount%"
       - "&eNext Upgrade: &a%current_amount% &m->&r %next_amount%"
   BuffModeLevel:
-    Slot: 45
+    Slot: 4
     Material: EXPERIENCE_BOTTLE
     Display: "&aLevel Buffs"
     Lore:
       - "&7Handler: &fLevel"
       - "&7Party Level: &f%party_level%"
   BuffModeSkillpoints:
-    Slot: 45
+    Slot: 4
     Material: NETHER_STAR
     Display: "&aSkillpoint Buffs"
     Lore:
@@ -245,13 +241,15 @@ Icons:
       - "&7Total: &f%skillpoints_total%"
       - "&7Available: &f%skillpoints_available%"
   PartyTop:
+    DefaultSort: RANKING
     Header:
-      Slot: 44
+      Slot: 4
       Material: NETHER_STAR
-      Display: "&6Party Rankings"
+      Display: "&6Party List"
       Lore:
-        - "&7Open the full party ranking list"
+        - "&7Open the full party list"
         - "&7Total parties: &f%total_parties%"
+        - "&7Default sorting: &f%sort_mode%"
         - "&7Click to view page %page%/%max_page%"
     Empty:
       Slot: 22
@@ -259,6 +257,7 @@ Icons:
       Display: "&cNo Parties Found"
       Lore:
         - "&7There are no parties to show."
+    OwnEntrySlot: 44
     EntrySlots:
       - 10
       - 11
@@ -311,6 +310,9 @@ Icons:
         - "&7Online: &f%online_member_count%"
         - "&7Total score: &a%party_score%"
         - "&7Power: &a%party_power%"
+        - "&7Balance: &a%party_balance%"
+        - "&7Access: %party_access%"
+        - "&7Password required: &f%party_password_required%"
         - "&7Click to inspect this party"
     EntryOwn:
       Material: PLAYER_HEAD
@@ -322,18 +324,28 @@ Icons:
         - "&7Online: &f%online_member_count%"
         - "&7Total score: &a%party_score%"
         - "&7Power: &a%party_power%"
+        - "&7Balance: &a%party_balance%"
+        - "&7Access: %party_access%"
+        - "&7Password required: &f%party_password_required%"
         - "&7Click to inspect this party"
     SkillHeader:
       - "&7Cumulative skill stats:"
     SkillLine:
       - "&7- &f%skill_name%: &a%skill_level%"
-    PageTitle: "&6Party Top &7| &fPage %page%/%max_page%"
+    PageTitle: "&6Party List &7| &f%sort_mode% &7| &fPage %page%/%max_page%"
     PrevPage:
       Slot: 45
       Material: ARROW
       Display: "&aPrevious Page"
       Lore:
         - "&7Go to the previous page"
+    Sort:
+      Slot: 48
+      Material: HOPPER
+      Display: "&bSorting: &f%sort_mode%"
+      Lore:
+        - "&7Left-click to use the next sorting"
+        - "&7Right-click to use the previous sorting"
     PageInfo:
       Slot: 49
       Material: BOOK

@@ -14,10 +14,12 @@ import net.maksy.mcmmoparties.hooks.EconomyHook;
 import net.maksy.mcmmoparties.hooks.HookManager;
 import net.maksy.mcmmoparties.hooks.chestshop.ChestShopPartyAccountProvider;
 import net.maksy.mcmmoparties.hooks.chestshop.ChestShopPartyHook;
+import net.maksy.mcmmoparties.hooks.mythiccraft.DungeonInstanceManager;
 import net.maksy.mcmmoparties.listeners.AbilityBuffListener;
 import net.maksy.mcmmoparties.listeners.ChestShopEconomyListener;
 import net.maksy.mcmmoparties.listeners.ChestShopListener;
 import net.maksy.mcmmoparties.listeners.ChestShopProtectionListener;
+import net.maksy.mcmmoparties.listeners.DungeonInstanceListener;
 import net.maksy.mcmmoparties.listeners.ExpEvents;
 import net.maksy.mcmmoparties.proxy.ProxyPartyChatListener;
 import net.maksy.mcmmoparties.proxy.ProxyTeleportListener;
@@ -42,6 +44,8 @@ public final class McMMOParties extends JavaPlugin {
     private static PartyLoader partyLoader;
     @Getter
     private static PartyEventHandler partyEventHandler;
+    @Getter
+    private static DungeonInstanceManager dungeonInstanceManager;
 
     @Getter
     private static PartyEditorCfg partyEditorCfg;
@@ -63,7 +67,8 @@ public final class McMMOParties extends JavaPlugin {
         init();
         sql = new SQLManager();
         partyLoader = new PartyLoader();
-       Objects.requireNonNull(getCommand("party")).setExecutor(new PartyCommands());
+        dungeonInstanceManager = new DungeonInstanceManager();
+        getCommand("party").setExecutor(new PartyCommands());
 
         partyEventHandler = new PartyEventHandler();
 
@@ -87,6 +92,7 @@ public final class McMMOParties extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new ExpEvents(), this);
         getServer().getPluginManager().registerEvents(new AbilityBuffListener(), this);
+        getServer().getPluginManager().registerEvents(new DungeonInstanceListener(), this);
         registerChestShopIntegration();
     }
 

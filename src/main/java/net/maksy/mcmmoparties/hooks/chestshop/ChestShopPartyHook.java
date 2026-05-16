@@ -15,7 +15,7 @@ public class ChestShopPartyHook {
 
     public boolean canManageShop(String partyId, Player player) {
         McMMOParty party = getParty(partyId);
-        return party != null && player != null && party.getMembers().contains(player.getUniqueId());
+        return party != null && player != null && party.canManageChestShop(player.getUniqueId());
     }
 
     public McMMOParty getParty(String partyId) {

@@ -84,3 +84,17 @@ Skillpoints:
     1: 2
     2: 2
     3: 3
+  DUNGEON_INSTANCE_SLOTS:
+    Configuration:
+      Costs:
+        1: 400.0
+        2: 900.0
+        3: 1800.0
+      Conditions:
+        2:
+          TAMING: 250
+        3:
+          TAMING: 500
+    1: 1
+    2: 2
+    3: unlimited

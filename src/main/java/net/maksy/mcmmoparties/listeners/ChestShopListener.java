@@ -41,9 +41,9 @@ public class ChestShopListener implements Listener {
             return;
         }
 
-        if (!party.getMembers().contains(event.getPlayer().getUniqueId())) {
+        if (!party.canManageChestShop(event.getPlayer().getUniqueId())) {
             event.getPlayer().sendMessage(LanguageConfig.get().getMessage(
-                    Lang.CHESTSHOP_PARTY_MEMBER_REQUIRED,
+                    Lang.CHESTSHOP_NO_PERMISSION,
                     new Replaceable("%party%", party.getPartyID())
             ));
             event.setCancelled(true);

@@ -2,6 +2,8 @@ package net.maksy.mcmmoparties.utils;
 
 import com.gmail.nossr50.datatypes.skills.PrimarySkillType;
 import net.maksy.mcmmoparties.McMMOParties;
+import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
+import net.maksy.mcmmoparties.configuration.enums.Lang;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -78,6 +80,13 @@ public final class PartyRankingRenderer {
 		placeholders.add(new Replaceable("%online_member_count%", String.valueOf(entry.onlineMemberCount())));
 		placeholders.add(new Replaceable("%party_score%", String.valueOf(entry.totalSkillScore())));
 		placeholders.add(new Replaceable("%party_power%", String.format(Locale.US, "%.2f", entry.powerLevel())));
+		placeholders.add(new Replaceable("%party_balance%", String.format(Locale.US, "%.2f", entry.party().getBalance())));
+		boolean isOpen = !entry.party().getPartySettings().isLocked();
+		boolean requiresPassword = entry.party().getPartySettings().getPassword() != null && !entry.party().getPartySettings().getPassword().isBlank();
+		placeholders.add(new Replaceable("%party_open%", isOpen ? LanguageConfig.get().getMessage(Lang.COMMON_YES) : LanguageConfig.get().getMessage(Lang.COMMON_NO)));
+		placeholders.add(new Replaceable("%party_private%", isOpen ? LanguageConfig.get().getMessage(Lang.COMMON_NO) : LanguageConfig.get().getMessage(Lang.COMMON_YES)));
+		placeholders.add(new Replaceable("%party_access%", LanguageConfig.get().getMessage(isOpen ? Lang.PARTY_ACCESS_OPEN : Lang.PARTY_ACCESS_PRIVATE)));
+		placeholders.add(new Replaceable("%party_password_required%", LanguageConfig.get().getMessage(requiresPassword ? Lang.COMMON_YES : Lang.COMMON_NO)));
 		if (extra != null) {
 			for (Replaceable replaceable : extra) {
 				if (replaceable != null) {

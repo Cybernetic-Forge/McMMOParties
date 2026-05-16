@@ -65,6 +65,14 @@ public class PartyOverviewCfg {
         return config.isSet(path) ? config.getIntegerList(path) : def;
     }
 
+    public int getInt(String path, int def) {
+        return config.getInt(path, def);
+    }
+
+    public String getString(String path, String def) {
+        return config.getString(path, def);
+    }
+
     private String applyReplaceables(String value, Replaceable... replaceables) {
         String result = value;
         if (replaceables == null) {
@@ -89,4 +97,3 @@ public class PartyOverviewCfg {
         return result;
     }
 }
-

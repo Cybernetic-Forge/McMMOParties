@@ -4,11 +4,14 @@ import lombok.Getter;
 import lombok.Setter;
 import net.maksy.mcmmoparties.McMMOParties;
 import net.maksy.mcmmoparties.configuration.PartyBuffHandler;
+import net.maksy.mcmmoparties.configuration.enums.PartyState;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class McMMOParty {
@@ -32,12 +35,13 @@ public class McMMOParty {
     private UUID owner;
     @Getter
     private final List<UUID> members;
+    private final Map<UUID, PartyState> memberStates;
 
     @Getter
     private final PartySettings partySettings;
     private final PartyBuffHandler buffHandler;
 
-    public McMMOParty(String partyID, String display, float experience, long level, UUID owner, List<UUID> members, PartySettings partySettings) {
+    public McMMOParty(String partyID, String display, float experience, long level, UUID owner, List<UUID> members, Map<UUID, PartyState> memberStates, PartySettings partySettings) {
         this.partyID = partyID;
         this.display = display;
         this.experience = experience;
@@ -46,6 +50,13 @@ public class McMMOParty {
         this.neededExperience = McMMOParties.getConfigManager().getNeededExperience(level + 1);
         this.owner = owner;
         this.members = members;
+        this.memberStates = new HashMap<>();
+        if (memberStates != null) {
+            this.memberStates.putAll(memberStates);
+        }
+        if (owner != null) {
+            this.memberStates.put(owner, PartyState.OWNER);
+        }
         this.partySettings = partySettings;
         this.buffHandler = new PartyBuffHandler(this);
         refreshBuffs();
@@ -72,7 +83,65 @@ public class McMMOParty {
     }
 
     public boolean isOwner(UUID uuid) {
-        return owner.equals(uuid);
+        return owner != null && owner.equals(uuid);
+    }
+
+    public PartyState getPartyState(UUID uuid) {
+        if (uuid == null) {
+            return PartyState.NONE;
+        }
+        if (isOwner(uuid)) {
+            return PartyState.OWNER;
+        }
+        if (!members.contains(uuid)) {
+            return PartyState.NONE;
+        }
+        return memberStates.getOrDefault(uuid, PartyState.MEMBER);
+    }
+
+    public void setPartyState(UUID uuid, PartyState state) {
+        if (uuid == null || state == null) {
+            return;
+        }
+        memberStates.put(uuid, state);
+        if (state == PartyState.OWNER) {
+            owner = uuid;
+        }
+    }
+
+    public Map<UUID, PartyState> getMemberStates() {
+        return new HashMap<>(memberStates);
+    }
+
+    public void removeMemberState(UUID uuid) {
+        if (uuid == null) {
+            return;
+        }
+        memberStates.remove(uuid);
+    }
+
+    public boolean canManageParty(UUID uuid) {
+        return getPartyState(uuid).canManageParty();
+    }
+
+    public boolean canDisband(UUID uuid) {
+        return getPartyState(uuid).canDisbandParty();
+    }
+
+    public boolean canManageChestShop(UUID uuid) {
+        return getPartyState(uuid).canManageChestShop();
+    }
+
+    public boolean canUpgradeBuffs(UUID uuid) {
+        return getPartyState(uuid).canUpgradeBuffs();
+    }
+
+    public boolean canManageMemberRoles(UUID uuid) {
+        return getPartyState(uuid).canManageMemberRoles();
+    }
+
+    public boolean canManageDungeonInstances(UUID uuid) {
+        return getPartyState(uuid).canManageDungeonInstances();
     }
 
     public void announceToMembers(String message) {

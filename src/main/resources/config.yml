@@ -19,6 +19,9 @@ Hooks:
   ChestShop:
     Enabled: true
 
+DungeonInstance:
+  DefaultSlots: 3
+
 Party:
   BaseMemberSlots: 10
 
@@ -30,6 +33,7 @@ Buffs:
     EXP_SHARING_RADIUS: "&aExp Sharing Radius"
     MEMBER_SLOTS: "&aMember Slots"
     ABILITY_DURATION: "&aAbility Duration"
+    DUNGEON_INSTANCE_SLOTS: "&aDungeon Instance Slots"
 
 Skills:
   DisplayNames:

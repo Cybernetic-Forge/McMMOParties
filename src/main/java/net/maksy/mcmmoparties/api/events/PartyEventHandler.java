@@ -110,11 +110,13 @@ public class PartyEventHandler {
         Bukkit.getPluginManager().callEvent(event);
         if (!event.isCancelled()) {
             party.getMembers().remove(leaver.getUniqueId());
+            party.removeMemberState(leaver.getUniqueId());
 
             UUID newOwner = null;
             if (party.isOwner(leaver.getUniqueId()) && !party.getMembers().isEmpty()) {
                 UUID uuid = party.getMembers().get(0);
                 party.setOwner(uuid);
+                party.setPartyState(uuid, PartyState.OWNER);
                 newOwner = uuid;
             }
 
@@ -157,6 +159,7 @@ public class PartyEventHandler {
         if (!event.isCancelled()) {
             if (left) {
                 SQLAsyncManager.setPartyState(newLeader, party.getPartyID(), PartyState.OWNER, () -> {
+                    party.setPartyState(newLeader, PartyState.OWNER);
                     for (UUID uuid : party.getMembers()) {
                         OfflinePlayer member = Bukkit.getOfflinePlayer(uuid);
                         if (member.isOnline()) {
@@ -166,9 +169,13 @@ public class PartyEventHandler {
                     partyLoader.reload();
                 });
             } else {
+                UUID previousOwner = party.getOwner();
                 party.setOwner(newLeader);
-                SQLAsyncManager.setPartyState(player.getUniqueId(), party.getPartyID(), PartyState.MEMBER
-                        , () -> SQLAsyncManager.setPartyState(newLeader, party.getPartyID(), PartyState.OWNER, () -> {
+                if (previousOwner != null && !previousOwner.equals(newLeader)) {
+                    party.setPartyState(previousOwner, PartyState.MEMBER);
+                }
+                party.setPartyState(newLeader, PartyState.OWNER);
+                Runnable promoteRunnable = () -> SQLAsyncManager.setPartyState(newLeader, party.getPartyID(), PartyState.OWNER, () -> {
                             for (UUID uuid : party.getMembers()) {
                                 OfflinePlayer member = Bukkit.getOfflinePlayer(uuid);
                                 if (member.isOnline()) {
@@ -176,7 +183,12 @@ public class PartyEventHandler {
                                 }
                             }
                             partyLoader.reload();
-                        }));
+                        });
+                if (previousOwner != null && !previousOwner.equals(newLeader)) {
+                    SQLAsyncManager.setPartyState(previousOwner, party.getPartyID(), PartyState.MEMBER, promoteRunnable);
+                } else {
+                    promoteRunnable.run();
+                }
             }
         }
     }

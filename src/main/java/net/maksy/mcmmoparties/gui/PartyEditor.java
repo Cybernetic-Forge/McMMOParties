@@ -171,6 +171,7 @@ public class PartyEditor implements Listener {
                             existingParty.getLevel(),
                             existingParty.getOwner(),
                             existingParty.getMembers(),
+                            existingParty.getMemberStates(),
                             new PartySettings(
                                     skillRequirements,
                                     locked,

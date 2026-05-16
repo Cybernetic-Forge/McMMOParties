@@ -35,6 +35,7 @@ public class ConfigManager {
         config.addMissing("Buffs.DisplayNames.EXP_SHARING_RADIUS", "&aExp Sharing Radius");
         config.addMissing("Buffs.DisplayNames.MEMBER_SLOTS", "&aMember Slots");
         config.addMissing("Buffs.DisplayNames.ABILITY_DURATION", "&aAbility Duration");
+        config.addMissing("Buffs.DisplayNames.DUNGEON_INSTANCE_SLOTS", "&aDungeon Instance Slots");
         for (PrimarySkillType skill : PrimarySkillType.values()) {
             config.addMissing("Skills.DisplayNames." + skill.name(), toReadableName(skill.name()));
         }
@@ -46,6 +47,7 @@ public class ConfigManager {
         config.addMissing("Network.TeleportChannel", "mcmmoparties:teleport");
         config.addMissing("Network.PartyChatChannel", "mcmmoparties:partychat");
         config.addMissing("Hooks.ChestShop.Enabled", true);
+        config.addMissing("DungeonInstance.DefaultSlots", 3);
 
         for (PrimarySkillType skill : PrimarySkillType.values()) {
             config.addMissing("Experience.Scaling." + skill.name(), 0.2D);
@@ -100,6 +102,10 @@ public class ConfigManager {
 
     public boolean isChestShopEnabled() {
         return config.getBoolean("Hooks.ChestShop.Enabled", true);
+    }
+
+    public int getDungeonInstanceDefaultSlots() {
+        return Math.max(1, config.getInt("DungeonInstance.DefaultSlots", 3));
     }
 
     public float getPastExp(long level) {

@@ -182,11 +182,13 @@ public class SQLManager {
 
             UUID owner = null;
             List<UUID> members = new ArrayList<>();
+            Map<UUID, PartyState> memberStates = new HashMap<>();
             for (PlayerTableSQL.PlayerRow row : playerTable.getPlayers(connection, normalizedPartyID)) {
-                if (row.state() == PartyState.NONE || row.state() == PartyState.PENDING) {
+                if (!row.state().isActiveMember()) {
                     continue;
                 }
                 members.add(row.uuid());
+                memberStates.put(row.uuid(), row.state());
                 if (row.state() == PartyState.OWNER) {
                     owner = row.uuid();
                 }
@@ -206,7 +208,7 @@ public class SQLManager {
                     settingsRow.partyChat()
             );
 
-            return new McMMOParty(partyRow.partyID(), partyRow.display(), partyRow.experience(), partyRow.level(), owner, members, partySettings);
+            return new McMMOParty(partyRow.partyID(), partyRow.display(), partyRow.experience(), partyRow.level(), owner, members, memberStates, partySettings);
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "[SQL] Could not load party " + partyID, e);
         }
@@ -237,7 +239,10 @@ public class SQLManager {
                 partyTable.updateParty(connection, normalizedPartyID, party.getDisplay(), party.getTotalExperience(), party.getLevel());
 
                 for (UUID uuid : party.getMembers()) {
-                    PartyState state = party.getOwner() != null && party.getOwner().equals(uuid) ? PartyState.OWNER : PartyState.MEMBER;
+                    PartyState state = party.getPartyState(uuid);
+                    if (!state.isActiveMember()) {
+                        state = party.getOwner() != null && party.getOwner().equals(uuid) ? PartyState.OWNER : PartyState.MEMBER;
+                    }
                     playerTable.upsertPlayer(connection, uuid, normalizedPartyID, state);
                 }
 
@@ -309,7 +314,7 @@ public class SQLManager {
                 }
 
                 PartyState state = playerTable.getPartyState(connection, playerUuid, normalizedPartyID);
-                if (state == null || state == PartyState.NONE || state == PartyState.PENDING) {
+                if (state == null || !state.isActiveMember()) {
                     connection.rollback();
                     return false;
                 }
@@ -321,7 +326,7 @@ public class SQLManager {
                 }
 
                 double currentShare = partyShareTable.getShareAmount(connection, normalizedPartyID, playerUuid);
-                if (state != PartyState.OWNER && currentShare < amount) {
+                if (!state.canManageParty() && currentShare < amount) {
                     connection.rollback();
                     return false;
                 }
@@ -576,21 +581,26 @@ public class SQLManager {
         return false;
     }
 
-    public void sendRequest(UUID uuid, String partyID) {
+    public boolean sendRequest(UUID uuid, String partyID) {
         String normalizedPartyID = normalizePartyID(partyID);
 
         try (Connection connection = connection()) {
             if (playerTable.isPending(connection, uuid)) {
-                Objects.requireNonNull(Bukkit.getPlayer(uuid)).sendMessage(LanguageConfig.get().getMessage(ALREADY_REQUESTING));
-                return;
+                Player player = Bukkit.getPlayer(uuid);
+                if (player != null) {
+                    player.sendMessage(LanguageConfig.get().getMessage(ALREADY_REQUESTING));
+                }
+                return false;
             }
 
             if (!playerTable.removeIfNone(connection, uuid, normalizedPartyID)) {
-                playerTable.insertPlayer(connection, uuid, normalizedPartyID, PartyState.PENDING);
+                playerTable.upsertPlayer(connection, uuid, normalizedPartyID, PartyState.PENDING);
             }
+            return true;
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "[SQL] Could not send request for " + uuid, e);
         }
+        return false;
     }
 
     public PartyState getPartyState(UUID uuid, String partyID) {
@@ -645,7 +655,7 @@ public class SQLManager {
                     return false;
                 }
                 PartyState state = playerTable.getPartyState(connection, playerUuid, normalizedPartyID);
-                if (state == null || state == PartyState.NONE || state == PartyState.PENDING) {
+                if (state == null || !state.isActiveMember()) {
                     connection.rollback();
                     return false;
                 }

@@ -13,6 +13,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,18 +24,27 @@ public class PartyTopGUI implements Listener {
 
 	private final Player player;
 	private final List<Integer> entrySlots;
+	private final int ownEntrySlot;
 	private final Map<Integer, String> partyBySlot = new HashMap<>();
 	private List<PartyRankingService.PartyRankingEntry> rankings = List.of();
 	private Inventory inventory;
 	private int page;
+	private PartyListSortMode sortMode;
 
 	public PartyTopGUI(Player player, int page) {
+		this(player, page, getConfiguredDefaultSort());
+	}
+
+	public PartyTopGUI(Player player, int page, PartyListSortMode sortMode) {
 		this.player = player;
 		this.page = Math.max(1, page);
+		this.sortMode = sortMode == null ? getConfiguredDefaultSort() : sortMode;
+		this.ownEntrySlot = McMMOParties.getPartyOverviewCfg().getInt("Icons.PartyTop.OwnEntrySlot", 44);
 		this.entrySlots = new ArrayList<>(McMMOParties.getPartyOverviewCfg().getIntegerList("Icons.PartyTop.EntrySlots", DEFAULT_ENTRY_SLOTS));
 		if (this.entrySlots.isEmpty()) {
 			this.entrySlots.addAll(DEFAULT_ENTRY_SLOTS);
 		}
+		this.entrySlots.removeIf(slot -> slot == ownEntrySlot);
 		McMMOParties.getInstance().getServer().getPluginManager().registerEvents(this, McMMOParties.getInstance());
 		render();
 	}
@@ -44,7 +54,7 @@ public class PartyTopGUI implements Listener {
 	}
 
 	private void render() {
-		rankings = PartyRankingService.getRankedParties();
+		rankings = getSortedRankings();
 		int maxPage = getMaxPage();
 		page = Math.max(1, Math.min(page, maxPage));
 
@@ -53,7 +63,8 @@ public class PartyTopGUI implements Listener {
 				"",
 				new Replaceable("%page%", String.valueOf(page)),
 				new Replaceable("%max_page%", String.valueOf(maxPage)),
-				new Replaceable("%total_parties%", String.valueOf(rankings.size()))
+				new Replaceable("%total_parties%", String.valueOf(rankings.size())),
+				new Replaceable("%sort_mode%", sortMode.getDisplayName())
 		));
 		inventory = Bukkit.createInventory(player, McMMOParties.getPartyOverviewCfg().getInvSize(), title);
         ItemUT.setFillerItem(inventory, Material.GRAY_STAINED_GLASS_PANE);
@@ -62,7 +73,8 @@ public class PartyTopGUI implements Listener {
 		var header = McMMOParties.getPartyOverviewCfg().getIcon("PartyTop.Header",
 				new Replaceable("%page%", String.valueOf(page)),
 				new Replaceable("%max_page%", String.valueOf(maxPage)),
-				new Replaceable("%total_parties%", String.valueOf(rankings.size()))
+				new Replaceable("%total_parties%", String.valueOf(rankings.size())),
+				new Replaceable("%sort_mode%", sortMode.getDisplayName())
 		);
 		inventory.setItem(header.getKey(), header.getValue());
 
@@ -85,6 +97,7 @@ public class PartyTopGUI implements Listener {
 				partyBySlot.put(slot, entry.party().getPartyID());
 			}
 		}
+		renderOwnPartyEntry();
 
 		var prev = McMMOParties.getPartyOverviewCfg().getIcon("PartyTop.PrevPage",
 				new Replaceable("%page%", String.valueOf(page)),
@@ -100,11 +113,15 @@ public class PartyTopGUI implements Listener {
 				new Replaceable("%total_parties%", String.valueOf(rankings.size())),
 				new Replaceable("%page_size%", String.valueOf(entrySlots.size()))
 		);
+		var sort = McMMOParties.getPartyOverviewCfg().getIcon("PartyTop.Sort",
+				new Replaceable("%sort_mode%", sortMode.getDisplayName())
+		);
 		var back = McMMOParties.getPartyOverviewCfg().getIcon("Back");
 
 		inventory.setItem(prev.getKey(), prev.getValue());
 		inventory.setItem(next.getKey(), next.getValue());
 		inventory.setItem(pageInfo.getKey(), pageInfo.getValue());
+		inventory.setItem(sort.getKey(), sort.getValue());
 		inventory.setItem(back.getKey(), back.getValue());
 	}
 
@@ -118,6 +135,56 @@ public class PartyTopGUI implements Listener {
 			return 1;
 		}
 		return Math.max(1, (int) Math.ceil((double) rankings.size() / entrySlots.size()));
+	}
+
+	private void renderOwnPartyEntry() {
+		if (ownEntrySlot < 0) {
+			return;
+		}
+
+		var viewerParty = McMMOParties.getPartyLoader().getPartyOfPlayer(player.getUniqueId());
+		if (viewerParty == null) {
+			return;
+		}
+
+		for (PartyRankingService.PartyRankingEntry entry : rankings) {
+			if (entry.party().getPartyID().equalsIgnoreCase(viewerParty.getPartyID())) {
+				inventory.setItem(ownEntrySlot, PartyRankingRenderer.createItem("PartyTop.EntryOwn", entry, true));
+				partyBySlot.put(ownEntrySlot, entry.party().getPartyID());
+				return;
+			}
+		}
+	}
+
+	private List<PartyRankingService.PartyRankingEntry> getSortedRankings() {
+		List<PartyRankingService.PartyRankingEntry> sorted = new ArrayList<>(PartyRankingService.getRankedParties());
+		sorted.sort(getComparator(sortMode));
+		return sorted;
+	}
+
+	private Comparator<PartyRankingService.PartyRankingEntry> getComparator(PartyListSortMode mode) {
+		return switch (mode) {
+			case POWER_LEVEL -> Comparator
+					.comparingDouble(PartyRankingService.PartyRankingEntry::powerLevel).reversed()
+					.thenComparingInt(PartyRankingService.PartyRankingEntry::rank);
+			case PARTY_BALANCE -> Comparator
+					.comparingDouble((PartyRankingService.PartyRankingEntry entry) -> entry.party().getBalance()).reversed()
+					.thenComparingInt(PartyRankingService.PartyRankingEntry::rank);
+			case OPEN -> Comparator
+					.comparingInt((PartyRankingService.PartyRankingEntry entry) -> entry.party().getPartySettings().isLocked() ? 0 : 1).reversed()
+					.thenComparing((PartyRankingService.PartyRankingEntry entry) -> {
+						String password = entry.party().getPartySettings().getPassword();
+						return password == null || password.isBlank() ? 1 : 0;
+					}, Comparator.reverseOrder())
+					.thenComparingInt(PartyRankingService.PartyRankingEntry::rank);
+			case RANKING -> Comparator.comparingInt(PartyRankingService.PartyRankingEntry::rank);
+		};
+	}
+
+	private static PartyListSortMode getConfiguredDefaultSort() {
+		String configured = McMMOParties.getPartyOverviewCfg().getString("Icons.PartyTop.DefaultSort", PartyListSortMode.RANKING.getKey());
+		PartyListSortMode parsed = PartyListSortMode.fromInput(configured);
+		return parsed == null ? PartyListSortMode.RANKING : parsed;
 	}
 
 	@EventHandler
@@ -136,6 +203,7 @@ public class PartyTopGUI implements Listener {
 		var next = McMMOParties.getPartyOverviewCfg().getIcon("PartyTop.NextPage");
 		var back = McMMOParties.getPartyOverviewCfg().getIcon("Back");
 		var header = McMMOParties.getPartyOverviewCfg().getIcon("PartyTop.Header");
+		var sort = McMMOParties.getPartyOverviewCfg().getIcon("PartyTop.Sort");
 
 		if (slot == prev.getKey() && page > 1) {
 			page--;
@@ -154,6 +222,13 @@ public class PartyTopGUI implements Listener {
 			return;
 		}
 		if (slot == header.getKey()) {
+			return;
+		}
+		if (slot == sort.getKey()) {
+			sortMode = event.getClick().isRightClick() ? sortMode.previous() : sortMode.next();
+			page = 1;
+			render();
+			player.openInventory(inventory);
 			return;
 		}
 

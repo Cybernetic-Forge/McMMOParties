@@ -51,8 +51,8 @@ public class SQLAsyncManager {
 
     public static void sendRequest(UUID uuid, String partyID, Runnable runnable) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            sql.sendRequest(uuid, partyID);
-            if (runnable != null)
+            boolean success = sql.sendRequest(uuid, partyID);
+            if (success && runnable != null)
                 runnable.run();
         });
     }
