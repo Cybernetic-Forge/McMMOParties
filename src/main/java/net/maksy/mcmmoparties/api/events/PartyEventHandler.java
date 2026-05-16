@@ -1,13 +1,16 @@
-package net.maksy.mcmmoparties.events;
+package net.maksy.mcmmoparties.api.events;
 
 import com.gmail.nossr50.events.experience.McMMOPlayerXpGainEvent;
 import com.gmail.nossr50.mcMMO;
 import net.maksy.mcmmoparties.McMMOParties;
 import net.maksy.mcmmoparties.configuration.PartyLoader;
+import net.maksy.mcmmoparties.configuration.enums.PartyBuffType;
 import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
 import net.maksy.mcmmoparties.configuration.enums.Lang;
 import net.maksy.mcmmoparties.configuration.enums.PartyState;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
+import net.maksy.mcmmoparties.configuration.models.PartyWaypoint;
+import net.maksy.mcmmoparties.configuration.models.SkillRequirement;
 import net.maksy.mcmmoparties.configuration.sql.SQLAsyncManager;
 import net.maksy.mcmmoparties.utils.PartyCommandUtils;
 import net.maksy.mcmmoparties.utils.Replaceable;
@@ -19,6 +22,7 @@ import org.bukkit.entity.Player;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -34,7 +38,7 @@ public class PartyEventHandler {
         PartyLevelChangeEvent event = new PartyLevelChangeEvent(party);
         Bukkit.getPluginManager().callEvent(event);
         if (!event.isCancelled()) {
-            party.setLevel(party.getLevel() + 1);
+            party.setLevel(event.getNextLevel());
             party.setCurrentExperience(party.getTotalExperience() - McMMOParties.getConfigManager().getPastExp(party.getLevel()));
             party.setNeededExperience(McMMOParties.getConfigManager().getNeededExperience(party.getLevel() + 1));
             if (McMMOParties.getConfigManager().getBuffHandlerMode() == net.maksy.mcmmoparties.configuration.enums.BuffHandlerMode.SKILLPOINTS) {
@@ -53,7 +57,7 @@ public class PartyEventHandler {
         Bukkit.getPluginManager().callEvent(epEvent);
 
         if (!epEvent.isCancelled()) {
-            party.setExperience(a);
+            party.setExperience(epEvent.getAmount());
             partyLoader.scheduleSave(party);
 
             barMap.putIfAbsent(party.getPartyID(), McMMOParties.getConfigManager().getLevelBar(party));
@@ -83,7 +87,7 @@ public class PartyEventHandler {
         Bukkit.getPluginManager().callEvent(shareEvent);
 
         if (!shareEvent.isCancelled()) {
-            mcMMO.getDatabaseManager().loadPlayerProfile(player).addXp(event.getSkill(), a);
+            mcMMO.getDatabaseManager().loadPlayerProfile(player).addXp(event.getSkill(), shareEvent.getSharedExp());
         }
     }
 
@@ -179,5 +183,53 @@ public class PartyEventHandler {
                         }));
             }
         }
+    }
+
+    public PartyWaypointSetEvent callPartyWaypointSetEvent(Player player, McMMOParty party, PartyWaypoint previousWaypoint, PartyWaypoint waypoint) {
+        PartyWaypointSetEvent event = new PartyWaypointSetEvent(party, player, previousWaypoint, waypoint);
+        Bukkit.getPluginManager().callEvent(event);
+        return event;
+    }
+
+    public PartyWaypointTeleportEvent callPartyWaypointTeleportEvent(Player player, McMMOParty party, PartyWaypoint waypoint) {
+        PartyWaypointTeleportEvent event = new PartyWaypointTeleportEvent(party, player, waypoint);
+        Bukkit.getPluginManager().callEvent(event);
+        return event;
+    }
+
+    public PartyTresorDepositEvent callPartyTresorDepositEvent(Player player, McMMOParty party, double amount) {
+        PartyTresorDepositEvent event = new PartyTresorDepositEvent(party, player, amount);
+        Bukkit.getPluginManager().callEvent(event);
+        return event;
+    }
+
+    public PartyTresorWithdrawEvent callPartyTresorWithdrawEvent(Player player, McMMOParty party, double amount) {
+        PartyTresorWithdrawEvent event = new PartyTresorWithdrawEvent(party, player, amount);
+        Bukkit.getPluginManager().callEvent(event);
+        return event;
+    }
+
+    public PartyChatWriteEvent callPartyChatWriteEvent(Player player, McMMOParty party, String message, List<UUID> recipientIds) {
+        PartyChatWriteEvent event = new PartyChatWriteEvent(party, player, message, recipientIds);
+        Bukkit.getPluginManager().callEvent(event);
+        return event;
+    }
+
+    public PartyBuffHighlightEvent callPartyBuffHighlightEvent(Player player, McMMOParty party, PartyBuffType buffType, String ability) {
+        PartyBuffHighlightEvent event = new PartyBuffHighlightEvent(party, player, buffType, ability);
+        Bukkit.getPluginManager().callEvent(event);
+        return event;
+    }
+
+    public PartyBuffUpgradeEvent callPartyBuffUpgradeEvent(Player player, McMMOParty party, PartyBuffType buffType, String ability, int maxPoints, double treasuryCost, List<SkillRequirement> conditions) {
+        PartyBuffUpgradeEvent event = new PartyBuffUpgradeEvent(party, player, buffType, ability, maxPoints, treasuryCost, conditions);
+        Bukkit.getPluginManager().callEvent(event);
+        return event;
+    }
+
+    public PartyDisbandEvent callPartyDisbandEvent(Player player, McMMOParty party) {
+        PartyDisbandEvent event = new PartyDisbandEvent(party, player);
+        Bukkit.getPluginManager().callEvent(event);
+        return event;
     }
 }

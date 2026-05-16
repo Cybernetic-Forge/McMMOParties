@@ -9,8 +9,8 @@ import net.maksy.mcmmoparties.configuration.sql.SQLAsyncManager;
 import net.maksy.mcmmoparties.gui.EditorRegistry;
 import net.maksy.mcmmoparties.gui.PartyOverview;
 import net.maksy.mcmmoparties.gui.PartyTopGUI;
-import net.maksy.mcmmoparties.events.PartyEventHandler;
-import net.maksy.mcmmoparties.network.ProxyPartyChatService;
+import net.maksy.mcmmoparties.api.events.PartyEventHandler;
+import net.maksy.mcmmoparties.proxy.ProxyPartyChatService;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
@@ -188,6 +188,11 @@ public class PartyCommandUtils {
 
         if (!party.isOwner(player.getUniqueId())) {
             player.sendMessage(LanguageConfig.get().getMessage(NOT_OWNER));
+            return;
+        }
+
+        var disbandEvent = partyEventHandler.callPartyDisbandEvent(player, party);
+        if (disbandEvent.isCancelled()) {
             return;
         }
 

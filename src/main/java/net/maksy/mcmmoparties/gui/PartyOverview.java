@@ -24,7 +24,7 @@ import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.configuration.models.PartyWaypoint;
 import net.maksy.mcmmoparties.configuration.models.SkillRequirement;
 import net.maksy.mcmmoparties.hooks.EconomyHook;
-import net.maksy.mcmmoparties.network.ProxyTeleportService;
+import net.maksy.mcmmoparties.proxy.ProxyTeleportService;
 import net.maksy.mcmmoparties.utils.InventoryUtils;
 import net.maksy.mcmmoparties.utils.ItemUT;
 import net.maksy.mcmmoparties.utils.PartyRankingRenderer;
@@ -816,21 +816,26 @@ public class PartyOverview implements Listener {
                             player.sendMessage(LanguageConfig.get().getMessage(WAYPOINT_NOT_SET));
                             return;
                         }
+                        var waypointEvent = McMMOParties.getPartyEventHandler().callPartyWaypointTeleportEvent(player, party, waypoint);
+                        if (waypointEvent.isCancelled()) {
+                            return;
+                        }
                         ProxyTeleportService.teleport(
                                 player,
-                                waypoint.server(),
-                                waypoint.world(),
-                                waypoint.x(),
-                                waypoint.y(),
-                                waypoint.z(),
-                                waypoint.yaw(),
-                                waypoint.pitch()
+                                waypointEvent.getWaypoint().server(),
+                                waypointEvent.getWaypoint().world(),
+                                waypointEvent.getWaypoint().x(),
+                                waypointEvent.getWaypoint().y(),
+                                waypointEvent.getWaypoint().z(),
+                                waypointEvent.getWaypoint().yaw(),
+                                waypointEvent.getWaypoint().pitch()
                         );
                     } else if (clickType.isRightClick()) {
                         if (!party.isOwner(playerUuid)) {
                             player.sendMessage(LanguageConfig.get().getMessage(NOT_OWNER));
                             return;
                         }
+                        PartyWaypoint previousWaypoint = McMMOParties.getSQL().getPartyWaypoint(party.getPartyID());
                         var location = player.getLocation();
                         PartyWaypoint waypoint = new PartyWaypoint(
                                 party.getPartyID(),
@@ -842,7 +847,11 @@ public class PartyOverview implements Listener {
                                 location.getYaw(),
                                 location.getPitch()
                         );
-                        McMMOParties.getSQL().setPartyWaypoint(waypoint);
+                        var waypointEvent = McMMOParties.getPartyEventHandler().callPartyWaypointSetEvent(player, party, previousWaypoint, waypoint);
+                        if (waypointEvent.isCancelled()) {
+                            return;
+                        }
+                        McMMOParties.getSQL().setPartyWaypoint(waypointEvent.getWaypoint());
                         player.sendMessage(LanguageConfig.get().getMessage(WAYPOINT_UPDATED));
                     }
                 }
@@ -921,6 +930,16 @@ public class PartyOverview implements Listener {
 
         boolean success;
         if (isDeposit) {
+            var depositEvent = McMMOParties.getPartyEventHandler().callPartyTresorDepositEvent(player, party, amount);
+            if (depositEvent.isCancelled()) {
+                return;
+            }
+            amount = depositEvent.getAmount();
+            if (amount <= 0.0) {
+                player.sendMessage(LanguageConfig.get().getMessage(AMOUNT_MUST_BE_POSITIVE));
+                return;
+            }
+
             if (!economy.has(player, amount)) {
                 player.sendMessage(LanguageConfig.get().getMessage(ECONOMY_NOT_ENOUGH_MONEY));
                 return;
@@ -943,6 +962,16 @@ public class PartyOverview implements Listener {
                     new Replaceable("%amount%", String.format(Locale.US, "%.2f", amount))
             ));
         } else {
+            var withdrawEvent = McMMOParties.getPartyEventHandler().callPartyTresorWithdrawEvent(player, party, amount);
+            if (withdrawEvent.isCancelled()) {
+                return;
+            }
+            amount = withdrawEvent.getAmount();
+            if (amount <= 0.0) {
+                player.sendMessage(LanguageConfig.get().getMessage(AMOUNT_MUST_BE_POSITIVE));
+                return;
+            }
+
             success = McMMOParties.getSQL().withdrawPartyBalance(party.getPartyID(), player.getUniqueId(), amount);
             if (!success) {
                 player.sendMessage(LanguageConfig.get().getMessage(PARTY_TRESOR_WITHDRAW_NOT_ALLOWED));
@@ -1015,8 +1044,17 @@ public class PartyOverview implements Listener {
                 if (!isPartyMember(playerUuid)) {
                     return;
                 }
+                var highlightEvent = McMMOParties.getPartyEventHandler().callPartyBuffHighlightEvent(player, party, key.type(), key.ability());
+                if (highlightEvent.isCancelled()) {
+                    return;
+                }
                 McMMOParties.getInstance().getServer().getScheduler().runTaskAsynchronously(McMMOParties.getInstance(), () -> {
-                    boolean success = McMMOParties.getSQL().suggestBuffUpgrade(party.getPartyID(), playerUuid, key.type(), key.ability());
+                    boolean success = McMMOParties.getSQL().suggestBuffUpgrade(
+                            party.getPartyID(),
+                            playerUuid,
+                            highlightEvent.getBuffType(),
+                            highlightEvent.getAbility()
+                    );
                     Bukkit.getScheduler().runTask(McMMOParties.getInstance(), () -> {
                         if (!success) {
                             player.sendMessage(LanguageConfig.get().getMessage(BUFF_HIGHLIGHT_SAVE_FAILED));
@@ -1044,7 +1082,26 @@ public class PartyOverview implements Listener {
             int maxPoints = key.type() == PartyBuffType.ABILITY_DURATION
                     ? handler.getMaxPoints(PartyBuffType.ABILITY_DURATION, key.ability())
                     : handler.getMaxPoints(key.type());
-            boolean success = McMMOParties.getSQL().spendBuffSkillPoint(party.getPartyID(), key.type(), key.ability(), maxPoints, treasuryCost);
+            var upgradeEvent = McMMOParties.getPartyEventHandler().callPartyBuffUpgradeEvent(
+                    player,
+                    party,
+                    key.type(),
+                    key.ability(),
+                    maxPoints,
+                    treasuryCost,
+                    handler.getNextUpgradeConditions(key.type(), key.ability())
+            );
+            if (upgradeEvent.isCancelled()) {
+                return;
+            }
+            treasuryCost = Math.max(0.0, upgradeEvent.getTreasuryCost());
+            boolean success = McMMOParties.getSQL().spendBuffSkillPoint(
+                    party.getPartyID(),
+                    upgradeEvent.getBuffType(),
+                    upgradeEvent.getAbility(),
+                    upgradeEvent.getMaxPoints(),
+                    treasuryCost
+            );
             if (!success) {
                 player.sendMessage(LanguageConfig.get().getMessage(BUFF_UPGRADE_FAILED));
                 return;
@@ -1056,4 +1113,3 @@ public class PartyOverview implements Listener {
         }
     }
 }
-
