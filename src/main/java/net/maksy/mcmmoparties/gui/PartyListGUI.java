@@ -18,7 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class PartyTopGUI implements Listener {
+public class PartyListGUI implements Listener {
 
 	private static final List<Integer> DEFAULT_ENTRY_SLOTS = List.of(10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43);
 
@@ -31,15 +31,15 @@ public class PartyTopGUI implements Listener {
 	private int page;
 	private PartyListSortMode sortMode;
 
-	public PartyTopGUI(Player player, int page) {
+	public PartyListGUI(Player player, int page) {
 		this(player, page, getConfiguredDefaultSort());
 	}
 
-	public PartyTopGUI(Player player, int page, PartyListSortMode sortMode) {
+	public PartyListGUI(Player player, int page, PartyListSortMode sortMode) {
 		this.player = player;
 		this.page = Math.max(1, page);
 		this.sortMode = sortMode == null ? getConfiguredDefaultSort() : sortMode;
-		this.ownEntrySlot = McMMOParties.getPartyOverviewCfg().getInt("Icons.PartyTop.OwnEntrySlot", 44);
+		this.ownEntrySlot = McMMOParties.getPartyOverviewCfg().getInt("Icons.PartyTop.EntryOwn.Slot", 44);
 		this.entrySlots = new ArrayList<>(McMMOParties.getPartyOverviewCfg().getIntegerList("Icons.PartyTop.EntrySlots", DEFAULT_ENTRY_SLOTS));
 		if (this.entrySlots.isEmpty()) {
 			this.entrySlots.addAll(DEFAULT_ENTRY_SLOTS);

@@ -9,7 +9,7 @@ import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.configuration.sql.SQLAsyncManager;
 import net.maksy.mcmmoparties.gui.EditorRegistry;
 import net.maksy.mcmmoparties.gui.PartyOverview;
-import net.maksy.mcmmoparties.gui.PartyTopGUI;
+import net.maksy.mcmmoparties.gui.PartyListGUI;
 import net.maksy.mcmmoparties.proxy.ProxyPartyChatService;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -390,7 +390,7 @@ public class PartyCommandUtils {
             sortMode = parsedSort;
         }
 
-        new PartyTopGUI(player, page, sortMode).open();
+        new PartyListGUI(player, page, sortMode).open();
     }
 
     public static void topPartyCommand(Player player, String[] args) {

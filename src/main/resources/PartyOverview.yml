@@ -33,7 +33,7 @@ Icons:
       - "&7Current: &f%member_filter%"
   PartyStats:
     Slot: 22
-    Material: DIAMOND_PICKAXE
+    Material: IRON_PICKAXE
     Display: "&9Skill Statistics"
     Lore:
       - "&eView cumulative skill levels"
@@ -80,119 +80,189 @@ Icons:
     Display: "&cBack"
     Lore:
       - "&7Click to close"
+  RoleSelector:
+    MEMBER:
+      Slot: 20
+      Title: "Member"
+      Description: "Basic party member with no management permissions."
+      SelectedMaterial: LIME_WOOL
+      UnselectedMaterial: LIGHT_GRAY_WOOL
+      SelectedDisplay: "&a%role_title%"
+      UnselectedDisplay: "&7%role_title%"
+      SelectedLore:
+        - "&7%role_description%"
+        - "&aCurrently selected"
+      UnselectedLore:
+        - "&7%role_description%"
+        - "&eClick to assign this role"
+    CO_OWNER:
+      Slot: 22
+      Title: "Co-Owner"
+      Description: "Can manage party settings, treasury access, shops, buffs and dungeon parties."
+      SelectedMaterial: LIME_WOOL
+      UnselectedMaterial: LIGHT_GRAY_WOOL
+      SelectedDisplay: "&a%role_title%"
+      UnselectedDisplay: "&7%role_title%"
+      SelectedLore:
+        - "&7%role_description%"
+        - "&aCurrently selected"
+      UnselectedLore:
+        - "&7%role_description%"
+        - "&eClick to assign this role"
+    SHOP_MANAGER:
+      Slot: 24
+      Title: "Shop Manager"
+      Description: "Can manage party shop access and ChestShop-related actions."
+      SelectedMaterial: LIME_WOOL
+      UnselectedMaterial: LIGHT_GRAY_WOOL
+      SelectedDisplay: "&a%role_title%"
+      UnselectedDisplay: "&7%role_title%"
+      SelectedLore:
+        - "&7%role_description%"
+        - "&aCurrently selected"
+      UnselectedLore:
+        - "&7%role_description%"
+        - "&eClick to assign this role"
+    BUFF_MANAGER:
+      Slot: 30
+      Title: "Buff Manager"
+      Description: "Can upgrade and manage party buffs."
+      SelectedMaterial: LIME_WOOL
+      UnselectedMaterial: LIGHT_GRAY_WOOL
+      SelectedDisplay: "&a%role_title%"
+      UnselectedDisplay: "&7%role_title%"
+      SelectedLore:
+        - "&7%role_description%"
+        - "&aCurrently selected"
+      UnselectedLore:
+        - "&7%role_description%"
+        - "&eClick to assign this role"
+    ADVENTURER:
+      Slot: 32
+      Title: "Adventurer"
+      Description: "Can manage dungeon instance party members."
+      SelectedMaterial: LIME_WOOL
+      UnselectedMaterial: LIGHT_GRAY_WOOL
+      SelectedDisplay: "&a%role_title%"
+      UnselectedDisplay: "&7%role_title%"
+      SelectedLore:
+        - "&7%role_description%"
+        - "&aCurrently selected"
+      UnselectedLore:
+        - "&7%role_description%"
+        - "&eClick to assign this role"
   CumulatedSkills:
-    MINING:
+    SWORDS:
       Slot: 10
-      Material: DIAMOND_PICKAXE
+      Material: IRON_SWORD
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    AXES:
+      Slot: 11
+      Material: IRON_AXE
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    ARCHERY:
+      Slot: 12
+      Material: BOW
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    SPEARS:
+      Slot: 13
+      Material: IRON_SPEAR
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    CROSSBOWS:
+      Slot: 14
+      Material: CROSSBOW
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    TRIDENTS:
+      Slot: 15
+      Material: TRIDENT
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    MACES:
+      Slot: 19
+      Material: MACE
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    ACROBATICS:
+      Slot: 20
+      Material: FEATHER
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    UNARMED:
+      Slot: 21
+      Material: POPPED_CHORUS_FRUIT
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    TAMING:
+      Slot: 22
+      Material: BONE
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
+    MINING:
+      Slot: 28
+      Material: IRON_PICKAXE
       Display: "&9%skill_name%"
       Lore:
         - "&eTotal Level: &a%skill_level%"
     WOODCUTTING:
-      Slot: 11
-      Material: DIAMOND_AXE
+      Slot: 29
+      Material: WOODEN_AXE
       Display: "&9%skill_name%"
       Lore:
         - "&eTotal Level: &a%skill_level%"
     EXCAVATION:
-      Slot: 12
-      Material: DIAMOND_SHOVEL
+      Slot: 30
+      Material: IRON_SHOVEL
       Display: "&9%skill_name%"
       Lore:
         - "&eTotal Level: &a%skill_level%"
     HERBALISM:
-      Slot: 13
-      Material: OAK_SAPLING
+      Slot: 31
+      Material: IRON_HOE
       Display: "&9%skill_name%"
       Lore:
         - "&eTotal Level: &a%skill_level%"
     FISHING:
-      Slot: 14
+      Slot: 32
       Material: FISHING_ROD
       Display: "&9%skill_name%"
       Lore:
         - "&eTotal Level: &a%skill_level%"
     ALCHEMY:
-      Slot: 15
+      Slot: 33
       Material: BREWING_STAND
       Display: "&9%skill_name%"
       Lore:
         - "&eTotal Level: &a%skill_level%"
-    SMELTING:
-      Slot: 16
-      Material: BLAST_FURNACE
-      Display: "&9%skill_name%"
-      Lore:
-        - "&eTotal Level: &a%skill_level%"
     REPAIR:
-      Slot: 19
+      Slot: 37
       Material: ANVIL
       Display: "&9%skill_name%"
       Lore:
         - "&eTotal Level: &a%skill_level%"
+    SMELTING:
+      Slot: 38
+      Material: BLAST_FURNACE
+      Display: "&9%skill_name%"
+      Lore:
+        - "&eTotal Level: &a%skill_level%"
     SALVAGE:
-      Slot: 20
+      Slot: 39
       Material: GRINDSTONE
-      Display: "&9%skill_name%"
-      Lore:
-        - "&eTotal Level: &a%skill_level%"
-    ACROBATICS:
-      Slot: 21
-      Material: FEATHER
-      Display: "&9%skill_name%"
-      Lore:
-        - "&eTotal Level: &a%skill_level%"
-
-    SWORDS:
-      Slot: 23
-      Material: DIAMOND_SWORD
-      Display: "&9%skill_name%"
-      Lore:
-        - "&eTotal Level: &a%skill_level%"
-    AXES:
-      Slot: 24
-      Material: DIAMOND_AXE
-      Display: "&9%skill_name%"
-      Lore:
-        - "&eTotal Level: &a%skill_level%"
-    ARCHERY:
-      Slot: 25
-      Material: BOW
-      Display: "&9%skill_name%"
-      Lore:
-        - "&eTotal Level: &a%skill_level%"
-    UNARMED:
-      Slot: 29
-      Material: BLAZE_ROD
-      Display: "&9%skill_name%"
-      Lore:
-        - "&eTotal Level: &a%skill_level%"
-    TAMING:
-      Slot: 30
-      Material: LEAD
-      Display: "&9%skill_name%"
-      Lore:
-        - "&eTotal Level: &a%skill_level%"
-    MACES:
-      Slot: 31
-      Material: MACE
-      Display: "&9%skill_name%"
-      Lore:
-        - "&eTotal Level: &a%skill_level%"
-    SPEARS:
-      Slot: 32
-      Material: DIAMOND_SPEAR
-      Display: "&9%skill_name%"
-      Lore:
-        - "&eTotal Level: &a%skill_level%"
-    TRIDENTS:
-      Slot: 33
-      Material: TRIDENT
-      Display: "&9%skill_name%"
-      Lore:
-        - "&eTotal Level: &a%skill_level%"
-    CROSSBOWS:
-      Slot: 34
-      Material: CROSSBOW
       Display: "&9%skill_name%"
       Lore:
         - "&eTotal Level: &a%skill_level%"
@@ -257,7 +327,6 @@ Icons:
       Display: "&cNo Parties Found"
       Lore:
         - "&7There are no parties to show."
-    OwnEntrySlot: 44
     EntrySlots:
       - 10
       - 11
@@ -315,6 +384,7 @@ Icons:
         - "&7Password required: &f%party_password_required%"
         - "&7Click to inspect this party"
     EntryOwn:
+      Slot: 44
       Material: PLAYER_HEAD
       Display: "&b#%rank% &f%party_display%"
       Lore:

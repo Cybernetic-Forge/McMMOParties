@@ -38,7 +38,7 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
                     case "disband" -> PartyCommandUtils.disbandPartyCommand(player);
                     case "chat" -> PartyCommandUtils.chatPartyCommand(player, args);
                     case "info" -> PartyCommandUtils.infoPartyCommand(player, args);
-                    case "top", "list" -> PartyCommandUtils.listPartyCommand(player, args);
+                    case "list" -> PartyCommandUtils.listPartyCommand(player, args);
                 }
                 break;
             case 2:
@@ -51,14 +51,14 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
                     case "invite" -> PartyCommandUtils.invitePartyCommand(player, args);
                     case "kick" -> PartyCommandUtils.kickPartyCommand(player, args);
                     case "newleader" -> PartyCommandUtils.setOwnerPartyCommand(player, args);
-                    case "top", "list" -> PartyCommandUtils.listPartyCommand(player, args);
+                    case "list" -> PartyCommandUtils.listPartyCommand(player, args);
                 }
                 break;
             case 3:
                 switch(args[0]) {
                     case "chat" -> PartyCommandUtils.chatPartyCommand(player, args);
                     case "join" -> PartyCommandUtils.joinPartyCommand(player, args);
-                    case "top", "list" -> PartyCommandUtils.listPartyCommand(player, args);
+                    case "list" -> PartyCommandUtils.listPartyCommand(player, args);
                 }
                 break;
             default:

@@ -2,7 +2,6 @@ package net.maksy.mcmmoparties.gui;
 
 import com.gmail.nossr50.datatypes.skills.PrimarySkillType;
 import com.gmail.nossr50.datatypes.skills.SuperAbilityType;
-import com.gmail.nossr50.util.player.UserManager;
 import io.papermc.paper.dialog.Dialog;
 import io.papermc.paper.dialog.DialogResponseView;
 import io.papermc.paper.registry.data.dialog.ActionButton;
@@ -61,13 +60,10 @@ public class PartyOverview implements Listener {
     private final Map<Integer, PartyState> roleSelectionSlots = new HashMap<>();
     private final Map<Integer, UUID> instanceAvailableSlots = new HashMap<>();
     private final Map<Integer, UUID> instanceMemberSlots = new HashMap<>();
-    private final Map<Integer, String> rankingSlots = new HashMap<>();
-    private int rankingHeaderSlot = -1;
     private UUID selectedRoleMemberUuid;
     private int instanceOnlinePage = 0;
     private int instanceMemberPage = 0;
 
-    private static final List<Integer> DEFAULT_RANKING_OVERVIEW_SLOTS = List.of(36, 37, 38, 39, 40, 41, 42, 43, 45, 46, 47);
     private static final List<Integer> INSTANCE_AVAILABLE_LAYOUT = List.of(10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25);
     private static final List<Integer> INSTANCE_MEMBER_LAYOUT = List.of(28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43);
     private static final int INSTANCE_AVAILABLE_PREVIOUS_SLOT = 17;
@@ -75,6 +71,13 @@ public class PartyOverview implements Listener {
     private static final int INSTANCE_MEMBER_PREVIOUS_SLOT = 36;
     private static final int INSTANCE_MEMBER_NEXT_SLOT = 44;
     private static final int INSTANCE_ACTION_SLOT = 49;
+    private static final Map<PartyState, Integer> DEFAULT_ROLE_SELECTOR_SLOTS = Map.of(
+            PartyState.MEMBER, 19,
+            PartyState.CO_OWNER, 21,
+            PartyState.SHOP_MANAGER, 23,
+            PartyState.BUFF_MANAGER, 29,
+            PartyState.ADVENTURER, 31
+    );
     private static final List<PartyState> MANAGEABLE_MEMBER_ROLES = List.of(
             PartyState.MEMBER,
             PartyState.CO_OWNER,
@@ -125,11 +128,11 @@ public class PartyOverview implements Listener {
         var partyInfoIcon = McMMOParties.getPartyOverviewCfg().getIcon("PartyInfo",
                 new Replaceable("%party_id%", party.getPartyID()),
                 new Replaceable("%party_display%", party.getDisplay()),
-                new Replaceable("%owner_name%", owner.getName() != null ? owner.getName() : LanguageConfig.get().getMessage(UNKNOWN_PLAYER_NAME)),
+                new Replaceable("%owner_name%", PartyDisplayUtils.getPlayerName(owner)),
                 new Replaceable("%member_count%", String.valueOf(party.getMembers().size()))
         );
 
-        double cumulativePower = calculateCumulativePower();
+        double cumulativePower = PartyDisplayUtils.calculateCumulativePower(party);
         var partyStatsIcon = McMMOParties.getPartyOverviewCfg().getIcon("PartyStats",
                 new Replaceable("%party_level%", String.valueOf(party.getLevel())),
                 new Replaceable("%party_exp%", String.format("%.0f", party.getCurrentExperience())),
@@ -183,19 +186,19 @@ public class PartyOverview implements Listener {
         for (UUID memberUuid : membersToDisplay) {
             if (slot > 43) break;
             OfflinePlayer member = Bukkit.getOfflinePlayer(memberUuid);
-            String statusDisplay = LanguageConfig.get().getMessage(member.isOnline() ? MEMBER_STATUS_ONLINE : MEMBER_STATUS_OFFLINE);
-            String memberName = member.getName() != null ? member.getName() : LanguageConfig.get().getMessage(UNKNOWN_PLAYER_NAME);
+            String statusDisplay = PartyDisplayUtils.getMemberStatusDisplay(member);
+            String memberName = PartyDisplayUtils.getPlayerName(member);
             double shareAmount = McMMOParties.getSQL().getPartyBalanceShare(party.getPartyID(), memberUuid);
             String roleDisplay = LanguageConfig.get().getMessage(
                     MEMBER_ROLE_LINE,
-                    new Replaceable("%member_role%", getRoleDisplayName(party.getPartyState(memberUuid)))
+                    new Replaceable("%member_role%", PartyDisplayUtils.getRoleDisplayName(party.getPartyState(memberUuid)))
             );
 
             var memberIcon = McMMOParties.getPartyOverviewCfg().getIcon("MemberEntry",
                     new Replaceable("%member_name%", memberName),
                     new Replaceable("%member_status%", statusDisplay),
                     new Replaceable("%member_share%", String.format(Locale.US, "%.2f", shareAmount)),
-                    new Replaceable("%member_role%", getRoleDisplayName(party.getPartyState(memberUuid))),
+                    new Replaceable("%member_role%", PartyDisplayUtils.getRoleDisplayName(party.getPartyState(memberUuid))),
                     new Replaceable("%member_role_display%", roleDisplay)
             );
 
@@ -251,8 +254,8 @@ public class PartyOverview implements Listener {
                 return p1Online ? -1 : 1; // Online players first
             }
 
-            String name1 = p1.getName() != null ? p1.getName() : LanguageConfig.get().getMessage(UNKNOWN_PLAYER_NAME);
-            String name2 = p2.getName() != null ? p2.getName() : LanguageConfig.get().getMessage(UNKNOWN_PLAYER_NAME);
+            String name1 = PartyDisplayUtils.getPlayerName(p1);
+            String name2 = PartyDisplayUtils.getPlayerName(p2);
             return name1.compareTo(name2);
         });
 
@@ -268,33 +271,74 @@ public class PartyOverview implements Listener {
         }
 
         OfflinePlayer target = Bukkit.getOfflinePlayer(selectedRoleMemberUuid);
-        String targetName = target.getName() != null ? target.getName() : LanguageConfig.get().getMessage(UNKNOWN_PLAYER_NAME);
+        String targetName = PartyDisplayUtils.getPlayerName(target);
         ItemStack header = ItemUT.getItem(
                 Material.NAME_TAG,
                 LanguageConfig.get().getMessage(ROLE_SELECTOR_TITLE, new Replaceable("%player%", targetName)),
                 List.of(
-                        LanguageConfig.get().getMessage(MEMBER_ROLE_LINE, new Replaceable("%member_role%", getRoleDisplayName(party.getPartyState(selectedRoleMemberUuid))))
+                        LanguageConfig.get().getMessage(MEMBER_ROLE_LINE, new Replaceable("%member_role%", PartyDisplayUtils.getRoleDisplayName(party.getPartyState(selectedRoleMemberUuid))))
                 )
         );
         inventory.setItem(4, header);
 
-        int[] slots = {19, 21, 23, 29, 31};
         PartyState currentRole = party.getPartyState(selectedRoleMemberUuid);
-        for (int i = 0; i < MANAGEABLE_MEMBER_ROLES.size() && i < slots.length; i++) {
-            PartyState role = MANAGEABLE_MEMBER_ROLES.get(i);
+        for (PartyState role : MANAGEABLE_MEMBER_ROLES) {
+            int slot = getRoleSelectorSlot(role);
+            if (slot < 0) {
+                continue;
+            }
             boolean selected = role == currentRole;
-            Material material = selected ? Material.LIME_WOOL : Material.LIGHT_GRAY_WOOL;
-            ItemStack item = ItemUT.getItem(
-                    material,
-                    getRoleDisplayName(role),
-                    List.of(LanguageConfig.get().getMessage(selected ? ROLE_SELECTOR_SELECTED : ROLE_SELECTOR_AVAILABLE))
-            );
-            inventory.setItem(slots[i], item);
-            roleSelectionSlots.put(slots[i], role);
+            ItemStack item = createRoleSelectorItem(role, selected);
+            inventory.setItem(slot, item);
+            roleSelectionSlots.put(slot, role);
         }
 
         var backIcon = McMMOParties.getPartyOverviewCfg().getIcon("Back");
         inventory.setItem(backIcon.getKey(), backIcon.getValue());
+    }
+
+    private int getRoleSelectorSlot(PartyState role) {
+        int defaultSlot = DEFAULT_ROLE_SELECTOR_SLOTS.getOrDefault(role, -1);
+        return McMMOParties.getPartyOverviewCfg().getInt("Icons.RoleSelector." + role.name() + ".Slot", defaultSlot);
+    }
+
+    private ItemStack createRoleSelectorItem(PartyState role, boolean selected) {
+        String basePath = "RoleSelector." + role.name();
+        String roleTitle = McMMOParties.getPartyOverviewCfg().getFormattedString(
+                "Icons." + basePath + ".Title",
+                PartyDisplayUtils.getRoleDisplayName(role)
+        );
+        String roleDescription = McMMOParties.getPartyOverviewCfg().getFormattedString(
+                "Icons." + basePath + ".Description",
+                ""
+        );
+
+        String displayPath = "Icons." + basePath + "." + (selected ? "SelectedDisplay" : "UnselectedDisplay");
+        String fallbackDisplay = (selected ? "&a" : "&7") + roleTitle;
+        String display = McMMOParties.getPartyOverviewCfg().getFormattedString(
+                displayPath,
+                fallbackDisplay,
+                new Replaceable("%role_title%", roleTitle),
+                new Replaceable("%role_description%", roleDescription)
+        );
+
+        String lorePath = "Icons." + basePath + "." + (selected ? "SelectedLore" : "UnselectedLore");
+        List<String> lore = McMMOParties.getPartyOverviewCfg().getFormattedStringList(
+                lorePath,
+                List.of(
+                        "&7" + roleDescription,
+                        LanguageConfig.get().getMessage(selected ? ROLE_SELECTOR_SELECTED : ROLE_SELECTOR_AVAILABLE)
+                ),
+                new Replaceable("%role_title%", roleTitle),
+                new Replaceable("%role_description%", roleDescription)
+        );
+
+        Material material = McMMOParties.getPartyOverviewCfg().getMaterial(
+                basePath + "." + (selected ? "SelectedMaterial" : "UnselectedMaterial"),
+                selected ? Material.LIME_WOOL : Material.LIGHT_GRAY_WOOL
+        );
+
+        return ItemUT.getItem(material, display, lore);
     }
 
     private void displayDungeonInstances() {
@@ -306,7 +350,7 @@ public class PartyOverview implements Listener {
         boolean canManage = party.canManageDungeonInstances(playerUuid);
         int maxSlots = manager.getMaxSlots(party);
         int visibleMemberSlots = Math.max(1, Math.min(manager.getVisibleSlotCount(party), INSTANCE_MEMBER_LAYOUT.size()));
-        String maxSlotsDisplay = getDungeonSlotDisplay(maxSlots);
+        String maxSlotsDisplay = PartyDisplayUtils.getDungeonSlotDisplay(maxSlots);
         int currentMemberCount = dungeonParty == null ? 0 : dungeonParty.getPlayerUuids().size();
 
         inventory.setItem(4, ItemUT.getItem(
@@ -353,9 +397,9 @@ public class PartyOverview implements Listener {
             }
             UUID memberUuid = selectableMembers.get(index);
             OfflinePlayer member = Bukkit.getOfflinePlayer(memberUuid);
-            inventory.setItem(layoutSlot, createPlayerHead(
+            inventory.setItem(layoutSlot, PartyDisplayUtils.createPlayerHead(
                     member,
-                    member.getName() != null ? member.getName() : LanguageConfig.get().getMessage(UNKNOWN_PLAYER_NAME),
+                    PartyDisplayUtils.getPlayerName(member),
                     List.of(canManage ? LanguageConfig.get().getMessage(DUNGEON_INSTANCE_ADD_MEMBER_HINT) : LanguageConfig.get().getMessage(DUNGEON_INSTANCE_NO_PERMISSION))
             ));
             instanceAvailableSlots.put(layoutSlot, memberUuid);
@@ -379,9 +423,9 @@ public class PartyOverview implements Listener {
                     : canManage
                     ? LanguageConfig.get().getMessage(DUNGEON_INSTANCE_REMOVE_MEMBER_HINT)
                     : LanguageConfig.get().getMessage(DUNGEON_INSTANCE_CURRENT_MEMBERS));
-            inventory.setItem(layoutSlot, createPlayerHead(
+            inventory.setItem(layoutSlot, PartyDisplayUtils.createPlayerHead(
                     member,
-                    member.getName() != null ? member.getName() : LanguageConfig.get().getMessage(UNKNOWN_PLAYER_NAME),
+                    PartyDisplayUtils.getPlayerName(member),
                     lore
             ));
             instanceMemberSlots.put(layoutSlot, memberUuid);
@@ -395,24 +439,11 @@ public class PartyOverview implements Listener {
         inventory.setItem(backIcon.getKey(), backIcon.getValue());
     }
 
-    private String getRoleDisplayName(PartyState state) {
-        return switch (state) {
-            case OWNER -> LanguageConfig.get().getMessage(MEMBER_ROLE_OWNER);
-            case CO_OWNER -> LanguageConfig.get().getMessage(MEMBER_ROLE_CO_OWNER);
-            case SHOP_MANAGER -> LanguageConfig.get().getMessage(MEMBER_ROLE_SHOP_MANAGER);
-            case BUFF_MANAGER -> LanguageConfig.get().getMessage(MEMBER_ROLE_BUFF_MANAGER);
-            case ADVENTURER -> LanguageConfig.get().getMessage(MEMBER_ROLE_ADVENTURER);
-            case PENDING -> LanguageConfig.get().getMessage(MEMBER_ROLE_PENDING);
-            case NONE -> LanguageConfig.get().getMessage(MEMBER_ROLE_NONE);
-            case MEMBER -> LanguageConfig.get().getMessage(MEMBER_ROLE_MEMBER);
-        };
-    }
-
     private void displaySkills() {
         int nextSlot = 10;
         for (PrimarySkillType skill : PrimarySkillType.values()) {
             if (nextSlot > 43) break;
-            int cumulativeLevel = calculateCumulativeSkillLevel(skill);
+            int cumulativeLevel = PartyDisplayUtils.calculateCumulativeSkillLevel(party, skill);
 
             // Try to get a dedicated CumulatedSkills entry from PartyOverview.yml
             var pair = McMMOParties.getPartyOverviewCfg().getIcon("CumulatedSkills." + skill.name().toUpperCase(),
@@ -473,8 +504,8 @@ public class PartyOverview implements Listener {
                             skillPointsMode,
                             buffKey,
                             name,
-                            formatPercent(totalPercent),
-                            formatPercent(nextPercent),
+                            PartyDisplayUtils.formatPercent(totalPercent),
+                            PartyDisplayUtils.formatPercent(nextPercent),
                             spentPoints,
                             maxPoints,
                             suggestionCounts,
@@ -501,8 +532,8 @@ public class PartyOverview implements Listener {
                             skillPointsMode,
                             buffKey,
                             name,
-                            formatAmount(BUFF_AMOUNT_BLOCKS, totalRadius),
-                            formatAmount(BUFF_AMOUNT_BLOCKS, nextRadius),
+                            PartyDisplayUtils.formatAmount(BUFF_AMOUNT_BLOCKS, totalRadius),
+                            PartyDisplayUtils.formatAmount(BUFF_AMOUNT_BLOCKS, nextRadius),
                             spentPoints,
                             maxPoints,
                             suggestionCounts,
@@ -529,8 +560,8 @@ public class PartyOverview implements Listener {
                             skillPointsMode,
                             buffKey,
                             name,
-                            formatAmount(BUFF_AMOUNT_SLOTS, totalSlots),
-                            formatAmount(BUFF_AMOUNT_SLOTS, nextSlots),
+                            PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SLOTS, totalSlots),
+                            PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SLOTS, nextSlots),
                             spentPoints,
                             maxPoints,
                             suggestionCounts,
@@ -559,8 +590,8 @@ public class PartyOverview implements Listener {
                             skillPointsMode,
                             buffKey,
                             name,
-                            formatDungeonSlotAmount(currentInfinite, totalSlots),
-                            formatDungeonSlotAmount(nextInfinite, nextSlots),
+                            PartyDisplayUtils.formatDungeonSlotAmount(currentInfinite, totalSlots),
+                            PartyDisplayUtils.formatDungeonSlotAmount(nextInfinite, nextSlots),
                             spentPoints,
                             maxPoints,
                             suggestionCounts,
@@ -587,8 +618,8 @@ public class PartyOverview implements Listener {
                                 true,
                                 buffKey,
                                 baseName + " &7(" + ability.getLocalizedName() + ")",
-                                formatAmount(BUFF_AMOUNT_SECONDS, totalSeconds),
-                                formatAmount(BUFF_AMOUNT_SECONDS, nextSeconds),
+                                PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SECONDS, totalSeconds),
+                                PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SECONDS, nextSeconds),
                                 spentPoints,
                                 maxPoints,
                                 suggestionCounts,
@@ -610,8 +641,8 @@ public class PartyOverview implements Listener {
                                 false,
                                 new BuffKey(PartyBuffType.ABILITY_DURATION, ability),
                                 baseName + " &7(" + ability + ")",
-                                formatAmount(BUFF_AMOUNT_SECONDS, totalSeconds),
-                                formatAmount(BUFF_AMOUNT_SECONDS, nextSeconds),
+                                PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SECONDS, totalSeconds),
+                                PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SECONDS, nextSeconds),
                                 0,
                                 0,
                                 suggestionCounts,
@@ -702,7 +733,7 @@ public class PartyOverview implements Listener {
             );
             lore.addAll(conditionLore);
             for (SkillRequirement requirement : conditions) {
-                int currentLevel = calculateCumulativeSkillLevel(requirement.getSkill());
+                int currentLevel = PartyDisplayUtils.calculateCumulativeSkillLevel(party, requirement.getSkill());
                 lore.addAll(McMMOParties.getPartyOverviewCfg().getFormattedStringList(
                         "BuffValidation.ConditionEntry",
                         List.of(),
@@ -716,7 +747,7 @@ public class PartyOverview implements Listener {
 
     private boolean meetsUpgradeConditions(BuffKey key) {
         for (SkillRequirement requirement : party.getBuffHandler().getNextUpgradeConditions(key.type(), key.ability())) {
-            if (calculateCumulativeSkillLevel(requirement.getSkill()) < requirement.getAmount()) {
+            if (PartyDisplayUtils.calculateCumulativeSkillLevel(party, requirement.getSkill()) < requirement.getAmount()) {
                 return false;
             }
         }
@@ -736,18 +767,6 @@ public class PartyOverview implements Listener {
             buffSlots.put(slot, key);
         }
         return slot + 1;
-    }
-
-    private String formatPercent(double value) {
-        return String.format(Locale.US, "%.2f%%", value);
-    }
-
-    private String formatAmount(Lang key, int amount) {
-        return LanguageConfig.get().getMessage(key, new Replaceable("%amount%", String.valueOf(amount)));
-    }
-
-    private String formatDungeonSlotAmount(boolean infinite, int amount) {
-        return infinite ? LanguageConfig.get().getMessage(BUFF_AMOUNT_UNLIMITED_SLOTS) : formatAmount(BUFF_AMOUNT_SLOTS, amount);
     }
 
     private int getSkillPointIntValue(Map<Integer, Integer> levels, int points, int fallback) {
@@ -880,34 +899,6 @@ public class PartyOverview implements Listener {
         meta.addEnchant(Enchantment.UNBREAKING, 1, false);
         meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
         item.setItemMeta(meta);
-    }
-
-    private double calculateCumulativePower() {
-        double totalPower = 0.0;
-        for (UUID memberUuid : party.getMembers()) {
-            OfflinePlayer member = Bukkit.getOfflinePlayer(memberUuid);
-            if (member.isOnline()) {
-                var user = UserManager.getPlayer(member.getPlayer());
-                if (user != null) {
-                    totalPower += user.getPowerLevel();
-                }
-            }
-        }
-        return totalPower;
-    }
-
-    private int calculateCumulativeSkillLevel(PrimarySkillType skill) {
-        int totalLevel = 0;
-        for (UUID memberUuid : party.getMembers()) {
-            OfflinePlayer member = Bukkit.getOfflinePlayer(memberUuid);
-            if (member.isOnline()) {
-                var user = UserManager.getPlayer(member.getPlayer());
-                if (user != null) {
-                    totalLevel += user.getSkillLevel(skill);
-                }
-            }
-        }
-        return totalLevel;
     }
 
     public void open() {
@@ -1183,20 +1174,7 @@ public class PartyOverview implements Listener {
                 refreshInventory();
             }
         } else if (currentView == 2) {
-            if (slot == rankingHeaderSlot) {
-                player.closeInventory();
-                new PartyTopGUI(player, 1, PartyListSortMode.RANKING).open();
-                return;
-            }
-
-            String partyId = rankingSlots.get(slot);
-            if (partyId != null) {
-                McMMOParty rankingParty = McMMOParties.getPartyLoader().getParty(partyId);
-                if (rankingParty != null) {
-                    player.closeInventory();
-                    new PartyOverview(player.getUniqueId(), rankingParty).open();
-                }
-            }
+            return;
         } else if (currentView == 3) {
             var handler = party.getBuffHandler();
             if (!handler.isSkillPointsMode()) {
@@ -1295,20 +1273,20 @@ public class PartyOverview implements Listener {
                 return;
             }
             party.setPartyState(selectedRoleMemberUuid, selectedRole);
-            String targetName = Optional.ofNullable(Bukkit.getOfflinePlayer(selectedRoleMemberUuid).getName()).orElse(LanguageConfig.get().getMessage(UNKNOWN_PLAYER_NAME));
+            String targetName = PartyDisplayUtils.getPlayerName(Bukkit.getOfflinePlayer(selectedRoleMemberUuid));
             Bukkit.getScheduler().runTaskAsynchronously(McMMOParties.getInstance(), () -> {
                 McMMOParties.getSQL().setPartyState(selectedRoleMemberUuid, party.getPartyID(), selectedRole);
                 Bukkit.getScheduler().runTask(McMMOParties.getInstance(), () -> {
                     player.sendMessage(LanguageConfig.get().getMessage(
                             ROLE_SELECTOR_UPDATED,
                             new Replaceable("%player%", targetName),
-                            new Replaceable("%role%", getRoleDisplayName(selectedRole))
+                            new Replaceable("%role%", PartyDisplayUtils.getRoleDisplayName(selectedRole))
                     ));
                     Player targetPlayer = Bukkit.getPlayer(selectedRoleMemberUuid);
                     if (targetPlayer != null) {
                         targetPlayer.sendMessage(LanguageConfig.get().getMessage(
                                 ROLE_SELECTOR_UPDATED_TARGET,
-                                new Replaceable("%role%", getRoleDisplayName(selectedRole))
+                                new Replaceable("%role%", PartyDisplayUtils.getRoleDisplayName(selectedRole))
                         ));
                     }
                     currentView = 1;
@@ -1397,7 +1375,7 @@ public class PartyOverview implements Listener {
                 player.sendMessage(LanguageConfig.get().getMessage(DUNGEON_INSTANCE_FULL));
                 return;
             }
-            String targetName = Optional.ofNullable(Bukkit.getOfflinePlayer(availableMemberUuid).getName()).orElse(LanguageConfig.get().getMessage(UNKNOWN_PLAYER_NAME));
+            String targetName = PartyDisplayUtils.getPlayerName(Bukkit.getOfflinePlayer(availableMemberUuid));
             player.sendMessage(LanguageConfig.get().getMessage(
                     DUNGEON_INSTANCE_MEMBER_ADDED,
                     new Replaceable("%player%", targetName)
@@ -1420,7 +1398,7 @@ public class PartyOverview implements Listener {
         if (!manager.removeMember(party, memberUuid)) {
             return;
         }
-        String targetName = Optional.ofNullable(Bukkit.getOfflinePlayer(memberUuid).getName()).orElse(LanguageConfig.get().getMessage(UNKNOWN_PLAYER_NAME));
+        String targetName = PartyDisplayUtils.getPlayerName(Bukkit.getOfflinePlayer(memberUuid));
         player.sendMessage(LanguageConfig.get().getMessage(
                 DUNGEON_INSTANCE_MEMBER_REMOVED,
                 new Replaceable("%player%", targetName)
@@ -1442,19 +1420,5 @@ public class PartyOverview implements Listener {
     private int getPageCount(int totalEntries, int pageSize) {
         int sanitizedPageSize = Math.max(1, pageSize);
         return Math.max(1, (int) Math.ceil((double) Math.max(0, totalEntries) / sanitizedPageSize));
-    }
-
-    private ItemStack createPlayerHead(OfflinePlayer player, String displayName, List<String> lore) {
-        ItemStack skull = ItemUT.getItem(Material.PLAYER_HEAD, displayName, lore);
-        ItemMeta meta = skull.getItemMeta();
-        if (meta instanceof SkullMeta skullMeta) {
-            skullMeta.setOwningPlayer(player);
-            skull.setItemMeta(skullMeta);
-        }
-        return skull;
-    }
-
-    private String getDungeonSlotDisplay(int amount) {
-        return amount == Integer.MAX_VALUE ? LanguageConfig.get().getMessage(BUFF_AMOUNT_UNLIMITED_SLOTS) : String.valueOf(Math.max(0, amount));
     }
 }
