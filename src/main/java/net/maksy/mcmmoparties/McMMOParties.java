@@ -18,6 +18,7 @@ import net.maksy.mcmmoparties.proxy.ProxyTeleportListener;
 import net.maksy.mcmmoparties.utils.ChatUT;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Objects;
@@ -57,8 +58,9 @@ public final class McMMOParties extends JavaPlugin {
         sql = new SQLManager();
         partyLoader = new PartyLoader();
         PartyCommands partyCommands = new PartyCommands();
-        Objects.requireNonNull(getCommand("party")).setExecutor(partyCommands);
-        Objects.requireNonNull(getCommand("party")).setTabCompleter(partyCommands);
+        PluginCommand partyCommand = Objects.requireNonNull(getCommand("party"));
+        partyCommand.setExecutor(partyCommands);
+        partyCommand.setTabCompleter(partyCommands);
 
         partyEventHandler = new PartyEventHandler();
 

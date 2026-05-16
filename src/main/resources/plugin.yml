@@ -3,7 +3,7 @@ version: '${project.version}'
 main: net.maksy.mcmmoparties.McMMOParties
 api-version: 1.21
 authors: [ MaksyKun ]
-softdepend: [Vault]
+softdepend: [Vault, mcMMO]
 commands:
   party:
     description: Party command
