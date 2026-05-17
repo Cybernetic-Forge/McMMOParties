@@ -8,6 +8,7 @@ import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
 import net.maksy.mcmmoparties.configuration.enums.Lang;
 import net.maksy.mcmmoparties.configuration.enums.PartyBuffType;
 import net.maksy.mcmmoparties.configuration.enums.PartyState;
+import net.maksy.mcmmoparties.configuration.models.BuffUpgradeCondition;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.configuration.models.PartyWaypoint;
 import net.maksy.mcmmoparties.configuration.models.SkillRequirement;
@@ -229,7 +230,7 @@ public class PartyEventHandler {
         return event;
     }
 
-    public PartyBuffUpgradeEvent callPartyBuffUpgradeEvent(Player player, McMMOParty party, PartyBuffType buffType, String ability, int maxPoints, double treasuryCost, List<SkillRequirement> conditions) {
+    public PartyBuffUpgradeEvent callPartyBuffUpgradeEvent(Player player, McMMOParty party, PartyBuffType buffType, String ability, int maxPoints, double treasuryCost, List<BuffUpgradeCondition> conditions) {
         PartyBuffUpgradeEvent event = new PartyBuffUpgradeEvent(party, player, buffType, ability, maxPoints, treasuryCost, conditions);
         Bukkit.getPluginManager().callEvent(event);
         return event;

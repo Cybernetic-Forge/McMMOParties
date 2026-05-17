@@ -1,11 +1,14 @@
 package net.maksy.mcmmoparties.configuration.enums;
 
+import lombok.Getter;
+
 public enum DatabaseType {
     MYSQL("jdbc:mysql:", "MySQL"),
     MARIADB("jdbc:mysql:", "MariaDB (rn MySQL..)"),
-    LOCALE(null, "Locale");
+    SQLITE(null, "SQLITE");
 
     private final String jdbcURL;
+    @Getter
     private final String name;
 
     DatabaseType(String jdbcURL, String name) {
@@ -15,5 +18,4 @@ public enum DatabaseType {
 
     public String getJdbcUrl() { return jdbcURL; }
 
-    public String getName() { return name; }
 }

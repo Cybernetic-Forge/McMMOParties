@@ -5,14 +5,16 @@ import lombok.Getter;
 import net.maksy.mcmmoparties.McMMOParties;
 import net.maksy.mcmmoparties.configuration.enums.BuffHandlerMode;
 import net.maksy.mcmmoparties.configuration.enums.PartyBuffType;
+import net.maksy.mcmmoparties.configuration.models.BuffUpgradeCondition;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
-import net.maksy.mcmmoparties.configuration.models.SkillRequirement;
+import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.*;
 import java.util.logging.Logger;
 
 public class PartyBuffHandler {
+    private static final String BUFFS_RESOURCE_PATH = "features/buffs.yml";
 
     private final McMMOParty party;
     private final YamlParser config;
@@ -58,21 +60,21 @@ public class PartyBuffHandler {
     private final TreeMap<Integer, Integer> abilityDurationPointLevels = new TreeMap<>();
     private final Map<String, TreeMap<Integer, Integer>> abilityCooldownReductionPointLevels = new HashMap<>();
     private final Map<String, TreeMap<Integer, Double>> skillPointUpgradeCosts = new HashMap<>();
-    private final Map<String, Map<Integer, List<SkillRequirement>>> skillPointUpgradeConditions = new HashMap<>();
+    private final Map<String, Map<Integer, List<BuffUpgradeCondition>>> skillPointUpgradeConditions = new HashMap<>();
 
     private final Map<PartyBuffType, Integer> spentPointsByBuff = new EnumMap<>(PartyBuffType.class);
     private final Map<String, Integer> spentPointsByAbility = new HashMap<>();
 
     public PartyBuffHandler(McMMOParty party) {
         this.party = party;
-        this.config = YamlParser.loadOrExtract(McMMOParties.getInstance(), "Features/Buffs.yml");
-        this.config.mergeMissingFromResource("Features/Buffs.yml");
-        this.config.saveChanges();
+        this.config = YamlParser.loadOrExtract(McMMOParties.getInstance(), BUFFS_RESOURCE_PATH);
+        reloadConfigFile();
         this.logger = McMMOParties.getInstance().getLogger();
         reload();
     }
 
     public void reload() {
+        reloadConfigFile();
         expSharingRatePercent = 0.0;
         expSharingRadius = 0;
         memberSlotBonus = 0;
@@ -113,6 +115,12 @@ public class PartyBuffHandler {
         }
 
         loadLevelBuffs();
+    }
+
+    private void reloadConfigFile() {
+        config.reload();
+        config.mergeMissingFromResource(BUFFS_RESOURCE_PATH);
+        config.saveChanges();
     }
 
     private void loadLevelBuffs() {
@@ -379,7 +387,7 @@ public class PartyBuffHandler {
 
         ConfigurationSection conditionsSection = configuration.getConfigurationSection("Conditions");
         if (conditionsSection != null) {
-            Map<Integer, List<SkillRequirement>> conditionsByLevel = new HashMap<>();
+            Map<Integer, List<BuffUpgradeCondition>> conditionsByLevel = new HashMap<>();
             for (String levelKey : conditionsSection.getKeys(false)) {
                 int level = parsePositiveInt(levelKey);
                 if (level <= 0) {
@@ -389,15 +397,8 @@ public class PartyBuffHandler {
                 if (skillSection == null) {
                     continue;
                 }
-                List<SkillRequirement> requirements = new ArrayList<>();
-                for (String skillKey : skillSection.getKeys(false)) {
-                    try {
-                        PrimarySkillType skill = PrimarySkillType.valueOf(skillKey.toUpperCase(Locale.ROOT));
-                        requirements.add(new SkillRequirement(skill, skillSection.getInt(skillKey)));
-                    } catch (IllegalArgumentException ignored) {
-                        logger.warning("Unknown PrimarySkillType in buff condition: " + skillKey);
-                    }
-                }
+                List<BuffUpgradeCondition> requirements = new ArrayList<>();
+                collectBuffUpgradeConditions(skillSection, "", requirements);
                 if (!requirements.isEmpty()) {
                     conditionsByLevel.put(level, requirements);
                 }
@@ -414,6 +415,61 @@ public class PartyBuffHandler {
             return parsed <= 0 ? -1 : parsed;
         } catch (NumberFormatException ex) {
             return -1;
+        }
+    }
+
+    private BuffUpgradeCondition parseBuffUpgradeCondition(String conditionKey, int amount) {
+        if (conditionKey == null || conditionKey.isBlank()) {
+            return null;
+        }
+        if (amount <= 0) {
+            logger.warning("Buff condition amount must be positive: " + conditionKey + "=" + amount);
+            return null;
+        }
+
+        if (conditionKey.equalsIgnoreCase("PartyLevel")) {
+            return BuffUpgradeCondition.partyLevel(amount);
+        }
+
+        if (conditionKey.regionMatches(true, 0, "BuffLevel.", 0, "BuffLevel.".length())) {
+            String buffKey = conditionKey.substring("BuffLevel.".length()).trim();
+            if (buffKey.isBlank()) {
+                logger.warning("Missing buff key in buff condition: " + conditionKey);
+                return null;
+            }
+            String[] parts = buffKey.split("\\.");
+            PartyBuffType buffType = PartyBuffType.fromString(parts[0]);
+            if (buffType == null) {
+                logger.warning("Unknown PartyBuffType in buff condition: " + conditionKey);
+                return null;
+            }
+            String ability = parts.length > 1 ? String.join(".", Arrays.copyOfRange(parts, 1, parts.length)) : null;
+            return BuffUpgradeCondition.buffLevel(buffType, ability, amount);
+        }
+
+        try {
+            PrimarySkillType skill = PrimarySkillType.valueOf(conditionKey.toUpperCase(Locale.ROOT));
+            return BuffUpgradeCondition.mcMMOSkill(skill, amount);
+        } catch (IllegalArgumentException ignored) {
+            logger.warning("Unknown buff condition key: " + conditionKey);
+            return null;
+        }
+    }
+
+    private void collectBuffUpgradeConditions(ConfigurationSection section, String pathPrefix, List<BuffUpgradeCondition> requirements) {
+        for (String key : section.getKeys(false)) {
+            String fullKey = pathPrefix.isEmpty() ? key : pathPrefix + "." + key;
+            ConfigurationSection nested = section.getConfigurationSection(key);
+            if (nested != null) {
+                collectBuffUpgradeConditions(nested, fullKey, requirements);
+                continue;
+            }
+
+            int amount = section.getInt(key);
+            BuffUpgradeCondition requirement = parseBuffUpgradeCondition(fullKey, amount);
+            if (requirement != null) {
+                requirements.add(requirement);
+            }
         }
     }
 
@@ -746,6 +802,23 @@ public class PartyBuffHandler {
         return accessPartyChat;
     }
 
+    public Material getBuffIconMaterial(PartyBuffType type, String ability) {
+        if (type == null) {
+            return null;
+        }
+
+        if (ability != null && !ability.isBlank()) {
+            String abilityPath = "BuffMeta." + type.name() + "." + ability.toUpperCase(Locale.ROOT) + ".IconMaterial";
+            Material abilityMaterial = parseMaterial(config.getString(abilityPath, null));
+            if (abilityMaterial != null) {
+                return abilityMaterial;
+            }
+        }
+
+        String typePath = "BuffMeta." + type.name() + ".IconMaterial";
+        return parseMaterial(config.getString(typePath, null));
+    }
+
     public int getAbilityDurationBonus(String ability) {
         return abilityDurationBonus;
     }
@@ -894,13 +967,13 @@ public class PartyBuffHandler {
         return Math.max(0.0, costs.getOrDefault(nextPoint, 0.0));
     }
 
-    public List<SkillRequirement> getNextUpgradeConditions(PartyBuffType type, String ability) {
-        Map<Integer, List<SkillRequirement>> conditions = skillPointUpgradeConditions.get(buildSkillPointKey(type, ability));
+    public List<BuffUpgradeCondition> getNextUpgradeConditions(PartyBuffType type, String ability) {
+        Map<Integer, List<BuffUpgradeCondition>> conditions = skillPointUpgradeConditions.get(buildSkillPointKey(type, ability));
         if (conditions == null || conditions.isEmpty()) {
             return List.of();
         }
         int nextPoint = getSpentPoints(type, ability) + 1;
-        List<SkillRequirement> requirements = conditions.get(nextPoint);
+        List<BuffUpgradeCondition> requirements = conditions.get(nextPoint);
         return requirements == null ? List.of() : List.copyOf(requirements);
     }
 
@@ -916,5 +989,16 @@ public class PartyBuffHandler {
             }
         }
         return max;
+    }
+
+    private Material parseMaterial(String materialName) {
+        if (materialName == null || materialName.isBlank()) {
+            return null;
+        }
+        try {
+            return Material.valueOf(materialName.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
     }
 }

@@ -16,6 +16,7 @@ import org.bukkit.boss.BossBar;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
+import java.util.Locale;
 import java.util.Objects;
 
 public class ConfigManager {
@@ -31,26 +32,13 @@ public class ConfigManager {
         config.addMissing("Party.BaseMemberSlots", 10);
         config.addMissing("Buffs.Handler", "LEVEL");
         config.addMissing("Buffs.SkillPointsPerLevel", 1);
-        config.addMissing("Buffs.DisplayNames.EXP_SHARING_RATE", "&aExp Sharing Rate");
-        config.addMissing("Buffs.DisplayNames.EXP_SHARING_RADIUS", "&aExp Sharing Radius");
-        config.addMissing("Buffs.DisplayNames.MEMBER_SLOTS", "&aMember Slots");
-        config.addMissing("Buffs.DisplayNames.TRESOR_SIZE", "&aTresor Size");
-        config.addMissing("Buffs.DisplayNames.ACCESS_PARTY_WAYPOINT", "&aParty Waypoint Access");
-        config.addMissing("Buffs.DisplayNames.ACCESS_PARTY_TRESOR", "&aParty Tresor Access");
-        config.addMissing("Buffs.DisplayNames.ACCESS_PARTY_CHAT", "&aParty Chat Access");
-        config.addMissing("Buffs.DisplayNames.ABILITY_DURATION", "&aAbility Duration");
-        config.addMissing("Buffs.DisplayNames.ABILITY_COOLDOWN_REDUCTION", "&aAbility Cooldown Reduction");
-        config.addMissing("Buffs.DisplayNames.DUNGEON_INSTANCE_SLOTS", "&aDungeon Instance Slots");
-        for (PrimarySkillType skill : PrimarySkillType.values()) {
-            config.addMissing("Skills.DisplayNames." + skill.name(), toReadableName(skill.name()));
-        }
         config.addMissing("Experience.LevelCurve", "x * 50 * Math.pow(x,2)");
-        config.addMissing("Experience.Bar.Display", "&b%party%     &9LvL &b%level%     &7[&a%exp%&7/&a%needed%&7]");
         config.addMissing("Experience.Bar.Color", "BLUE");
         config.addMissing("Experience.Bar.Segments", "SOLID");
         config.addMissing("Network.ServerName", "paper");
         config.addMissing("Network.TeleportChannel", "mcmmoparties:teleport");
         config.addMissing("Network.PartyChatChannel", "mcmmoparties:partychat");
+        config.addMissing("translation", "en");
         config.addMissing("Hooks.ChestShop.Enabled", true);
         config.addMissing("DungeonInstance.DefaultSlots", 3);
         config.addMissing("Party.DefaultTresorSize", 50000);
@@ -76,18 +64,12 @@ public class ConfigManager {
     }
 
     public String getBuffDisplayName(String key, String fallback) {
-        return ChatColor.translateAlternateColorCodes(
-                '&',
-                config.getString("Buffs.DisplayNames." + key, fallback)
-        );
+        String defaultDisplayName = getDefaultBuffDisplayName(key, fallback);
+        return LanguageConfig.get().getMessage("buff_display_names." + key, defaultDisplayName);
     }
 
     public String getSkillDisplayName(PrimarySkillType skill) {
-        String fallback = toReadableName(skill.name());
-        return ChatColor.translateAlternateColorCodes(
-                '&',
-                config.getString("Skills.DisplayNames." + skill.name(), fallback)
-        );
+        return LanguageConfig.get().getMessage("skill_display_names." + skill.name(), toReadableName(skill.name()));
     }
 
     public BuffHandlerMode getBuffHandlerMode() {
@@ -101,6 +83,21 @@ public class ConfigManager {
 
     public String getServerName() {
         return config.getString("Network.ServerName", "paper");
+    }
+
+    public String getTranslation() {
+        String configured = config.getString("translation", "en");
+        String normalized = configured == null ? "en" : configured.trim().toLowerCase(Locale.ROOT);
+        return normalized.isBlank() ? "en" : normalized;
+    }
+
+    public String getTranslationFilePath(String fileName) {
+        String normalizedFileName = fileName.startsWith("/") ? fileName.substring(1) : fileName;
+        String selectedPath = "translations/" + getTranslation() + "/" + normalizedFileName;
+        if (McMMOParties.getInstance().getResource(selectedPath) != null) {
+            return selectedPath;
+        }
+        return "translations/en/" + normalizedFileName;
     }
 
     public String getTeleportChannel() {
@@ -156,12 +153,14 @@ public class ConfigManager {
 
         String title = Objects.requireNonNull(config.getString(
                 "Experience.Bar.Display",
-                "&b%party%     &9LvL &b%level%     &7[&a%exp%&7/&a%needed%&7]"
+                ""
         ));
-        for (Replaceable rep : replaceables) {
-            title = title.replace(rep.getK(), rep.getV());
-        }
-        return ChatColor.translateAlternateColorCodes('&', title);
+        String localizedTitle = LanguageConfig.get().getMessage(
+                "experience_bar_display",
+                title.isBlank() ? "&b%party%     &9LvL &b%level%     &7[&a%exp%&7/&a%needed%&7]" : title,
+                replaceables
+        );
+        return ChatColor.translateAlternateColorCodes('&', localizedTitle);
     }
 
     private String toReadableName(String key) {
@@ -178,4 +177,21 @@ public class ConfigManager {
         }
         return builder.toString();
     }
+
+    private String getDefaultBuffDisplayName(String key, String fallback) {
+        return switch (key) {
+            case "EXP_SHARING_RATE" -> "&aExp Sharing Rate";
+            case "EXP_SHARING_RADIUS" -> "&aExp Sharing Radius";
+            case "MEMBER_SLOTS" -> "&aMember Slots";
+            case "TRESOR_SIZE" -> "&aTresor Size";
+            case "ACCESS_PARTY_WAYPOINT" -> "&aParty Waypoint Access";
+            case "ACCESS_PARTY_TRESOR" -> "&aParty Tresor Access";
+            case "ACCESS_PARTY_CHAT" -> "&aParty Chat Access";
+            case "ABILITY_DURATION" -> "&aAbility Duration";
+            case "ABILITY_COOLDOWN_REDUCTION" -> "&aAbility Cooldown Reduction";
+            case "DUNGEON_INSTANCE_SLOTS" -> "&aDungeon Instance Slots";
+            default -> fallback;
+        };
+    }
+
 }

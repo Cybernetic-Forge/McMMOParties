@@ -48,6 +48,11 @@ Level:
     ACCESS_PARTY_WAYPOINT: 1
 
 # Skillpoint-based buffs (spent points map to levels below)
+# Supported condition keys:
+# - <MCMMO_SKILL>: <required cumulative level>
+# - PartyLevel: <required party level>
+# - BuffLevel.<BUFF_TYPE>: <required invested buff points>
+# - BuffLevel.<BUFF_TYPE>.<ABILITY>: <required invested buff points> for ability-specific buffs
 Skillpoints:
   EXP_SHARING_RATE:
     Configuration:
@@ -60,6 +65,7 @@ Skillpoints:
           MINING: 250
         3:
           MINING: 500
+          PartyLevel: 5
     1: 5
     2: 10
     3: 15
@@ -118,6 +124,9 @@ Skillpoints:
         Conditions:
           2:
             MINING: 300
+          3:
+            BuffLevel:
+              ABILITY_DURATION: 2
       1: 60
       2: 120
       3: 180
@@ -147,3 +156,27 @@ Skillpoints:
     1: 1
     2: 2
     3: unlimited
+
+BuffMeta:
+  EXP_SHARING_RATE:
+    IconMaterial: EXPERIENCE_BOTTLE
+  EXP_SHARING_RADIUS:
+    IconMaterial: COMPASS
+  MEMBER_SLOTS:
+    IconMaterial: PLAYER_HEAD
+  DUNGEON_INSTANCE_SLOTS:
+    IconMaterial: TRIAL_KEY
+  TRESOR_SIZE:
+    IconMaterial: BUNDLE
+  ACCESS_PARTY_WAYPOINT:
+    IconMaterial: LODESTONE
+  ACCESS_PARTY_TRESOR:
+    IconMaterial: CHEST
+  ACCESS_PARTY_CHAT:
+    IconMaterial: WRITABLE_BOOK
+  ABILITY_DURATION:
+    IconMaterial: CLOCK
+  ABILITY_COOLDOWN_REDUCTION:
+    IconMaterial: AMETHYST_SHARD
+    ALL:
+      IconMaterial: AMETHYST_SHARD

@@ -17,9 +17,9 @@ import net.kyori.adventure.text.event.ClickCallback;
 import net.maksy.mcmmoparties.McMMOParties;
 import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
 import net.maksy.mcmmoparties.configuration.enums.*;
+import net.maksy.mcmmoparties.configuration.models.BuffUpgradeCondition;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.configuration.models.PartyWaypoint;
-import net.maksy.mcmmoparties.configuration.models.SkillRequirement;
 import net.maksy.mcmmoparties.hooks.EconomyHook;
 import net.maksy.mcmmoparties.proxy.ProxyTeleportService;
 import net.maksy.mcmmoparties.utils.*;
@@ -63,6 +63,7 @@ public class PartyOverview implements Listener {
     private UUID selectedRoleMemberUuid;
     private int instanceOnlinePage = 0;
     private int instanceMemberPage = 0;
+    private int buffPage = 0;
 
     private static final List<Integer> DEFAULT_INSTANCE_AVAILABLE_LAYOUT = List.of(10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25);
     private static final List<Integer> DEFAULT_INSTANCE_MEMBER_LAYOUT = List.of(28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43);
@@ -71,6 +72,9 @@ public class PartyOverview implements Listener {
     private static final int DEFAULT_INSTANCE_MEMBER_PREVIOUS_SLOT = 36;
     private static final int DEFAULT_INSTANCE_MEMBER_NEXT_SLOT = 44;
     private static final int DEFAULT_INSTANCE_ACTION_SLOT = 49;
+    private static final List<Integer> DEFAULT_BUFF_LAYOUT = List.of(10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34);
+    private static final int DEFAULT_BUFF_PREVIOUS_SLOT = 27;
+    private static final int DEFAULT_BUFF_NEXT_SLOT = 35;
     private static final Map<PartyState, Integer> DEFAULT_ROLE_SELECTOR_SLOTS = Map.of(
             PartyState.MEMBER, 19,
             PartyState.CO_OWNER, 21,
@@ -87,6 +91,8 @@ public class PartyOverview implements Listener {
     );
 
     private record BuffKey(PartyBuffType type, String ability) {
+    }
+    private record BuffDisplayEntry(ItemStack item, BuffKey key) {
     }
     public PartyOverview(UUID playerUuid, McMMOParty party) {
         this.playerUuid = playerUuid;
@@ -363,8 +369,24 @@ public class PartyOverview implements Listener {
         ));
     }
 
-    private int getDungeonActionSlot() {
+    private int getDungeonCreateActionSlot() {
         return McMMOParties.getPartyOverviewCfg().getInt("Icons.DungeonInstances.ActionCreate.Slot", DEFAULT_INSTANCE_ACTION_SLOT);
+    }
+
+    private int getDungeonDisbandActionSlot() {
+        return McMMOParties.getPartyOverviewCfg().getInt("Icons.DungeonInstances.ActionDisband.Slot", DEFAULT_INSTANCE_ACTION_SLOT);
+    }
+
+    private List<Integer> getBuffLayoutSlots() {
+        return McMMOParties.getPartyOverviewCfg().getIntegerList("Icons.Buffs.Layout.Slots", DEFAULT_BUFF_LAYOUT);
+    }
+
+    private int getBuffPreviousSlot() {
+        return McMMOParties.getPartyOverviewCfg().getInt("Icons.Buffs.PreviousPage.Slot", DEFAULT_BUFF_PREVIOUS_SLOT);
+    }
+
+    private int getBuffNextSlot() {
+        return McMMOParties.getPartyOverviewCfg().getInt("Icons.Buffs.NextPage.Slot", DEFAULT_BUFF_NEXT_SLOT);
     }
 
     private int getDungeonAvailablePreviousSlot() {
@@ -525,10 +547,22 @@ public class PartyOverview implements Listener {
                 new Replaceable("%page%", String.valueOf(instanceMemberPage + 1)),
                 new Replaceable("%max_page%", String.valueOf(memberPageCount))
         );
-        inventory.setItem(availablePrev.getKey(), availablePrev.getValue());
-        inventory.setItem(availableNext.getKey(), availableNext.getValue());
-        inventory.setItem(memberPrev.getKey(), memberPrev.getValue());
-        inventory.setItem(memberNext.getKey(), memberNext.getValue());
+        if (onlinePageCount > 1) {
+            if (instanceOnlinePage > 0) {
+                inventory.setItem(availablePrev.getKey(), availablePrev.getValue());
+            }
+            if (instanceOnlinePage + 1 < onlinePageCount) {
+                inventory.setItem(availableNext.getKey(), availableNext.getValue());
+            }
+        }
+        if (memberPageCount > 1) {
+            if (instanceMemberPage > 0) {
+                inventory.setItem(memberPrev.getKey(), memberPrev.getValue());
+            }
+            if (instanceMemberPage + 1 < memberPageCount) {
+                inventory.setItem(memberNext.getKey(), memberNext.getValue());
+            }
+        }
         var backIcon = McMMOParties.getPartyOverviewCfg().getIcon("Back");
         inventory.setItem(backIcon.getKey(), backIcon.getValue());
     }
@@ -539,7 +573,7 @@ public class PartyOverview implements Listener {
             if (nextSlot > 43) break;
             int cumulativeLevel = PartyDisplayUtils.calculateCumulativeSkillLevel(party, skill);
 
-            // Try to get a dedicated CumulatedSkills entry from PartyOverview.yml
+            // Try to get a dedicated CumulatedSkills entry from guis.yml
             var pair = McMMOParties.getPartyOverviewCfg().getIcon("CumulatedSkills." + skill.name().toUpperCase(),
                     new Replaceable("%skill_name%", McMMOParties.getConfigManager().getSkillDisplayName(skill)),
                     new Replaceable("%skill_level%", String.valueOf(cumulativeLevel))
@@ -552,7 +586,7 @@ public class PartyOverview implements Listener {
                 nextSlot++;
             }
 
-            // place the item (pair.getValue() already contains display/lore as defined in PartyOverview.yml)
+            // place the item (pair.getValue() already contains display/lore as defined in guis.yml)
             inventory.setItem(slot, pair.getValue());
         }
 
@@ -562,7 +596,7 @@ public class PartyOverview implements Listener {
 
     private void displayBuffs() {
         buffSlots.clear();
-        int slot = 10;
+        List<BuffDisplayEntry> entries = new ArrayList<>();
 
         var handler = party.getBuffHandler();
         boolean skillPointsMode = handler.isSkillPointsMode();
@@ -593,7 +627,7 @@ public class PartyOverview implements Listener {
                     : getNextLevelDoubleValue(handler.getExpSharingRateByLevel(), party.getLevel(), totalPercent);
             String name = McMMOParties.getConfigManager().getBuffDisplayName("EXP_SHARING_RATE", "Exp Sharing Rate");
             BuffKey buffKey = new BuffKey(PartyBuffType.EXP_SHARING_RATE, null);
-            slot = placeBuffItem(
+            addBuffEntry(entries,
                     getBuffItem(
                             skillPointsMode,
                             buffKey,
@@ -606,7 +640,6 @@ public class PartyOverview implements Listener {
                             preferredBuff,
                             playerSuggestionKey
                     ),
-                    slot,
                     skillPointsMode ? buffKey : null
             );
         }
@@ -621,7 +654,7 @@ public class PartyOverview implements Listener {
                     : getNextLevelIntValue(handler.getExpSharingRadiusByLevel(), party.getLevel(), totalRadius);
             String name = McMMOParties.getConfigManager().getBuffDisplayName("EXP_SHARING_RADIUS", "Exp Sharing Radius");
             BuffKey buffKey = new BuffKey(PartyBuffType.EXP_SHARING_RADIUS, null);
-            slot = placeBuffItem(
+            addBuffEntry(entries,
                     getBuffItem(
                             skillPointsMode,
                             buffKey,
@@ -634,7 +667,6 @@ public class PartyOverview implements Listener {
                             preferredBuff,
                             playerSuggestionKey
                     ),
-                    slot,
                     skillPointsMode ? buffKey : null
             );
         }
@@ -649,7 +681,7 @@ public class PartyOverview implements Listener {
                     : getNextLevelIntValue(handler.getMemberSlotsByLevel(), party.getLevel(), totalSlots);
             String name = McMMOParties.getConfigManager().getBuffDisplayName("MEMBER_SLOTS", "Member Slots");
             BuffKey buffKey = new BuffKey(PartyBuffType.MEMBER_SLOTS, null);
-            slot = placeBuffItem(
+            addBuffEntry(entries,
                     getBuffItem(
                             skillPointsMode,
                             buffKey,
@@ -662,7 +694,6 @@ public class PartyOverview implements Listener {
                             preferredBuff,
                             playerSuggestionKey
                     ),
-                    slot,
                     skillPointsMode ? buffKey : null
             );
         }
@@ -679,7 +710,7 @@ public class PartyOverview implements Listener {
             boolean nextInfinite = currentInfinite || nextSlots == Integer.MAX_VALUE;
             String name = McMMOParties.getConfigManager().getBuffDisplayName("DUNGEON_INSTANCE_SLOTS", "Dungeon Instance Slots");
             BuffKey buffKey = new BuffKey(PartyBuffType.DUNGEON_INSTANCE_SLOTS, null);
-            slot = placeBuffItem(
+            addBuffEntry(entries,
                     getBuffItem(
                             skillPointsMode,
                             buffKey,
@@ -692,7 +723,6 @@ public class PartyOverview implements Listener {
                             preferredBuff,
                             playerSuggestionKey
                     ),
-                    slot,
                     skillPointsMode ? buffKey : null
             );
         }
@@ -708,7 +738,7 @@ public class PartyOverview implements Listener {
             boolean nextInfinite = currentInfinite || nextSize == Integer.MAX_VALUE;
             String name = McMMOParties.getConfigManager().getBuffDisplayName("TRESOR_SIZE", "Tresor Size");
             BuffKey buffKey = new BuffKey(PartyBuffType.TRESOR_SIZE, null);
-            slot = placeBuffItem(
+            addBuffEntry(entries,
                     getBuffItem(
                             skillPointsMode,
                             buffKey,
@@ -721,23 +751,22 @@ public class PartyOverview implements Listener {
                             preferredBuff,
                             playerSuggestionKey
                     ),
-                    slot,
                     skillPointsMode ? buffKey : null
             );
         }
 
-        slot = displayAccessBuff(
-                slot, skillPointsMode, handler, suggestionCounts, preferredBuff, playerSuggestionKey,
+        displayAccessBuff(
+                entries, skillPointsMode, handler, suggestionCounts, preferredBuff, playerSuggestionKey,
                 PartyBuffType.ACCESS_PARTY_WAYPOINT, "ACCESS_PARTY_WAYPOINT", "Party Waypoint Access",
                 handler.getAccessPartyWaypointByLevel(), handler.isAccessPartyWaypoint()
         );
-        slot = displayAccessBuff(
-                slot, skillPointsMode, handler, suggestionCounts, preferredBuff, playerSuggestionKey,
+        displayAccessBuff(
+                entries, skillPointsMode, handler, suggestionCounts, preferredBuff, playerSuggestionKey,
                 PartyBuffType.ACCESS_PARTY_TRESOR, "ACCESS_PARTY_TRESOR", "Party Tresor Access",
                 handler.getAccessPartyTresorByLevel(), handler.isAccessPartyTresor()
         );
-        slot = displayAccessBuff(
-                slot, skillPointsMode, handler, suggestionCounts, preferredBuff, playerSuggestionKey,
+        displayAccessBuff(
+                entries, skillPointsMode, handler, suggestionCounts, preferredBuff, playerSuggestionKey,
                 PartyBuffType.ACCESS_PARTY_CHAT, "ACCESS_PARTY_CHAT", "Party Chat Access",
                 handler.getAccessPartyChatByLevel(), handler.isAccessPartyChat()
         );
@@ -751,7 +780,7 @@ public class PartyOverview implements Listener {
                     : getNextLevelIntValue(handler.getAbilityDurationByLevel(), party.getLevel(), totalSeconds);
             String name = McMMOParties.getConfigManager().getBuffDisplayName("ABILITY_DURATION", "Ability Duration");
             BuffKey buffKey = new BuffKey(PartyBuffType.ABILITY_DURATION, null);
-            slot = placeBuffItem(
+            addBuffEntry(entries,
                     getBuffItem(
                             skillPointsMode,
                             buffKey,
@@ -764,12 +793,11 @@ public class PartyOverview implements Listener {
                             preferredBuff,
                             playerSuggestionKey
                     ),
-                    slot,
                     skillPointsMode ? buffKey : null
             );
         }
-        slot = displayAbilitySpecificBuff(
-                slot,
+        displayAbilitySpecificBuff(
+                entries,
                 skillPointsMode,
                 handler,
                 suggestionCounts,
@@ -782,6 +810,8 @@ public class PartyOverview implements Listener {
                 handler.getAbilityCooldownReductionBonuses(),
                 handler.getAbilityCooldownReductionByLevel()
         );
+
+        renderBuffEntries(entries);
 
         var backIcon = McMMOParties.getPartyOverviewCfg().getIcon("Back");
         inventory.setItem(backIcon.getKey(), backIcon.getValue());
@@ -816,8 +846,13 @@ public class PartyOverview implements Listener {
             appendValidationLore(lore, key);
         }
 
+        Material material = party.getBuffHandler().getBuffIconMaterial(key.type(), key.ability());
+        if (material == null) {
+            material = McMMOParties.getPartyOverviewCfg().getMaterial(templatePath, Material.POTION);
+        }
+
         ItemStack item = ItemUT.getItem(
-                McMMOParties.getPartyOverviewCfg().getMaterial(templatePath, Material.POTION),
+                material,
                 McMMOParties.getPartyOverviewCfg().getFormattedString(
                         "Icons." + templatePath + ".Display",
                         buffName,
@@ -842,7 +877,7 @@ public class PartyOverview implements Listener {
     private void appendValidationLore(List<String> lore, BuffKey key) {
         var handler = party.getBuffHandler();
         double treasuryCost = handler.getNextUpgradeCost(key.type(), key.ability());
-        List<SkillRequirement> conditions = handler.getNextUpgradeConditions(key.type(), key.ability());
+        List<BuffUpgradeCondition> conditions = handler.getNextUpgradeConditions(key.type(), key.ability());
 
         if (treasuryCost > 0.0) {
             lore.addAll(McMMOParties.getPartyOverviewCfg().getFormattedStringList(
@@ -860,12 +895,15 @@ public class PartyOverview implements Listener {
                     new Replaceable("%condition_count%", String.valueOf(conditions.size()))
             );
             lore.addAll(conditionLore);
-            for (SkillRequirement requirement : conditions) {
-                int currentLevel = PartyDisplayUtils.calculateCumulativeSkillLevel(party, requirement.getSkill());
+            for (BuffUpgradeCondition requirement : conditions) {
+                int currentLevel = getCurrentConditionValue(requirement);
                 lore.addAll(McMMOParties.getPartyOverviewCfg().getFormattedStringList(
                         "BuffValidation.ConditionEntry",
                         List.of(),
-                        new Replaceable("%skill_name%", McMMOParties.getConfigManager().getSkillDisplayName(requirement.getSkill())),
+                        new Replaceable("%condition_name%", getConditionDisplayName(requirement)),
+                        new Replaceable("%condition_current%", String.valueOf(currentLevel)),
+                        new Replaceable("%condition_required%", String.valueOf(requirement.getAmount())),
+                        new Replaceable("%skill_name%", getConditionDisplayName(requirement)),
                         new Replaceable("%skill_current%", String.valueOf(currentLevel)),
                         new Replaceable("%skill_required%", String.valueOf(requirement.getAmount()))
                 ));
@@ -874,27 +912,100 @@ public class PartyOverview implements Listener {
     }
 
     private boolean meetsUpgradeConditions(BuffKey key) {
-        for (SkillRequirement requirement : party.getBuffHandler().getNextUpgradeConditions(key.type(), key.ability())) {
-            if (PartyDisplayUtils.calculateCumulativeSkillLevel(party, requirement.getSkill()) < requirement.getAmount()) {
+        for (BuffUpgradeCondition requirement : party.getBuffHandler().getNextUpgradeConditions(key.type(), key.ability())) {
+            if (getCurrentConditionValue(requirement) < requirement.getAmount()) {
                 return false;
             }
         }
         return true;
     }
 
+    private int getCurrentConditionValue(BuffUpgradeCondition condition) {
+        return switch (condition.getType()) {
+            case MCMMO_SKILL -> condition.getSkill() == null ? 0 : PartyDisplayUtils.calculateCumulativeSkillLevel(party, condition.getSkill());
+            case PARTY_LEVEL -> (int) party.getLevel();
+            case BUFF_LEVEL -> {
+                if (condition.getBuffType() == null) {
+                    yield 0;
+                }
+                String ability = condition.getAbility();
+                yield ability == null
+                        ? party.getBuffHandler().getSpentPoints(condition.getBuffType())
+                        : party.getBuffHandler().getSpentPoints(condition.getBuffType(), ability);
+            }
+        };
+    }
+
+    private String getConditionDisplayName(BuffUpgradeCondition condition) {
+        return switch (condition.getType()) {
+            case MCMMO_SKILL -> condition.getSkill() == null
+                    ? ""
+                    : McMMOParties.getConfigManager().getSkillDisplayName(condition.getSkill());
+            case PARTY_LEVEL -> LanguageConfig.get().getMessage(BUFF_CONDITION_PARTY_LEVEL);
+            case BUFF_LEVEL -> {
+                if (condition.getBuffType() == null) {
+                    yield LanguageConfig.get().getMessage(BUFF_CONDITION_BUFF_LEVEL, new Replaceable("%buff_name%", ""));
+                }
+                String buffName = McMMOParties.getConfigManager().getBuffDisplayName(condition.getBuffType().name(), condition.getBuffType().name());
+                if (condition.getAbility() == null || condition.getAbility().isBlank()) {
+                    yield LanguageConfig.get().getMessage(BUFF_CONDITION_BUFF_LEVEL, new Replaceable("%buff_name%", buffName));
+                }
+                yield LanguageConfig.get().getMessage(
+                        BUFF_CONDITION_BUFF_LEVEL_ABILITY,
+                        new Replaceable("%buff_name%", buffName),
+                        new Replaceable("%ability%", condition.getAbility())
+                );
+            }
+        };
+    }
+
     private boolean isPartyMember(UUID uuid) {
         return uuid != null && party.getMembers().contains(uuid);
     }
 
-    private int placeBuffItem(ItemStack item, int slot, BuffKey key) {
-        if (slot > 43) {
-            return slot;
+    private void addBuffEntry(List<BuffDisplayEntry> entries, ItemStack item, BuffKey key) {
+        entries.add(new BuffDisplayEntry(item, key));
+    }
+
+    private void renderBuffEntries(List<BuffDisplayEntry> entries) {
+        List<Integer> layoutSlots = getBuffLayoutSlots();
+        if (layoutSlots.isEmpty()) {
+            return;
         }
-        inventory.setItem(slot, item);
-        if (key != null) {
-            buffSlots.put(slot, key);
+
+        int pageSize = Math.max(1, layoutSlots.size());
+        int pageCount = getPageCount(entries.size(), pageSize);
+        buffPage = clampPage(buffPage, entries.size(), pageSize);
+
+        int startIndex = buffPage * pageSize;
+        int endIndex = Math.min(entries.size(), startIndex + pageSize);
+        for (int index = startIndex; index < endIndex; index++) {
+            int layoutIndex = index - startIndex;
+            int slot = layoutSlots.get(layoutIndex);
+            BuffDisplayEntry entry = entries.get(index);
+            inventory.setItem(slot, entry.item());
+            if (entry.key() != null) {
+                buffSlots.put(slot, entry.key());
+            }
         }
-        return slot + 1;
+
+        if (pageCount > 1) {
+            if (buffPage > 0) {
+                var previousIcon = McMMOParties.getPartyOverviewCfg().getIcon("Buffs.PreviousPage",
+                        new Replaceable("%page%", String.valueOf(buffPage + 1)),
+                        new Replaceable("%max_page%", String.valueOf(pageCount))
+                );
+                inventory.setItem(previousIcon.getKey(), previousIcon.getValue());
+            }
+
+            if (buffPage + 1 < pageCount) {
+                var nextIcon = McMMOParties.getPartyOverviewCfg().getIcon("Buffs.NextPage",
+                        new Replaceable("%page%", String.valueOf(buffPage + 1)),
+                        new Replaceable("%max_page%", String.valueOf(pageCount))
+                );
+                inventory.setItem(nextIcon.getKey(), nextIcon.getValue());
+            }
+        }
     }
 
     private int getSkillPointIntValue(Map<Integer, Integer> levels, int points, int fallback) {
@@ -937,7 +1048,7 @@ public class PartyOverview implements Listener {
         return currentTotal;
     }
 
-    private int displayAbilitySpecificBuff(int slot, boolean skillPointsMode,
+    private void displayAbilitySpecificBuff(List<BuffDisplayEntry> entries, boolean skillPointsMode,
                                            net.maksy.mcmmoparties.configuration.PartyBuffHandler handler,
                                            Map<String, Integer> suggestionCounts, BuffKey preferredBuff, String playerSuggestionKey,
                                            PartyBuffType type, String displayKey, String fallbackName,
@@ -953,7 +1064,7 @@ public class PartyOverview implements Listener {
                 int totalSeconds = totalBonuses.getOrDefault(abilityName.toUpperCase(Locale.ROOT), 0);
                 int nextSeconds = getSkillPointIntValue(abilityEntry.getValue(), spentPoints + 1, totalSeconds);
                 BuffKey buffKey = new BuffKey(type, abilityName);
-                slot = placeBuffItem(
+                addBuffEntry(entries,
                         getBuffItem(
                                 true,
                                 buffKey,
@@ -966,15 +1077,14 @@ public class PartyOverview implements Listener {
                                 preferredBuff,
                                 playerSuggestionKey
                         ),
-                        slot,
                         buffKey
                 );
             }
-            return slot;
+            return;
         }
 
         if (totalBonuses.isEmpty()) {
-            return slot;
+            return;
         }
 
         String baseName = McMMOParties.getConfigManager().getBuffDisplayName(displayKey, fallbackName);
@@ -982,7 +1092,7 @@ public class PartyOverview implements Listener {
             String ability = abilityEntry.getKey();
             int totalSeconds = abilityEntry.getValue();
             int nextSeconds = getNextAbilityValue(levelBonuses, ability, party.getLevel(), totalSeconds);
-            slot = placeBuffItem(
+            addBuffEntry(entries,
                     getBuffItem(
                             false,
                             new BuffKey(type, ability),
@@ -995,20 +1105,18 @@ public class PartyOverview implements Listener {
                             preferredBuff,
                             playerSuggestionKey
                     ),
-                    slot,
                     null
             );
         }
-        return slot;
     }
 
-    private int displayAccessBuff(int slot, boolean skillPointsMode,
+    private void displayAccessBuff(List<BuffDisplayEntry> entries, boolean skillPointsMode,
                                   net.maksy.mcmmoparties.configuration.PartyBuffHandler handler,
                                   Map<String, Integer> suggestionCounts, BuffKey preferredBuff, String playerSuggestionKey,
                                   PartyBuffType type, String displayKey, String fallbackName,
                                   Map<Integer, Integer> levels, boolean unlocked) {
         if (levels.isEmpty()) {
-            return slot;
+            return;
         }
 
         int spentPoints = handler.getSpentPoints(type);
@@ -1018,7 +1126,7 @@ public class PartyOverview implements Listener {
                 : getNextLevelIntValue(levels, party.getLevel(), unlocked ? 1 : 0) > 0;
         String name = McMMOParties.getConfigManager().getBuffDisplayName(displayKey, fallbackName);
         BuffKey buffKey = new BuffKey(type, null);
-        return placeBuffItem(
+        addBuffEntry(entries,
                 getBuffItem(
                         skillPointsMode,
                         buffKey,
@@ -1031,7 +1139,6 @@ public class PartyOverview implements Listener {
                         preferredBuff,
                         playerSuggestionKey
                 ),
-                slot,
                 skillPointsMode ? buffKey : null
         );
     }
@@ -1084,6 +1191,26 @@ public class PartyOverview implements Listener {
             }
         }
         return suggestionCounts;
+    }
+
+    private int getBuffEntryCount(net.maksy.mcmmoparties.configuration.PartyBuffHandler handler) {
+        int count = 0;
+        if (!handler.getExpSharingRateByLevel().isEmpty()) count++;
+        if (!handler.getExpSharingRadiusByLevel().isEmpty()) count++;
+        if (!handler.getMemberSlotsByLevel().isEmpty()) count++;
+        if (!handler.getDungeonInstanceSlotsByLevel().isEmpty()) count++;
+        if (!handler.getTresorSizeByLevel().isEmpty()) count++;
+        if (!handler.getAccessPartyWaypointByLevel().isEmpty()) count++;
+        if (!handler.getAccessPartyTresorByLevel().isEmpty()) count++;
+        if (!handler.getAccessPartyChatByLevel().isEmpty()) count++;
+        if (!handler.getAbilityDurationByLevel().isEmpty()) count++;
+
+        if (handler.isSkillPointsMode()) {
+            count += handler.getAbilityCooldownReductionPointLevels().size();
+        } else {
+            count += handler.getAbilityCooldownReductionBonuses().size();
+        }
+        return count;
     }
 
     private BuffKey getPreferredBuff(net.maksy.mcmmoparties.configuration.PartyBuffHandler handler, Map<String, Integer> suggestionCounts) {
@@ -1188,6 +1315,7 @@ public class PartyOverview implements Listener {
                 }
                 case BUFFS -> {
                     currentView = 3;
+                    buffPage = 0;
                     refreshInventory();
                 }
                 case DUNGEON_INSTANCES -> {
@@ -1439,6 +1567,23 @@ public class PartyOverview implements Listener {
             return;
         } else if (currentView == 3) {
             var handler = party.getBuffHandler();
+            int buffPageCount = getPageCount(getBuffEntryCount(handler), Math.max(1, getBuffLayoutSlots().size()));
+            if (buffPageCount > 1) {
+                if (slot == getBuffPreviousSlot()) {
+                    if (buffPage > 0) {
+                        buffPage--;
+                        refreshInventory();
+                    }
+                    return;
+                }
+                if (slot == getBuffNextSlot()) {
+                    if (buffPage + 1 < buffPageCount) {
+                        buffPage++;
+                        refreshInventory();
+                    }
+                    return;
+                }
+            }
             if (!handler.isSkillPointsMode()) {
                 return;
             }
@@ -1566,8 +1711,12 @@ public class PartyOverview implements Listener {
         var dungeonParty = manager.get(party.getPartyID());
         List<Integer> availableLayout = getDungeonAvailableLayout();
         List<Integer> memberLayout = getDungeonMemberLayout();
+        int availablePageCount = getPageCount(manager.getSelectableOnlineMembers(party).size(), Math.max(1, availableLayout.size()));
+        int memberPageSize = Math.max(1, Math.min(manager.getVisibleSlotCount(party), memberLayout.size()));
+        int memberPageCount = getPageCount(dungeonParty == null ? 0 : dungeonParty.getPlayerUuids().size(), memberPageSize);
 
-        if (slot == getDungeonActionSlot()) {
+        int actionSlot = dungeonParty == null ? getDungeonCreateActionSlot() : getDungeonDisbandActionSlot();
+        if (slot == actionSlot) {
             if (!party.canManageDungeonInstances(playerUuid)) {
                 player.sendMessage(LanguageConfig.get().getMessage(DUNGEON_INSTANCE_NO_PERMISSION));
                 return;
@@ -1593,32 +1742,29 @@ public class PartyOverview implements Listener {
             return;
         }
 
-        if (slot == getDungeonAvailablePreviousSlot()) {
+        if (availablePageCount > 1 && slot == getDungeonAvailablePreviousSlot()) {
             if (instanceOnlinePage > 0) {
                 instanceOnlinePage--;
                 refreshInventory();
             }
             return;
         }
-        if (slot == getDungeonAvailableNextSlot()) {
-            int maxPage = getPageCount(manager.getSelectableOnlineMembers(party).size(), Math.max(1, availableLayout.size()));
-            if (instanceOnlinePage + 1 < maxPage) {
+        if (availablePageCount > 1 && slot == getDungeonAvailableNextSlot()) {
+            if (instanceOnlinePage + 1 < availablePageCount) {
                 instanceOnlinePage++;
                 refreshInventory();
             }
             return;
         }
-        if (slot == getDungeonMemberPreviousSlot()) {
+        if (memberPageCount > 1 && slot == getDungeonMemberPreviousSlot()) {
             if (instanceMemberPage > 0) {
                 instanceMemberPage--;
                 refreshInventory();
             }
             return;
         }
-        if (slot == getDungeonMemberNextSlot()) {
-            int pageSize = Math.max(1, Math.min(manager.getVisibleSlotCount(party), memberLayout.size()));
-            int maxPage = getPageCount(dungeonParty == null ? 0 : dungeonParty.getPlayerUuids().size(), pageSize);
-            if (instanceMemberPage + 1 < maxPage) {
+        if (memberPageCount > 1 && slot == getDungeonMemberNextSlot()) {
+            if (instanceMemberPage + 1 < memberPageCount) {
                 instanceMemberPage++;
                 refreshInventory();
             }

@@ -6,6 +6,7 @@ import net.maksy.mcmmoparties.api.events.PartyEventHandler;
 import net.maksy.mcmmoparties.commands.PartyCommands;
 import net.maksy.mcmmoparties.configuration.PartyLoader;
 import net.maksy.mcmmoparties.configuration.configs.ConfigManager;
+import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
 import net.maksy.mcmmoparties.configuration.enums.HookType;
 import net.maksy.mcmmoparties.configuration.configs.PartyEditorCfg;
 import net.maksy.mcmmoparties.configuration.configs.PartyOverviewCfg;
@@ -58,8 +59,7 @@ public final class McMMOParties extends JavaPlugin {
         EconomyHook.init(this);
         configManager = new ConfigManager();
         configManager.init();
-        partyEditorCfg = new PartyEditorCfg();
-        partyOverviewCfg = new PartyOverviewCfg();
+        reloadTranslationConfigs();
 
         init();
         sql = new SQLManager();
@@ -136,6 +136,18 @@ public final class McMMOParties extends JavaPlugin {
     }
 
     public static SQLManager getSQL() { return sql; }
+
+    public static void reloadTranslationConfigs() {
+        LanguageConfig.resetIfPathChanged();
+
+        String guiPath = configManager.getTranslationFilePath("guis.yml");
+        if (partyEditorCfg == null || !partyEditorCfg.usesPath(guiPath)) {
+            partyEditorCfg = new PartyEditorCfg();
+        }
+        if (partyOverviewCfg == null || !partyOverviewCfg.usesPath(guiPath)) {
+            partyOverviewCfg = new PartyOverviewCfg();
+        }
+    }
 
     public static void consoleMessage (Component message){
         Bukkit.getConsoleSender().sendMessage(ChatUT.hexString(ChatUT.serialize(message)));

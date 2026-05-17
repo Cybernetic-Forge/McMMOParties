@@ -1,10 +1,12 @@
 SQL:
-  Type: LOCALE
+  Type: SQLITE
   Host: /
   Database: /
   Username: /
   Password: /
   Port: /
+
+translation: en
 
 Network:
   ServerName: paper
@@ -29,44 +31,10 @@ Party:
 Buffs:
   Handler: LEVEL
   SkillPointsPerLevel: 1
-  DisplayNames:
-    EXP_SHARING_RATE: "&aExp Sharing Rate"
-    EXP_SHARING_RADIUS: "&aExp Sharing Radius"
-    MEMBER_SLOTS: "&aMember Slots"
-    TRESOR_SIZE: "&aTresor Size"
-    ACCESS_PARTY_WAYPOINT: "&aParty Waypoint Access"
-    ACCESS_PARTY_TRESOR: "&aParty Tresor Access"
-    ACCESS_PARTY_CHAT: "&aParty Chat Access"
-    ABILITY_DURATION: "&aAbility Duration"
-    ABILITY_COOLDOWN_REDUCTION: "&aAbility Cooldown Reduction"
-    DUNGEON_INSTANCE_SLOTS: "&aDungeon Instance Slots"
-
-Skills:
-  DisplayNames:
-    MINING: "Mining"
-    WOODCUTTING: "Woodcutting"
-    REPAIR: "Repair"
-    UNARMED: "Unarmed"
-    HERBALISM: "Herbalism"
-    EXCAVATION: "Excavation"
-    ARCHERY: "Archery"
-    SWORDS: "Swords"
-    AXES: "Axes"
-    ACROBATICS: "Acrobatics"
-    TAMING: "Taming"
-    FISHING: "Fishing"
-    ALCHEMY: "Alchemy"
-    SMELTING: "Smelting"
-    SALVAGE: "Salvage"
-    MACES: "Maces"
-    TRIDENTS: "Tridents"
-    CROSSBOWS: "Crossbows"
-    SPEARS: "Spears"
 
 Experience:
   LevelCurve: "x * 50 * Math.pow(x,2)"
   Bar:
-    Display: "&b%party%     &9LvL &b%level%     &7[&a%exp%&7/&a%needed%&7]"
     Color: BLUE
     Segments: SOLID
   Scaling:

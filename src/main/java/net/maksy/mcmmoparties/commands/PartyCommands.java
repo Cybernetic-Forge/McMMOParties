@@ -64,7 +64,7 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
             default:
                 if ("chat".equalsIgnoreCase(args[0])) {
                     PartyCommandUtils.chatPartyCommand(player, args);
-                } else if ("top".equalsIgnoreCase(args[0]) || "list".equalsIgnoreCase(args[0])) {
+                } else if ("list".equalsIgnoreCase(args[0])) {
                     PartyCommandUtils.listPartyCommand(player, args);
                 }
                 break;
@@ -93,7 +93,6 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
             if(canManage && "kick".startsWith(args[0])) first.add("kick");
             if(canManage && "newleader".startsWith(args[0])) first.add("newleader");
             if("list".startsWith(args[0])) first.add("list");
-            if("top".startsWith(args[0])) first.add("top");
             if (canDisband && "disband".startsWith(args[0])) first.add("disband");
             if ((player.isOp() || player.hasPermission("mcmmoparties.admin")) && "reload".startsWith(args[0])) {
                 first.add("reload");
@@ -107,7 +106,7 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
             if("info".startsWith(args[0])) second.addAll(McMMOParties.getPartyLoader().getPartyNames());
             if("invite".startsWith(args[0])) second.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList());
             if("newleader".startsWith(args[0])) second.addAll(party != null ? party.getMemberNames() : List.of(""));
-            if ("top".startsWith(args[0]) || "list".startsWith(args[0])) {
+            if ("list".startsWith(args[0])) {
                 second.add("1");
                 for (PartyListSortMode mode : PartyListSortMode.values()) {
                     second.add(mode.getKey());

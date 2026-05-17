@@ -440,6 +440,7 @@ public class PartyCommandUtils {
 
         McMMOParties.getInstance().reloadConfig();
         McMMOParties.getConfigManager().init();
+        McMMOParties.reloadTranslationConfigs();
         net.maksy.mcmmoparties.configuration.YamlParser.reloadAll(true);
         McMMOParties.getPartyLoader().flushPendingSaves();
         McMMOParties.getPartyLoader().reload();

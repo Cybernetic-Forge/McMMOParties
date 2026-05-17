@@ -8,43 +8,115 @@ import net.maksy.mcmmoparties.utils.ItemUT;
 import net.maksy.mcmmoparties.utils.Replaceable;
 import org.apache.commons.lang3.tuple.Pair;
 import org.bukkit.Material;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
 
+import java.io.File;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class PartyEditorCfg {
+    private static final String LEGACY_SHARED_FILE = "guis.yml";
+    private static final String ROOT_PATH = "PartyEditor";
+    private static final String LEGACY_FILE = "PartyEditor.yml";
+    private static final String MIGRATION_PATH = "Meta.LegacyMigration.PartyEditor";
 
+    private final String sourcePath;
     private final YamlParser config;
 
     public PartyEditorCfg() {
-        this.config = YamlParser.loadOrExtract(McMMOParties.getInstance(), "PartyEditor.yml");
-        this.config.mergeMissingFromResource("PartyEditor.yml");
+        this.sourcePath = getGuiPath();
+        this.config = YamlParser.loadOrExtract(McMMOParties.getInstance(), sourcePath);
+        migrateLegacyConfig();
+        this.config.mergeMissingFromResource(sourcePath);
         this.config.saveChanges();
     }
 
+    public boolean usesPath(String path) {
+        return sourcePath.equals(path);
+    }
+
     public Component getPartyEditorTitle() {
-        return ChatUT.hexComp(config.getString("Title", "Party Editor"));
+        return ChatUT.hexComp(config.getString(root("Title"), "Party Editor"));
     }
 
     public int getInvSize() {
-        return config.getInt("InvSize", 54);
+        return config.getInt(root("InvSize"), 54);
     }
 
     public Pair<Integer, ItemStack> getIcon(String iconPath, Replaceable... replaceables) {
-        int slot = config.getInt("Icons." + iconPath + ".Slot", 0);
+        int slot = config.getInt(root("Icons." + iconPath + ".Slot"), 0);
         Material material = getMaterial(iconPath, Material.STONE);
-        String display = applyReplaceables(config.getString("Icons." + iconPath + ".Display", "DisplayName error"), replaceables);
-        List<String> lore = applyReplaceables(config.getStringList("Icons." + iconPath + ".Lore", List.of()), replaceables);
+        String display = applyReplaceables(config.getString(root("Icons." + iconPath + ".Display"), "DisplayName error"), replaceables);
+        List<String> lore = applyReplaceables(config.getStringList(root("Icons." + iconPath + ".Lore"), List.of()), replaceables);
         return Pair.of(slot, ItemUT.getItem(material, display, lore));
     }
 
     private Material getMaterial(String iconPath, Material fallback) {
         try {
-            return Material.valueOf(config.getString("Icons." + iconPath + ".Material", fallback.name()));
+            return Material.valueOf(config.getString(root("Icons." + iconPath + ".Material"), fallback.name()));
         } catch (IllegalArgumentException ignored) {
             return fallback;
         }
+    }
+
+    private String root(String path) {
+        return ROOT_PATH + "." + path;
+    }
+
+    private void migrateLegacyConfig() {
+        if (config.getBoolean(MIGRATION_PATH, false)) {
+            return;
+        }
+
+        if (!"en".equals(McMMOParties.getConfigManager().getTranslation())) {
+            config.set(MIGRATION_PATH, true);
+            return;
+        }
+
+        if (migrateFromLegacySharedConfig()) {
+            config.set(MIGRATION_PATH, true);
+            return;
+        }
+
+        File legacyFile = new File(McMMOParties.getInstance().getDataFolder(), LEGACY_FILE);
+        if (!legacyFile.exists()) {
+            config.set(MIGRATION_PATH, true);
+            return;
+        }
+
+        YamlConfiguration legacyConfig = YamlConfiguration.loadConfiguration(legacyFile);
+        Map<String, Object> legacyValues = legacyConfig.getValues(false);
+        config.set(ROOT_PATH, new LinkedHashMap<>());
+        for (Map.Entry<String, Object> entry : legacyValues.entrySet()) {
+            config.set(root(entry.getKey()), entry.getValue());
+        }
+        config.set(MIGRATION_PATH, true);
+    }
+
+    private boolean migrateFromLegacySharedConfig() {
+        File sharedLegacyFile = new File(McMMOParties.getInstance().getDataFolder(), LEGACY_SHARED_FILE);
+        if (!sharedLegacyFile.exists()) {
+            return false;
+        }
+
+        YamlConfiguration legacyConfig = YamlConfiguration.loadConfiguration(sharedLegacyFile);
+        if (!legacyConfig.isConfigurationSection(ROOT_PATH)) {
+            return false;
+        }
+
+        Map<String, Object> legacyValues = legacyConfig.getConfigurationSection(ROOT_PATH).getValues(false);
+        config.set(ROOT_PATH, new LinkedHashMap<>());
+        for (Map.Entry<String, Object> entry : legacyValues.entrySet()) {
+            config.set(root(entry.getKey()), entry.getValue());
+        }
+        return true;
+    }
+
+    private String getGuiPath() {
+        return McMMOParties.getConfigManager().getTranslationFilePath("guis.yml");
     }
 
     private String applyReplaceables(String value, Replaceable... replaceables) {

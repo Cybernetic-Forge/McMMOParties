@@ -23,13 +23,21 @@ public class YamlParser extends YamlConfiguration implements IValuesReloadable {
     private static final Logger logger = McMMOParties.getInstance().getLogger();
     private static final List<IValuesReloadable> valuesReloadables = new LinkedList<>();
 
+    private final JavaPlugin plugin;
     private final File file;
+    private final String resourcePath;
     private boolean isChanged;
 
     public YamlParser(@NotNull File file) {
+        this(null, file, null);
+    }
+
+    public YamlParser(@Nullable JavaPlugin plugin, @NotNull File file, @Nullable String resourcePath) {
+        this.plugin = plugin;
+        this.resourcePath = resourcePath;
         this.isChanged = false;
-        FileUT.create(file);
         this.file = file;
+        ensureExtractedFromResource();
         reloadValues();
         valuesReloadables.add(this);
     }
@@ -60,6 +68,7 @@ public class YamlParser extends YamlConfiguration implements IValuesReloadable {
     }
 
     public void reload() {
+        ensureExtractedFromResource();
         try {
             this.load(this.file);
             this.isChanged = false;
@@ -69,7 +78,12 @@ public class YamlParser extends YamlConfiguration implements IValuesReloadable {
     }
 
     public static FileConfiguration getDefaultConfig(String filePath) {
-        Reader fixReader = new InputStreamReader(Objects.requireNonNull(McMMOParties.getInstance().getResource(filePath)));
+        InputStream resource = openBundledResource(McMMOParties.getInstance(), filePath);
+        if (resource == null) {
+            logger.warning("Bundled config resource was not found: " + filePath);
+            return new YamlConfiguration();
+        }
+        Reader fixReader = new InputStreamReader(resource);
         return YamlConfiguration.loadConfiguration(fixReader);
     }
 
@@ -78,6 +92,8 @@ public class YamlParser extends YamlConfiguration implements IValuesReloadable {
             FileUT.mkdir(plugin.getDataFolder());
         }
 
+        String requestedResourcePath = filePath.startsWith("/") ? filePath.substring(1) : filePath;
+        String resourcePath = resolveResourcePath(plugin, requestedResourcePath);
         if (!filePath.startsWith("/")) {
             filePath = "/" + filePath;
         }
@@ -85,8 +101,7 @@ public class YamlParser extends YamlConfiguration implements IValuesReloadable {
         File file = new File(plugin.getDataFolder() + filePath);
         if (!file.exists()) {
             FileUT.create(file);
-            try {
-                InputStream input = plugin.getClass().getResourceAsStream(filePath);
+            try (InputStream input = openBundledResource(plugin, resourcePath)) {
                 if (input != null) {
                     FileUT.copy(input, file);
                 }
@@ -95,7 +110,7 @@ public class YamlParser extends YamlConfiguration implements IValuesReloadable {
             }
         }
 
-        return new YamlParser(file);
+        return new YamlParser(plugin, file, resourcePath);
     }
 
     public void addMissing(@NotNull String path, @Nullable Object val) {
@@ -105,7 +120,11 @@ public class YamlParser extends YamlConfiguration implements IValuesReloadable {
     }
 
     public void mergeMissingFromResource(@NotNull String filePath) {
-        mergeMissingFrom(YamlParser.getDefaultConfig(filePath));
+        FileConfiguration defaults = YamlParser.getDefaultConfig(filePath);
+        if (defaults.getKeys(false).isEmpty()) {
+            return;
+        }
+        mergeMissingFrom(defaults);
     }
 
     public void mergeMissingFrom(@NotNull FileConfiguration defaults) {
@@ -174,11 +193,46 @@ public class YamlParser extends YamlConfiguration implements IValuesReloadable {
         reload();
     }
 
+    private void ensureExtractedFromResource() {
+        FileUT.create(file);
+        if (file.exists() && file.length() > 0) {
+            return;
+        }
+        if (plugin == null || resourcePath == null || resourcePath.isBlank()) {
+            return;
+        }
+        try (InputStream input = openBundledResource(plugin, resourcePath)) {
+            if (input == null) {
+                return;
+            }
+            FileUT.copy(input, file);
+        } catch (Exception ex) {
+            logger.warning("The loading or extraction went wrong: " + ex.getMessage());
+        }
+    }
+
+    private static @Nullable InputStream openBundledResource(@NotNull JavaPlugin plugin, @NotNull String filePath) {
+        String resolvedPath = resolveResourcePath(plugin, filePath);
+        return plugin.getResource(resolvedPath);
+    }
+
+    private static @NotNull String resolveResourcePath(@NotNull JavaPlugin plugin, @NotNull String filePath) {
+        String normalized = filePath.startsWith("/") ? filePath.substring(1) : filePath;
+        if (plugin.getResource(normalized) != null) {
+            return normalized;
+        }
+
+        if ("features/buffs.yml".equals(normalized) && plugin.getResource("Features/Buffs.yml") != null) {
+            return "Features/Buffs.yml";
+        }
+
+        return normalized;
+    }
+
     public static void reload(String config) {
         for (IValuesReloadable reloadable : valuesReloadables) {
             if (reloadable.getConfig().equals(config)) {
                 reloadable.reloadValues();
-                return;
             }
         }
     }
@@ -193,10 +247,10 @@ public class YamlParser extends YamlConfiguration implements IValuesReloadable {
     }
 
     public static List<String> getConfigNames() {
-        List<String> entries = new ArrayList<>();
+        Set<String> entries = new LinkedHashSet<>();
         for (IValuesReloadable reloadable : valuesReloadables) {
             entries.add(reloadable.getConfig());
         }
-        return entries;
+        return new ArrayList<>(entries);
     }
 }

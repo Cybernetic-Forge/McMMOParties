@@ -28,7 +28,7 @@ public class SQLManager {
     private static final JavaPlugin plugin = McMMOParties.getInstance();
 
     private static final DatabaseType dbType = DatabaseType.valueOf(
-            Objects.requireNonNullElse(plugin.getConfig().getString("SQL.Type"), "LOCALE").toUpperCase(Locale.ROOT)
+            Objects.requireNonNullElse(plugin.getConfig().getString("SQL.Type"), "SQLITE").toUpperCase(Locale.ROOT)
     );
     private static final String host = plugin.getConfig().getString("SQL.Host");
     private static final String database = plugin.getConfig().getString("SQL.Database");
@@ -74,7 +74,7 @@ public class SQLManager {
 
     private static void ensureDriverLoaded() {
         try {
-            if (dbType == DatabaseType.LOCALE) {
+            if (dbType == DatabaseType.SQLITE) {
                 Class.forName("org.sqlite.JDBC");
             } else if (dbType == DatabaseType.MARIADB) {
                 Class.forName("org.mariadb.jdbc.Driver");
@@ -120,7 +120,7 @@ public class SQLManager {
     }
 
     private static String buildJdbcUrl(String databaseName) {
-        if (dbType == DatabaseType.LOCALE) {
+        if (dbType == DatabaseType.SQLITE) {
             File databaseFile = new File(plugin.getDataFolder(), "Database.db");
             if (!databaseFile.exists()) {
                 try {
