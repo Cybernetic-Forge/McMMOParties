@@ -162,7 +162,12 @@ public class DungeonInstanceManager {
         if (mythicPlayer == null) {
             return;
         }
-        mythicPlayer.setDungeonParty(PartyWrapper.adapt(mythicPlayer));
+        try {
+            IDungeonParty restoredParty = PartyWrapper.adapt(mythicPlayer);
+            mythicPlayer.setDungeonParty(restoredParty);
+        } catch (Exception ex) {
+            mythicPlayer.setDungeonParty(null);
+        }
     }
 
     private MythicPlayer getMythicPlayer(UUID uuid) {

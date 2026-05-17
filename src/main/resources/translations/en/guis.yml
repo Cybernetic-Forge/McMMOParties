@@ -24,7 +24,7 @@ PartyOverview:
       Lore:
         - "&eStatus: %member_status%"
         - "%member_role_display%"
-        - "&eShare: &a%member_share%"
+        - "&eParty-Share: &a%member_share%"
     MemberSort:
       Slot: 49
       Material: HOPPER
@@ -562,8 +562,7 @@ PartyOverview:
           - "&7Go to the next page"
   BuffValidation:
     Costs:
-      - "&eCost: &a%cost_amount%"
-      - "&7Current Balance: &f%party_balance%"
+      - "&eCost: &a%cost_amount% &7/ &2%party_balance%"
     ConditionsHeader:
       - "&eConditions:"
     ConditionEntry:
