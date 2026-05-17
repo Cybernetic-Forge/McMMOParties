@@ -1,161 +1,520 @@
-# Party level buffs configuration
-# Each top-level key is a party level.
-# Each entry under a level is a buff definition in the form:
-#   BUFF_TYPE: VALUE
-# or for ability duration:
-#   ABILITY_DURATION: <AMOUNT>
-# or for ability cooldown reduction:
-#   ABILITY_COOLDOWN_REDUCTION:
-#     <ABILITY>: <AMOUNT>
-#
-# Examples:
-# 1:
-#   EXP_SHARING_RATE: 5
-#   EXP_SHARING_RADIUS: 25
-# 3:
-#   MEMBER_SLOTS: 2
-# 7:
-#   ABILITY_DURATION: 10
-#
-# Supported (suggested) buff keys:
-# - EXP_SHARING_RATE: <percent>
-# - EXP_SHARING_RADIUS: <blocks>
-# - MEMBER_SLOTS: <count>
-# - TRESOR_SIZE: <amount|-1 for unlimited>
-# - ACCESS_PARTY_WAYPOINT: 1
-# - ACCESS_PARTY_TRESOR: 1
-# - ACCESS_PARTY_CHAT: 1
-# - ABILITY_DURATION: <seconds>
-# - ABILITY_COOLDOWN_REDUCTION: <ability|ALL>: <seconds>
+# Party buff configuration.
+# The default config uses SKILLPOINTS mode:
+# - Each party level grants 1 party skill point.
+# - With PartyLevelCap: 100, a party can earn exactly 100 points to invest.
+# - Setting PartyLevelCap: -1 in config.yml removes the cap and lets parties level forever.
 
-# Level-based buffs (default)
+# Legacy LEVEL mode support.
 Level:
   1:
-    EXP_SHARING_RATE: 5
-    EXP_SHARING_RADIUS: 25
-  3:
-    MEMBER_SLOTS: 2
+    EXP_SHARING_RATE: 3
+    EXP_SHARING_RADIUS: 12
+  5:
     ACCESS_PARTY_CHAT: 1
-  7:
-    ABILITY_DURATION: 10
+  10:
+    MEMBER_SLOTS: 1
+  15:
+    ACCESS_PARTY_TRESOR: 1
+  20:
+    TRESOR_SIZE: 25000
+  30:
+    ABILITY_DURATION: 5
+  40:
+    MEMBER_SLOTS: 1
+  50:
     ABILITY_COOLDOWN_REDUCTION:
       ALL: 5
-    MEMBER_SLOTS: 1
-    TRESOR_SIZE: 25000
-  10:
-    ACCESS_PARTY_TRESOR: 1
-  12:
+  60:
     ACCESS_PARTY_WAYPOINT: 1
+  75:
+    DUNGEON_INSTANCE_SLOTS: 1
+  90:
+    EXP_SHARING_RATE: 5
+    EXP_SHARING_RADIUS: 12
+  100:
+    ABILITY_DURATION: 10
+    ABILITY_COOLDOWN_REDUCTION:
+      ALL: 10
 
-# Skillpoint-based buffs (spent points map to levels below)
+# Skillpoint mode.
 # Supported condition keys:
 # - <MCMMO_SKILL>: <required cumulative level>
 # - PartyLevel: <required party level>
 # - BuffLevel.<BUFF_TYPE>: <required invested buff points>
 # - BuffLevel.<BUFF_TYPE>.<ABILITY>: <required invested buff points> for ability-specific buffs
+#
+# The tree below contains exactly 100 total upgrade points across all branches.
 Skillpoints:
   EXP_SHARING_RATE:
     Configuration:
       Costs:
-        1: 250.0
-        2: 500.0
-        3: 750.0
+        1: 250
+        2: 400
+        3: 550
+        4: 700
+        5: 850
+        6: 1000
+        7: 1200
+        8: 1400
+        9: 1600
+        10: 1800
+        11: 2100
+        12: 2400
+        13: 2800
+        14: 3200
+        15: 3800
+        16: 4500
+        17: 5400
       Conditions:
-        2:
-          MINING: 250
         3:
-          MINING: 500
           PartyLevel: 5
-    1: 5
-    2: 10
-    3: 15
+          MINING: 150
+        6:
+          PartyLevel: 15
+          WOODCUTTING: 350
+        9:
+          PartyLevel: 30
+          HERBALISM: 650
+          BuffLevel:
+            EXP_SHARING_RADIUS: 4
+        12:
+          PartyLevel: 50
+          MINING: 1000
+          BuffLevel:
+            EXP_SHARING_RADIUS: 7
+        15:
+          PartyLevel: 75
+          WOODCUTTING: 1500
+          BuffLevel:
+            ABILITY_DURATION: 8
+        16:
+          PartyLevel: 88
+          MINING: 1750
+          BuffLevel:
+            EXP_SHARING_RADIUS: 9
+        17:
+          PartyLevel: 100
+          HERBALISM: 2000
+          BuffLevel:
+            ACCESS_PARTY_WAYPOINT: 1
+    1: 4
+    2: 6
+    3: 8
+    4: 10
+    5: 12
+    6: 14
+    7: 16
+    8: 18
+    9: 20
+    10: 22
+    11: 24
+    12: 26
+    13: 28
+    14: 30
+    15: 35
+    16: 40
+    17: 45
   EXP_SHARING_RADIUS:
     Configuration:
       Costs:
-        1: 150.0
-        2: 300.0
-        3: 450.0
-    1: 25
-    2: 40
-    3: 60
+        1: 150
+        2: 250
+        3: 350
+        4: 450
+        5: 600
+        6: 750
+        7: 900
+        8: 1100
+        9: 1300
+        10: 1600
+        11: 1900
+        12: 2300
+      Conditions:
+        3:
+          PartyLevel: 4
+          EXCAVATION: 100
+        6:
+          PartyLevel: 18
+          MINING: 300
+        8:
+          PartyLevel: 35
+          HERBALISM: 600
+          BuffLevel:
+            ACCESS_PARTY_CHAT: 1
+        10:
+          PartyLevel: 60
+          EXCAVATION: 1100
+          BuffLevel:
+            EXP_SHARING_RATE: 8
+        11:
+          PartyLevel: 78
+          MINING: 1400
+          BuffLevel:
+            ABILITY_DURATION: 9
+        12:
+          PartyLevel: 92
+          EXCAVATION: 1750
+          BuffLevel:
+            ACCESS_PARTY_WAYPOINT: 1
+    1: 12
+    2: 16
+    3: 20
+    4: 24
+    5: 28
+    6: 32
+    7: 36
+    8: 40
+    9: 48
+    10: 56
+    11: 64
+    12: 72
   TRESOR_SIZE:
     Configuration:
       Costs:
-        1: 250.0
-        2: 500.0
-        3: 750.0
-    1: 25000
-    2: 50000
-    3: 75000
+        1: 300
+        2: 450
+        3: 600
+        4: 800
+        5: 1000
+        6: 1250
+        7: 1500
+        8: 1800
+        9: 2200
+        10: 2600
+        11: 3000
+        12: 3500
+        13: 4200
+        14: 5000
+        15: 6500
+        16: 7800
+        17: 9500
+      Conditions:
+        1:
+          PartyLevel: 8
+          REPAIR: 100
+          BuffLevel:
+            ACCESS_PARTY_TRESOR: 1
+        4:
+          PartyLevel: 20
+          SMELTING: 250
+        7:
+          PartyLevel: 35
+          SALVAGE: 450
+          BuffLevel:
+            MEMBER_SLOTS: 3
+        10:
+          PartyLevel: 55
+          REPAIR: 800
+          BuffLevel:
+            EXP_SHARING_RATE: 6
+        13:
+          PartyLevel: 75
+          SMELTING: 1200
+          BuffLevel:
+            ABILITY_DURATION: 6
+        15:
+          PartyLevel: 95
+          REPAIR: 1800
+          BuffLevel:
+            ACCESS_PARTY_WAYPOINT: 1
+        16:
+          PartyLevel: 98
+          SMELTING: 1700
+          BuffLevel:
+            EXP_SHARING_RATE: 12
+        17:
+          PartyLevel: 100
+          REPAIR: 2200
+          BuffLevel:
+            ABILITY_COOLDOWN_REDUCTION:
+              ALL: 12
+    1: 10000
+    2: 20000
+    3: 30000
+    4: 40000
+    5: 50000
+    6: 65000
+    7: 80000
+    8: 95000
+    9: 110000
+    10: 125000
+    11: 145000
+    12: 165000
+    13: 190000
+    14: 220000
+    15: -1
+    16: -1
+    17: -1
   ACCESS_PARTY_WAYPOINT:
     Configuration:
       Costs:
-        1: 250.0
+        1: 1500
+      Conditions:
+        1:
+          PartyLevel: 20
+          EXCAVATION: 400
+          BuffLevel:
+            ACCESS_PARTY_CHAT: 1
+            ACCESS_PARTY_TRESOR: 1
     1: 1
   ACCESS_PARTY_TRESOR:
     Configuration:
       Costs:
-        1: 250.0
+        1: 750
+      Conditions:
+        1:
+          PartyLevel: 10
+          REPAIR: 250
     1: 1
   ACCESS_PARTY_CHAT:
     Configuration:
       Costs:
-        1: 250.0
+        1: 250
+      Conditions:
+        1:
+          PartyLevel: 2
+          HERBALISM: 75
     1: 1
   ABILITY_DURATION:
     Configuration:
       Costs:
-        1: 200.0
-        2: 400.0
-        3: 600.0
+        1: 250
+        2: 350
+        3: 450
+        4: 600
+        5: 750
+        6: 900
+        7: 1100
+        8: 1300
+        9: 1500
+        10: 1700
+        11: 2000
+        12: 2300
+        13: 2600
+        14: 3000
+        15: 3500
+        16: 4100
+        17: 4800
+        18: 5600
       Conditions:
-        2:
-          MINING: 300
-    1: 3
-    2: 6
-    3: 9
+        1:
+          PartyLevel: 10
+          SWORDS: 120
+        4:
+          PartyLevel: 25
+          AXES: 300
+        7:
+          PartyLevel: 40
+          UNARMED: 500
+          BuffLevel:
+            EXP_SHARING_RATE: 4
+        10:
+          PartyLevel: 60
+          ARCHERY: 800
+          BuffLevel:
+            MEMBER_SLOTS: 5
+        13:
+          PartyLevel: 80
+          MACES: 1200
+          BuffLevel:
+            EXP_SHARING_RADIUS: 6
+        15:
+          PartyLevel: 95
+          SWORDS: 1800
+          BuffLevel:
+            ACCESS_PARTY_WAYPOINT: 1
+        16:
+          PartyLevel: 97
+          AXES: 1900
+          BuffLevel:
+            ABILITY_COOLDOWN_REDUCTION:
+              ALL: 10
+        17:
+          PartyLevel: 99
+          ARCHERY: 2000
+          BuffLevel:
+            EXP_SHARING_RATE: 13
+        18:
+          PartyLevel: 100
+          MACES: 2200
+          BuffLevel:
+            ACCESS_PARTY_WAYPOINT: 1
+    1: 2
+    2: 4
+    3: 6
+    4: 8
+    5: 10
+    6: 12
+    7: 14
+    8: 16
+    9: 18
+    10: 20
+    11: 22
+    12: 24
+    13: 26
+    14: 28
+    15: 30
+    16: 33
+    17: 36
+    18: 40
   ABILITY_COOLDOWN_REDUCTION:
     ALL:
       Configuration:
         Costs:
-          1: 250.0
-          2: 500.0
-          3: 750.0
+          1: 300
+          2: 400
+          3: 550
+          4: 700
+          5: 850
+          6: 1000
+          7: 1200
+          8: 1400
+          9: 1700
+          10: 2000
+          11: 2400
+          12: 2800
+          13: 3300
+          14: 3900
+          15: 4600
         Conditions:
-          2:
-            MINING: 300
-          3:
+          1:
+            PartyLevel: 15
+            UNARMED: 150
             BuffLevel:
-              ABILITY_DURATION: 2
-      1: 60
-      2: 120
-      3: 180
+              ABILITY_DURATION: 3
+          4:
+            PartyLevel: 30
+            SWORDS: 400
+            BuffLevel:
+              ABILITY_DURATION: 5
+          7:
+            PartyLevel: 45
+            AXES: 650
+            BuffLevel:
+              ABILITY_DURATION: 8
+          10:
+            PartyLevel: 65
+            ARCHERY: 900
+            BuffLevel:
+              ABILITY_DURATION: 10
+          13:
+            PartyLevel: 85
+            MACES: 1300
+            BuffLevel:
+              ABILITY_DURATION: 12
+          15:
+            PartyLevel: 100
+            TRIDENTS: 1600
+            BuffLevel:
+              ACCESS_PARTY_WAYPOINT: 1
+      1: 2
+      2: 4
+      3: 6
+      4: 8
+      5: 10
+      6: 12
+      7: 14
+      8: 16
+      9: 18
+      10: 20
+      11: 22
+      12: 24
+      13: 27
+      14: 30
+      15: 35
   MEMBER_SLOTS:
     Configuration:
       Costs:
-        1: 500.0
-        2: 1000.0
-        3: 1500.0
+        1: 300
+        2: 450
+        3: 600
+        4: 800
+        5: 1000
+        6: 1250
+        7: 1500
+        8: 1800
+        9: 2100
+        10: 2500
+        11: 3000
+        12: 3500
+        13: 4200
+        14: 5000
+        15: 6000
       Conditions:
-        3:
-          TAMING: 400
-    1: 2
+        2:
+          PartyLevel: 6
+          TAMING: 100
+        4:
+          PartyLevel: 16
+          TAMING: 250
+        6:
+          PartyLevel: 30
+          TAMING: 450
+          BuffLevel:
+            ACCESS_PARTY_CHAT: 1
+        9:
+          PartyLevel: 50
+          TAMING: 800
+          BuffLevel:
+            EXP_SHARING_RATE: 6
+        12:
+          PartyLevel: 75
+          TAMING: 1400
+          BuffLevel:
+            TRESOR_SIZE: 8
+        13:
+          PartyLevel: 85
+          TAMING: 1650
+          BuffLevel:
+            ABILITY_DURATION: 10
+        14:
+          PartyLevel: 93
+          TAMING: 1900
+          BuffLevel:
+            EXP_SHARING_RADIUS: 8
+        15:
+          PartyLevel: 100
+          TAMING: 2200
+          BuffLevel:
+            ACCESS_PARTY_WAYPOINT: 1
+    1: 1
     2: 2
     3: 3
+    4: 4
+    5: 5
+    6: 6
+    7: 7
+    8: 8
+    9: 9
+    10: 10
+    11: 11
+    12: 12
+    13: 13
+    14: 14
+    15: 15
   DUNGEON_INSTANCE_SLOTS:
     Configuration:
       Costs:
-        1: 400.0
-        2: 900.0
-        3: 1800.0
+        1: 250
+        2: 350
+        3: 500
       Conditions:
+        1:
+          PartyLevel: 12
+          TAMING: 150
         2:
-          TAMING: 250
+          PartyLevel: 28
+          SWORDS: 250
+          BuffLevel:
+            MEMBER_SLOTS: 4
         3:
-          TAMING: 500
+          PartyLevel: 52
+          TRIDENTS: 650
+          BuffLevel:
+            ACCESS_PARTY_TRESOR: 1
     1: 1
-    2: 2
-    3: unlimited
+    2: 1
+    3: 1
 
 BuffMeta:
   EXP_SHARING_RATE:

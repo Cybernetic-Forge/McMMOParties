@@ -36,8 +36,7 @@ public class PartyEventHandler {
         Bukkit.getPluginManager().callEvent(event);
         if (!event.isCancelled()) {
             party.setLevel(event.getNextLevel());
-            party.setCurrentExperience(party.getTotalExperience() - McMMOParties.getConfigManager().getPastExp(party.getLevel()));
-            party.setNeededExperience(McMMOParties.getConfigManager().getNeededExperience(party.getLevel() + 1));
+            party.refreshLevelProgress();
             if (McMMOParties.getConfigManager().getBuffHandlerMode() == net.maksy.mcmmoparties.configuration.enums.BuffHandlerMode.SKILLPOINTS) {
                 McMMOParties.getSQL().addPartySkillPoints(party.getPartyID(), McMMOParties.getConfigManager().getSkillPointsPerLevel());
             }
@@ -61,7 +60,9 @@ public class PartyEventHandler {
             BossBar bar = barMap.get(party.getPartyID());
             double neededExperience = party.getNeededExperience();
             double currentExperience = Utils.round(party.getCurrentExperience());
-            double progress = neededExperience <= 0.0 ? 0.0 : currentExperience / neededExperience;
+            double progress = McMMOParties.getConfigManager().hasReachedPartyLevelCap(party.getLevel())
+                    ? 1.0
+                    : (neededExperience <= 0.0 ? 0.0 : currentExperience / neededExperience);
 
             bar.setProgress(Math.max(0.0, Math.min(1.0, progress)));
             bar.setTitle(McMMOParties.getConfigManager().getBossBarTitle(party));

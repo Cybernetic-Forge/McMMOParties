@@ -47,8 +47,7 @@ public class McMMOParty {
         this.display = display;
         this.experience = experience;
         this.level = level;
-        this.currentExperience = experience - McMMOParties.getConfigManager().getPastExp(level);
-        this.neededExperience = McMMOParties.getConfigManager().getNeededExperience(level + 1);
+        refreshLevelProgress();
         this.owner = owner;
         this.members = members;
         this.memberStates = new HashMap<>();
@@ -68,14 +67,29 @@ public class McMMOParty {
     }
 
     public void setExperience(float experience) {
+        if (McMMOParties.getConfigManager().hasReachedPartyLevelCap(level)) {
+            return;
+        }
+
         this.experience += experience;
-        this.currentExperience += experience;
+        float maxExperience = McMMOParties.getConfigManager().getMaxPartyExperience();
+        if (maxExperience >= 0.0F && this.experience > maxExperience) {
+            this.experience = maxExperience;
+        }
+        this.currentExperience = this.experience - McMMOParties.getConfigManager().getPastExp(level);
 
         // Handle multiple level ups if the added experience spans more than one level
-        while (this.currentExperience >= this.neededExperience && this.neededExperience > 0) {
+        while (!McMMOParties.getConfigManager().hasReachedPartyLevelCap(level)
+                && this.currentExperience >= this.neededExperience
+                && this.neededExperience > 0) {
             McMMOParties.getPartyEventHandler().callPartyLevelChangedEvent(this);
             // After the handler runs, party's level, currentExperience and neededExperience are updated
             // Loop will continue if there's enough experience for further levels
+        }
+
+        if (McMMOParties.getConfigManager().hasReachedPartyLevelCap(level)) {
+            this.currentExperience = 0;
+            this.neededExperience = 0;
         }
     }
 
@@ -186,5 +200,16 @@ public class McMMOParty {
     public void refreshBuffs() {
         buffHandler.reload();
         partySettings.setExpSharing(new ExpSharing(buffHandler.getExpSharingRateBonus(), buffHandler.getExpSharingRadius()));
+    }
+
+    public void refreshLevelProgress() {
+        if (McMMOParties.getConfigManager().hasReachedPartyLevelCap(level)) {
+            this.currentExperience = 0;
+            this.neededExperience = 0;
+            return;
+        }
+
+        this.currentExperience = experience - McMMOParties.getConfigManager().getPastExp(level);
+        this.neededExperience = McMMOParties.getConfigManager().getNeededExperience(level + 1);
     }
 }

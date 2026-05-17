@@ -376,7 +376,7 @@ PartyOverview:
         - "&eTotal: &a%current_amount%"
         - "&eNext Upgrade: &a%current_amount% &m->&r %next_amount%"
         - " "
-        - "&5*: &d%highlight_count%"
+        - "&5✦ &d%highlight_count%"
         - "&ePreferred: %preferred_text%"
         - "&eYour Highlight: %player_highlighted%"
         - " "

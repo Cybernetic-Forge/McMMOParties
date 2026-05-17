@@ -30,9 +30,10 @@ public class ConfigManager {
         config.mergeMissingFromResource("config.yml");
 
         config.addMissing("Party.BaseMemberSlots", 10);
-        config.addMissing("Buffs.Handler", "LEVEL");
+        config.addMissing("Party.PartyLevelCap", 100);
+        config.addMissing("Buffs.Handler", "SKILLPOINTS");
         config.addMissing("Buffs.SkillPointsPerLevel", 1);
-        config.addMissing("Experience.LevelCurve", "x * 50 * Math.pow(x,2)");
+        config.addMissing("Experience.LevelCurve", "(x * (20 + (2.5 * x))) * 25");
         config.addMissing("Experience.Bar.Color", "BLUE");
         config.addMissing("Experience.Bar.Segments", "SOLID");
         config.addMissing("Network.ServerName", "paper");
@@ -40,22 +41,37 @@ public class ConfigManager {
         config.addMissing("Network.PartyChatChannel", "mcmmoparties:partychat");
         config.addMissing("translation", "en");
         config.addMissing("Hooks.ChestShop.Enabled", true);
-        config.addMissing("DungeonInstance.DefaultSlots", 3);
+        config.addMissing("DungeonInstance.DefaultSlots", 2);
         config.addMissing("Party.DefaultTresorSize", 50000);
 
         for (PrimarySkillType skill : PrimarySkillType.values()) {
-            config.addMissing("Experience.Scaling." + skill.name(), 0.2D);
+            config.addMissing("Experience.Scaling." + skill.name(), getDefaultScaling(skill));
         }
 
         config.saveChanges();
     }
 
     public float getScaledExp(PrimarySkillType skill, float exp) {
-        return (float) (exp * config.getDouble("Experience.Scaling." + skill.name(), 0.2D));
+        return (float) (exp * config.getDouble("Experience.Scaling." + skill.name(), getDefaultScaling(skill)));
     }
 
     public int getBaseMemberSlots() {
         return config.getInt("Party.BaseMemberSlots", 10);
+    }
+
+    public int getPartyLevelCap() {
+        int configured = config.getInt("Party.PartyLevelCap", 100);
+        return configured == -1 ? -1 : Math.max(1, configured);
+    }
+
+    public boolean hasReachedPartyLevelCap(long level) {
+        int cap = getPartyLevelCap();
+        return cap >= 0 && level >= cap;
+    }
+
+    public float getMaxPartyExperience() {
+        int cap = getPartyLevelCap();
+        return cap < 0 ? -1.0F : getPastExp(cap);
     }
 
     public int getDefaultTresorSize() {
@@ -73,7 +89,7 @@ public class ConfigManager {
     }
 
     public BuffHandlerMode getBuffHandlerMode() {
-        String handler = config.getString("Buffs.Handler", config.getString("BuffHandler", "LEVEL"));
+        String handler = config.getString("Buffs.Handler", config.getString("BuffHandler", "SKILLPOINTS"));
         return BuffHandlerMode.fromString(handler);
     }
 
@@ -113,7 +129,7 @@ public class ConfigManager {
     }
 
     public int getDungeonInstanceDefaultSlots() {
-        return Math.max(1, config.getInt("DungeonInstance.DefaultSlots", 3));
+        return Math.max(1, config.getInt("DungeonInstance.DefaultSlots", 2));
     }
 
     public float getPastExp(long level) {
@@ -125,7 +141,12 @@ public class ConfigManager {
     }
 
     public float getNeededExperience(long level) {
-        String expression = config.getString("Experience.LevelCurve", "x * 50 * Math.pow(x,2)")
+        int cap = getPartyLevelCap();
+        if (cap >= 0 && level > cap) {
+            return 0.0F;
+        }
+
+        String expression = config.getString("Experience.LevelCurve", "(x * (20 + (2.5 * x))) * 25")
                 .replace("x", String.valueOf(level));
         try {
             return Float.parseFloat(engine.eval(expression).toString());
@@ -176,6 +197,19 @@ public class ConfigManager {
             builder.append(Character.toUpperCase(part.charAt(0))).append(part.substring(1));
         }
         return builder.toString();
+    }
+
+    private double getDefaultScaling(PrimarySkillType skill) {
+        return switch (skill) {
+            case MINING, WOODCUTTING, EXCAVATION -> 0.10D;
+            case UNARMED, HERBALISM, ARCHERY, SWORDS, AXES, MACES -> 0.09D;
+            case TRIDENTS, CROSSBOWS, SPEARS -> 0.08D;
+            case FISHING -> 0.07D;
+            case TAMING, ALCHEMY -> 0.05D;
+            case REPAIR, SMELTING -> 0.04D;
+            case ACROBATICS, SALVAGE -> 0.03D;
+            default -> 0.08D;
+        };
     }
 
     private String getDefaultBuffDisplayName(String key, String fallback) {

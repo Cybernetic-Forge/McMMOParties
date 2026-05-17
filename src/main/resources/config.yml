@@ -22,38 +22,39 @@ Hooks:
     Enabled: true
 
 DungeonInstance:
-  DefaultSlots: 3
+  DefaultSlots: 2
 
 Party:
   BaseMemberSlots: 10
+  PartyLevelCap: 100 # Set to -1 for unlimited party levels.
   DefaultTresorSize: 50000
 
 Buffs:
-  Handler: LEVEL
+  Handler: SKILLPOINTS
   SkillPointsPerLevel: 1
 
 Experience:
-  LevelCurve: "x * 50 * Math.pow(x,2)"
+  LevelCurve: "(x * (20 + (2.5 * x))) * 25"
   Bar:
     Color: BLUE
     Segments: SOLID
   Scaling:
-    MINING: 0.2
-    WOODCUTTING: 0.2
-    REPAIR: 0.2
-    UNARMED: 0.2
-    HERBALISM: 0.2
-    EXCAVATION: 0.2
-    ARCHERY: 0.2
-    SWORDS: 0.2
-    AXES: 0.2
-    ACROBATICS: 0.2
-    TAMING: 0.2
-    FISHING: 0.2
-    ALCHEMY: 0.2
-    SMELTING: 0.2
-    SALVAGE: 0.2
-    MACES: 0.2
-    TRIDENTS: 0.2
-    CROSSBOWS: 0.2
-    SPEARS: 0.2
+    MINING: 0.10
+    WOODCUTTING: 0.10
+    REPAIR: 0.04
+    UNARMED: 0.09
+    HERBALISM: 0.09
+    EXCAVATION: 0.10
+    ARCHERY: 0.09
+    SWORDS: 0.09
+    AXES: 0.09
+    ACROBATICS: 0.03
+    TAMING: 0.05
+    FISHING: 0.07
+    ALCHEMY: 0.05
+    SMELTING: 0.04
+    SALVAGE: 0.03
+    MACES: 0.09
+    TRIDENTS: 0.08
+    CROSSBOWS: 0.08
+    SPEARS: 0.08

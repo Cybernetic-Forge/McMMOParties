@@ -94,11 +94,7 @@ public class YamlParser extends YamlConfiguration implements IValuesReloadable {
 
         String requestedResourcePath = filePath.startsWith("/") ? filePath.substring(1) : filePath;
         String resourcePath = resolveResourcePath(plugin, requestedResourcePath);
-        if (!filePath.startsWith("/")) {
-            filePath = "/" + filePath;
-        }
-
-        File file = new File(plugin.getDataFolder() + filePath);
+        File file = resolveDataFile(plugin, requestedResourcePath);
         if (!file.exists()) {
             FileUT.create(file);
             try (InputStream input = openBundledResource(plugin, resourcePath)) {
@@ -214,6 +210,24 @@ public class YamlParser extends YamlConfiguration implements IValuesReloadable {
     private static @Nullable InputStream openBundledResource(@NotNull JavaPlugin plugin, @NotNull String filePath) {
         String resolvedPath = resolveResourcePath(plugin, filePath);
         return plugin.getResource(resolvedPath);
+    }
+
+    private static @NotNull File resolveDataFile(@NotNull JavaPlugin plugin, @NotNull String filePath) {
+        String normalized = filePath.startsWith("/") ? filePath.substring(1) : filePath;
+        File primaryFile = new File(plugin.getDataFolder(), normalized.replace('/', File.separatorChar));
+        if (primaryFile.exists()) {
+            return primaryFile;
+        }
+
+        if ("features/buffs.yml".equals(normalized)) {
+            File legacyFile = new File(plugin.getDataFolder(), "Features" + File.separator + "Buffs.yml");
+            if (legacyFile.exists()) {
+                logger.info("Using legacy buffs config path: " + legacyFile.getPath());
+                return legacyFile;
+            }
+        }
+
+        return primaryFile;
     }
 
     private static @NotNull String resolveResourcePath(@NotNull JavaPlugin plugin, @NotNull String filePath) {
