@@ -5,6 +5,7 @@ import net.maksy.mcmmoparties.api.events.PartyEventHandler;
 import net.maksy.mcmmoparties.configuration.PartyLoader;
 
 public class McMMOPartyAPI {
+    private static final McMMOPartyService PARTY_SERVICE = new McMMOPartyService();
 
     public static PartyEventHandler getPartyEventHandler() {
         return McMMOParties.getPartyEventHandler();
@@ -12,5 +13,9 @@ public class McMMOPartyAPI {
 
     public static PartyLoader getPartyLoader() {
         return McMMOParties.getPartyLoader();
+    }
+
+    public static McMMOPartyService getPartyService() {
+        return PARTY_SERVICE;
     }
 }

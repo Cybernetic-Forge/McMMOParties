@@ -10,7 +10,49 @@ commands:
     usage: /party
     aliases:
       - pa
+  pa-admin:
+    description: Party admin command
+    usage: /pa-admin
+    aliases:
+      - party-admin
 permissions:
   mcmmoparties.admin:
-    description: Allows use of /party reload
+    description: Allows use of party admin commands
+    default: op
+    children:
+      mcmmoparties.admin.reload: true
+      mcmmoparties.admin.disband: true
+      mcmmoparties.admin.kick: true
+      mcmmoparties.admin.invite: true
+      mcmmoparties.admin.exp: true
+      mcmmoparties.admin.level: true
+      mcmmoparties.admin.skillpoints: true
+      mcmmoparties.admin.buff: true
+      mcmmoparties.admin.balance: true
+  mcmmoparties.admin.reload:
+    description: Allows reloading McMMOParties
+    default: op
+  mcmmoparties.admin.disband:
+    description: Allows force disbanding parties
+    default: op
+  mcmmoparties.admin.kick:
+    description: Allows force kicking party members
+    default: op
+  mcmmoparties.admin.invite:
+    description: Allows forcing party invites
+    default: op
+  mcmmoparties.admin.exp:
+    description: Allows editing party experience
+    default: op
+  mcmmoparties.admin.level:
+    description: Allows editing party levels
+    default: op
+  mcmmoparties.admin.skillpoints:
+    description: Allows editing party skill points
+    default: op
+  mcmmoparties.admin.buff:
+    description: Allows editing party buff upgrades
+    default: op
+  mcmmoparties.admin.balance:
+    description: Allows editing party balances
     default: op

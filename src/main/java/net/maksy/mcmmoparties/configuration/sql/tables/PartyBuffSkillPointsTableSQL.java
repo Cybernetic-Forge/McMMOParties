@@ -91,6 +91,15 @@ public class PartyBuffSkillPointsTableSQL {
         }
     }
 
+    public void deleteSpentPoints(Connection connection, String partyID, String buffType, String ability) throws SQLException {
+        try (PreparedStatement delete = connection.prepareStatement("DELETE FROM " + SQLTables.BUFF_SKILLPOINTS_TABLE + " WHERE PartyID=? AND BuffType=? AND Ability=?")) {
+            delete.setString(1, normalizePartyID(partyID));
+            delete.setString(2, buffType);
+            delete.setString(3, ability == null ? "" : ability.toUpperCase(Locale.ROOT));
+            delete.executeUpdate();
+        }
+    }
+
     public int getTotalSpentPoints(Connection connection, String partyID) throws SQLException {
         try (PreparedStatement select = connection.prepareStatement("SELECT SUM(SpentPoints) AS TotalSpent FROM " + SQLTables.BUFF_SKILLPOINTS_TABLE + " WHERE PartyID=?")) {
             select.setString(1, normalizePartyID(partyID));

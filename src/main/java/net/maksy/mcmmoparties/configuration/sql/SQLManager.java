@@ -501,6 +501,15 @@ public class SQLManager {
         }
     }
 
+    public void setPartyBalance(String partyID, double balance) {
+        String normalizedPartyID = normalizePartyID(partyID);
+        try (Connection connection = connection()) {
+            partyTable.updateBalance(connection, normalizedPartyID, Math.max(0.0D, balance));
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not update party balance for " + partyID, e);
+        }
+    }
+
     public void addPartySkillPoints(String partyID, int delta) {
         if (delta == 0) {
             return;
@@ -552,6 +561,23 @@ public class SQLManager {
             plugin.getLogger().log(Level.SEVERE, "[SQL] Could not load total buff skill points for " + partyID, e);
         }
         return 0;
+    }
+
+    public void setBuffSkillPoints(String partyID, PartyBuffType type, String ability, int points) {
+        if (type == null) {
+            return;
+        }
+
+        String normalizedPartyID = normalizePartyID(partyID);
+        try (Connection connection = connection()) {
+            if (points <= 0) {
+                buffSkillPointsTable.deleteSpentPoints(connection, normalizedPartyID, type.name(), ability);
+            } else {
+                buffSkillPointsTable.upsertSpentPoints(connection, normalizedPartyID, type.name(), ability, points);
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not update buff skill points for " + partyID, e);
+        }
     }
 
     public boolean spendBuffSkillPoint(String partyID, PartyBuffType type, String ability, int maxPoints, double treasuryCost) {

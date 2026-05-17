@@ -97,6 +97,10 @@ public class McMMOParty {
         return experience;
     }
 
+    public void setTotalExperience(float experience) {
+        this.experience = Math.max(0.0F, experience);
+    }
+
     public boolean isOwner(UUID uuid) {
         return owner != null && owner.equals(uuid);
     }

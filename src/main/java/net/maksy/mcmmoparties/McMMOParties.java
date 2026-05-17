@@ -3,6 +3,7 @@ package net.maksy.mcmmoparties;
 import lombok.Getter;
 import net.kyori.adventure.text.Component;
 import net.maksy.mcmmoparties.api.events.PartyEventHandler;
+import net.maksy.mcmmoparties.commands.PartyAdminCommands;
 import net.maksy.mcmmoparties.commands.PartyCommands;
 import net.maksy.mcmmoparties.configuration.PartyLoader;
 import net.maksy.mcmmoparties.configuration.configs.ConfigManager;
@@ -65,7 +66,12 @@ public final class McMMOParties extends JavaPlugin {
         sql = new SQLManager();
         partyLoader = new PartyLoader();
         dungeonInstanceManager = new DungeonInstanceManager();
-        getCommand("party").setExecutor(new PartyCommands());
+        PartyCommands partyCommands = new PartyCommands();
+        getCommand("party").setExecutor(partyCommands);
+        getCommand("party").setTabCompleter(partyCommands);
+        PartyAdminCommands partyAdminCommands = new PartyAdminCommands();
+        getCommand("pa-admin").setExecutor(partyAdminCommands);
+        getCommand("pa-admin").setTabCompleter(partyAdminCommands);
 
         partyEventHandler = new PartyEventHandler();
 
