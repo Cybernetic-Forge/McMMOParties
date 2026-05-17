@@ -33,6 +33,7 @@ Buffs:
     EXP_SHARING_RADIUS: "&aExp Sharing Radius"
     MEMBER_SLOTS: "&aMember Slots"
     ABILITY_DURATION: "&aAbility Duration"
+    ABILITY_COOLDOWN_REDUCTION: "&aAbility Cooldown Reduction"
     DUNGEON_INSTANCE_SLOTS: "&aDungeon Instance Slots"
 
 Skills:

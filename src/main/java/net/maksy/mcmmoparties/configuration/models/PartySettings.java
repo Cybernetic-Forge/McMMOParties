@@ -1,9 +1,13 @@
 package net.maksy.mcmmoparties.configuration.models;
 
 import com.gmail.nossr50.datatypes.skills.PrimarySkillType;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.List;
 
+@Getter
+@Setter
 public class PartySettings {
 
     private final List<SkillRequirement> skillRequirements;
@@ -24,31 +28,11 @@ public class PartySettings {
         this.partyChat = partyChat;
     }
 
-    public List<SkillRequirement> getSkillRequirements() {
-        return skillRequirements;
-    }
-
     public void setSkillRequirement(PrimarySkillType skill, int amount) {
         for(SkillRequirement req : skillRequirements) {
             if(req.getSkill() == skill)
                 req.setAmount(amount);
         }
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public boolean isLocked() {
-        return locked;
-    }
-
-    public void setLocked(boolean locked) {
-        this.locked = locked;
     }
 
     public boolean isAuthorized(String password) {
@@ -57,34 +41,6 @@ public class PartySettings {
 
         return this.password.equals(password);
     }
-
-    public boolean isItemShare() {
-        return itemShare;
-    }
-
-    public void setItemShare(boolean itemShare) {
-        this.itemShare = itemShare;
-    }
-
-    public boolean isExpShare() {
-        return expShare;
-    }
-
-    public void setExpShare(boolean expShare) {
-        this.expShare = expShare;
-    }
-
-    public boolean isPartyChat() {
-        return partyChat;
-    }
-
-    public void setPartyChat(boolean partyChat) {
-        this.partyChat = partyChat;
-    }
-
-    public ExpSharing getExpSharing() { return  expSharing; }
-
-    public void setExpSharing(ExpSharing expSharing) { this.expSharing = expSharing;}
 
     public double getSharingPercent() { return expSharing.getPercent(); }
 

@@ -1,4 +1,4 @@
-package net.maksy.mcmmoparties.listeners;
+package net.maksy.mcmmoparties.listeners.hooks;
 
 import com.Acrobot.ChestShop.Events.Economy.AccountCheckEvent;
 import com.Acrobot.ChestShop.Events.Economy.CurrencyAddEvent;

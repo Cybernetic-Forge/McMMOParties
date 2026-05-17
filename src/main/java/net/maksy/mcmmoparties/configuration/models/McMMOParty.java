@@ -39,6 +39,7 @@ public class McMMOParty {
 
     @Getter
     private final PartySettings partySettings;
+    @Getter
     private final PartyBuffHandler buffHandler;
 
     public McMMOParty(String partyID, String display, float experience, long level, UUID owner, List<UUID> members, Map<UUID, PartyState> memberStates, PartySettings partySettings) {
@@ -157,10 +158,6 @@ public class McMMOParty {
         members.forEach(uuid -> memberList.add(Bukkit.getOfflinePlayer(uuid).getName()));
         return memberList;
     }
-
-    public PartySettings getPartySettings() { return partySettings; }
-
-    public PartyBuffHandler getBuffHandler() { return buffHandler; }
 
     public int getMaxMembers() {
         return McMMOParties.getConfigManager().getBaseMemberSlots() + buffHandler.getMemberSlotBonus();

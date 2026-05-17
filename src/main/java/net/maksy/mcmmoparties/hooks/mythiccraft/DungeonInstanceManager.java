@@ -8,6 +8,10 @@ import net.maksy.mcmmoparties.utils.Replaceable;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
+import net.playavalon.mythicdungeons.MythicDungeons;
+import net.playavalon.mythicdungeons.api.party.IDungeonParty;
+import net.playavalon.mythicdungeons.player.MythicPlayer;
+import net.playavalon.mythicdungeons.player.party.PartyWrapper;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -19,18 +23,19 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class DungeonInstanceManager {
 
-    private final Map<String, McMMOPartiesDungeonParty> activeParties = new ConcurrentHashMap<>();
+    private final Map<String, MythicDungeonPartyInstance> activeParties = new ConcurrentHashMap<>();
 
-    public McMMOPartiesDungeonParty get(String partyId) {
+    public MythicDungeonPartyInstance get(String partyId) {
         return partyId == null ? null : activeParties.get(partyId.toLowerCase());
     }
 
-    public McMMOPartiesDungeonParty create(McMMOParty party, Player leader) {
+    public MythicDungeonPartyInstance create(McMMOParty party, Player leader) {
         if (party == null || leader == null) {
             return null;
         }
-        McMMOPartiesDungeonParty dungeonParty = new McMMOPartiesDungeonParty(party, leader);
+        MythicDungeonPartyInstance dungeonParty = new MythicDungeonPartyInstance(party, leader);
         activeParties.put(party.getPartyID().toLowerCase(), dungeonParty);
+        bindPlayerToDungeonParty(leader.getUniqueId(), dungeonParty);
         return dungeonParty;
     }
 
@@ -38,12 +43,13 @@ public class DungeonInstanceManager {
         if (partyId == null) {
             return;
         }
-        McMMOPartiesDungeonParty removed = activeParties.remove(partyId.toLowerCase());
+        MythicDungeonPartyInstance removed = activeParties.remove(partyId.toLowerCase());
         if (removed == null || reason == null) {
             return;
         }
         String message = LanguageConfig.get().getMessage(reason, replaceables);
         for (UUID memberUuid : removed.getPlayerUuids()) {
+            restorePlayerDungeonParty(memberUuid);
             Player player = Bukkit.getPlayer(memberUuid);
             if (player != null) {
                 player.sendMessage(message);
@@ -55,7 +61,7 @@ public class DungeonInstanceManager {
         if (party == null || uuid == null) {
             return false;
         }
-        McMMOPartiesDungeonParty dungeonParty = get(party.getPartyID());
+        MythicDungeonPartyInstance dungeonParty = get(party.getPartyID());
         if (dungeonParty == null || dungeonParty.hasPlayer(uuid)) {
             return false;
         }
@@ -68,6 +74,7 @@ public class DungeonInstanceManager {
             return false;
         }
         dungeonParty.addPlayer(player);
+        bindPlayerToDungeonParty(uuid, dungeonParty);
         return true;
     }
 
@@ -75,16 +82,18 @@ public class DungeonInstanceManager {
         if (party == null || uuid == null) {
             return false;
         }
-        McMMOPartiesDungeonParty dungeonParty = get(party.getPartyID());
+        MythicDungeonPartyInstance dungeonParty = get(party.getPartyID());
         if (dungeonParty == null || !dungeonParty.hasPlayer(uuid) || dungeonParty.getLeaderUniqueId().equals(uuid)) {
             return false;
         }
         Player player = Bukkit.getPlayer(uuid);
         if (player != null) {
             dungeonParty.removePlayer(player);
+            restorePlayerDungeonParty(uuid);
             return true;
         }
         dungeonParty.removePlayer(uuid);
+        restorePlayerDungeonParty(uuid);
         return true;
     }
 
@@ -102,7 +111,7 @@ public class DungeonInstanceManager {
         return Math.max(1, Math.min(getMaxSlots(party), 14));
     }
 
-    public Collection<McMMOPartiesDungeonParty> getActiveParties() {
+    public Collection<MythicDungeonPartyInstance> getActiveParties() {
         return activeParties.values();
     }
 
@@ -110,7 +119,7 @@ public class DungeonInstanceManager {
         if (player == null) {
             return;
         }
-        for (McMMOPartiesDungeonParty dungeonParty : new ArrayList<>(activeParties.values())) {
+        for (MythicDungeonPartyInstance dungeonParty : new ArrayList<>(activeParties.values())) {
             if (!dungeonParty.getLeaderUniqueId().equals(player.getUniqueId())) {
                 continue;
             }
@@ -121,7 +130,7 @@ public class DungeonInstanceManager {
     }
 
     public List<UUID> getSelectableOnlineMembers(McMMOParty party) {
-        McMMOPartiesDungeonParty dungeonParty = get(party.getPartyID());
+        MythicDungeonPartyInstance dungeonParty = get(party.getPartyID());
         List<UUID> selectable = new ArrayList<>();
         for (UUID memberUuid : party.getMembers()) {
             OfflinePlayer member = Bukkit.getOfflinePlayer(memberUuid);
@@ -138,5 +147,32 @@ public class DungeonInstanceManager {
             return name == null ? "" : name.toLowerCase();
         }));
         return selectable;
+    }
+
+    private void bindPlayerToDungeonParty(UUID uuid, IDungeonParty dungeonParty) {
+        MythicPlayer mythicPlayer = getMythicPlayer(uuid);
+        if (mythicPlayer == null) {
+            return;
+        }
+        mythicPlayer.setDungeonParty(dungeonParty);
+    }
+
+    private void restorePlayerDungeonParty(UUID uuid) {
+        MythicPlayer mythicPlayer = getMythicPlayer(uuid);
+        if (mythicPlayer == null) {
+            return;
+        }
+        mythicPlayer.setDungeonParty(PartyWrapper.adapt(mythicPlayer));
+    }
+
+    private MythicPlayer getMythicPlayer(UUID uuid) {
+        if (uuid == null) {
+            return null;
+        }
+        try {
+            return MythicDungeons.inst().getMythicPlayer(uuid);
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 }

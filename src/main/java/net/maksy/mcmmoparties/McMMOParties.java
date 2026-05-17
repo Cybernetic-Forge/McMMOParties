@@ -16,20 +16,17 @@ import net.maksy.mcmmoparties.hooks.chestshop.ChestShopPartyAccountProvider;
 import net.maksy.mcmmoparties.hooks.chestshop.ChestShopPartyHook;
 import net.maksy.mcmmoparties.hooks.mythiccraft.DungeonInstanceManager;
 import net.maksy.mcmmoparties.listeners.AbilityBuffListener;
-import net.maksy.mcmmoparties.listeners.ChestShopEconomyListener;
-import net.maksy.mcmmoparties.listeners.ChestShopListener;
-import net.maksy.mcmmoparties.listeners.ChestShopProtectionListener;
-import net.maksy.mcmmoparties.listeners.DungeonInstanceListener;
+import net.maksy.mcmmoparties.listeners.hooks.ChestShopEconomyListener;
+import net.maksy.mcmmoparties.listeners.hooks.ChestShopListener;
+import net.maksy.mcmmoparties.listeners.hooks.ChestShopProtectionListener;
+import net.maksy.mcmmoparties.listeners.hooks.DungeonInstanceListener;
 import net.maksy.mcmmoparties.listeners.ExpEvents;
 import net.maksy.mcmmoparties.proxy.ProxyPartyChatListener;
 import net.maksy.mcmmoparties.proxy.ProxyTeleportListener;
 import net.maksy.mcmmoparties.utils.ChatUT;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
-import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
-
-import java.util.Objects;
 
 public final class McMMOParties extends JavaPlugin {
 

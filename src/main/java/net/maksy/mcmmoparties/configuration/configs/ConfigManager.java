@@ -35,6 +35,7 @@ public class ConfigManager {
         config.addMissing("Buffs.DisplayNames.EXP_SHARING_RADIUS", "&aExp Sharing Radius");
         config.addMissing("Buffs.DisplayNames.MEMBER_SLOTS", "&aMember Slots");
         config.addMissing("Buffs.DisplayNames.ABILITY_DURATION", "&aAbility Duration");
+        config.addMissing("Buffs.DisplayNames.ABILITY_COOLDOWN_REDUCTION", "&aAbility Cooldown Reduction");
         config.addMissing("Buffs.DisplayNames.DUNGEON_INSTANCE_SLOTS", "&aDungeon Instance Slots");
         for (PrimarySkillType skill : PrimarySkillType.values()) {
             config.addMissing("Skills.DisplayNames." + skill.name(), toReadableName(skill.name()));

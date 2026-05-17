@@ -7,7 +7,8 @@ public enum PartyBuffType {
     EXP_SHARING_RADIUS,
     MEMBER_SLOTS,
     DUNGEON_INSTANCE_SLOTS,
-    ABILITY_DURATION;
+    ABILITY_DURATION,
+    ABILITY_COOLDOWN_REDUCTION;
 
     public static PartyBuffType fromString(String value) {
         if (value == null) {

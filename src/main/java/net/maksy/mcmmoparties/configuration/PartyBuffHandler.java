@@ -33,13 +33,16 @@ public class PartyBuffHandler {
     @Getter
     private boolean dungeonInstanceSlotsInfinite;
     private final Map<String, Integer> abilityDurationBonus = new HashMap<>();
+    private final Map<String, Integer> abilityCooldownReductionBonus = new HashMap<>();
 
     private final Map<Integer, Double> expSharingRateByLevel = new TreeMap<>();
     private final Map<Integer, Integer> expSharingRadiusByLevel = new TreeMap<>();
     private final Map<Integer, Integer> memberSlotsByLevel = new TreeMap<>();
     private final Map<Integer, Integer> dungeonInstanceSlotsByLevel = new TreeMap<>();
     private final Map<Integer, Map<String, Integer>> abilityDurationByLevel = new TreeMap<>();
+    private final Map<Integer, Map<String, Integer>> abilityCooldownReductionByLevel = new TreeMap<>();
     private final Map<String, TreeMap<Integer, Integer>> abilityDurationPointLevels = new HashMap<>();
+    private final Map<String, TreeMap<Integer, Integer>> abilityCooldownReductionPointLevels = new HashMap<>();
     private final Map<String, TreeMap<Integer, Double>> skillPointUpgradeCosts = new HashMap<>();
     private final Map<String, Map<Integer, List<SkillRequirement>>> skillPointUpgradeConditions = new HashMap<>();
 
@@ -62,12 +65,15 @@ public class PartyBuffHandler {
         dungeonInstanceSlotBonus = 0;
         dungeonInstanceSlotsInfinite = false;
         abilityDurationBonus.clear();
+        abilityCooldownReductionBonus.clear();
         expSharingRateByLevel.clear();
         expSharingRadiusByLevel.clear();
         memberSlotsByLevel.clear();
         dungeonInstanceSlotsByLevel.clear();
         abilityDurationByLevel.clear();
+        abilityCooldownReductionByLevel.clear();
         abilityDurationPointLevels.clear();
+        abilityCooldownReductionPointLevels.clear();
         skillPointUpgradeCosts.clear();
         skillPointUpgradeConditions.clear();
         spentPointsByBuff.clear();
@@ -139,29 +145,18 @@ public class PartyBuffHandler {
             loadSkillPointUpgradeConfig(dungeonSlotsSection, buildSkillPointKey(PartyBuffType.DUNGEON_INSTANCE_SLOTS, null));
         }
 
-        ConfigurationSection abilitySection = skillpoints.getConfigurationSection(PartyBuffType.ABILITY_DURATION.name());
-        if (abilitySection != null) {
-            for (String ability : abilitySection.getKeys(false)) {
-                ConfigurationSection abilityLevels = abilitySection.getConfigurationSection(ability);
-                if (abilityLevels == null) {
-                    continue;
-                }
-                TreeMap<Integer, Integer> levels = new TreeMap<>();
-                for (String levelKey : abilityLevels.getKeys(false)) {
-                    int level = parsePositiveInt(levelKey);
-                    if (level <= 0) {
-                        continue;
-                    }
-                    int seconds = abilityLevels.getInt(levelKey);
-                    levels.put(level, seconds);
-                    abilityDurationByLevel.computeIfAbsent(level, unused -> new HashMap<>())
-                            .merge(ability.toUpperCase(Locale.ROOT), seconds, Integer::sum);
-                }
-                String normalizedAbility = ability.toUpperCase(Locale.ROOT);
-                abilityDurationPointLevels.put(normalizedAbility, levels);
-                loadSkillPointUpgradeConfig(abilityLevels, buildSkillPointKey(PartyBuffType.ABILITY_DURATION, normalizedAbility));
-            }
-        }
+        loadSkillPointAbilityBuffs(
+                skillpoints.getConfigurationSection(PartyBuffType.ABILITY_DURATION.name()),
+                PartyBuffType.ABILITY_DURATION,
+                abilityDurationByLevel,
+                abilityDurationPointLevels
+        );
+        loadSkillPointAbilityBuffs(
+                skillpoints.getConfigurationSection(PartyBuffType.ABILITY_COOLDOWN_REDUCTION.name()),
+                PartyBuffType.ABILITY_COOLDOWN_REDUCTION,
+                abilityCooldownReductionByLevel,
+                abilityCooldownReductionPointLevels
+        );
 
         expSharingRatePercent = getValueForPointsDouble(expSharingRateByLevel, getSpentPoints(PartyBuffType.EXP_SHARING_RATE)) / 100.0;
         expSharingRadius = getValueForPointsInt(expSharingRadiusByLevel, getSpentPoints(PartyBuffType.EXP_SHARING_RADIUS));
@@ -177,8 +172,44 @@ public class PartyBuffHandler {
                 abilityDurationBonus.put(entry.getKey(), seconds);
             }
         }
+        for (Map.Entry<String, TreeMap<Integer, Integer>> entry : abilityCooldownReductionPointLevels.entrySet()) {
+            int spent = getSpentPoints(PartyBuffType.ABILITY_COOLDOWN_REDUCTION, entry.getKey());
+            int seconds = getValueForPointsInt(entry.getValue(), spent);
+            if (seconds > 0) {
+                abilityCooldownReductionBonus.put(entry.getKey(), seconds);
+            }
+        }
 
         availableSkillPoints = Math.max(0, totalSkillPoints - getTotalSpentPoints());
+    }
+
+    private void loadSkillPointAbilityBuffs(ConfigurationSection abilitySection, PartyBuffType type,
+                                            Map<Integer, Map<String, Integer>> totalByLevel,
+                                            Map<String, TreeMap<Integer, Integer>> pointLevels) {
+        if (abilitySection == null) {
+            return;
+        }
+
+        for (String ability : abilitySection.getKeys(false)) {
+            ConfigurationSection abilityLevels = abilitySection.getConfigurationSection(ability);
+            if (abilityLevels == null) {
+                continue;
+            }
+            TreeMap<Integer, Integer> levels = new TreeMap<>();
+            for (String levelKey : abilityLevels.getKeys(false)) {
+                int level = parsePositiveInt(levelKey);
+                if (level <= 0) {
+                    continue;
+                }
+                int seconds = abilityLevels.getInt(levelKey);
+                levels.put(level, seconds);
+                totalByLevel.computeIfAbsent(level, unused -> new HashMap<>())
+                        .merge(ability.toUpperCase(Locale.ROOT), seconds, Integer::sum);
+            }
+            String normalizedAbility = ability.toUpperCase(Locale.ROOT);
+            pointLevels.put(normalizedAbility, levels);
+            loadSkillPointUpgradeConfig(abilityLevels, buildSkillPointKey(type, normalizedAbility));
+        }
     }
 
     private void loadSpentSkillPoints() {
@@ -192,7 +223,7 @@ public class PartyBuffHandler {
                 continue;
             }
             if (parts.length > 1 && !parts[1].isEmpty()) {
-                spentPointsByAbility.put(parts[1].toUpperCase(Locale.ROOT), points);
+                spentPointsByAbility.put(buildSkillPointKey(type, parts[1]), points);
             } else {
                 spentPointsByBuff.put(type, points);
             }
@@ -367,6 +398,7 @@ public class PartyBuffHandler {
                 case MEMBER_SLOTS -> parseMemberSlots(level, entry, parts[1]);
                 case DUNGEON_INSTANCE_SLOTS -> parseDungeonInstanceSlots(level, entry, parts[1]);
                 case ABILITY_DURATION -> parseAbilityDuration(level, entry, parts);
+                case ABILITY_COOLDOWN_REDUCTION -> parseAbilityCooldownReduction(level, entry, parts);
             }
         }
     }
@@ -390,6 +422,15 @@ public class PartyBuffHandler {
                 for (String ability : abilities.getKeys(false)) {
                     String value = abilities.getString(ability);
                     parseAbilityDuration(level, PartyBuffType.ABILITY_DURATION.name() + ":" + ability + ":" + value, new String[] { "ABILITY_DURATION", ability, value });
+                }
+            }
+        }
+        if (section.isConfigurationSection(PartyBuffType.ABILITY_COOLDOWN_REDUCTION.name())) {
+            ConfigurationSection abilities = section.getConfigurationSection(PartyBuffType.ABILITY_COOLDOWN_REDUCTION.name());
+            if (abilities != null) {
+                for (String ability : abilities.getKeys(false)) {
+                    String value = abilities.getString(ability);
+                    parseAbilityCooldownReduction(level, PartyBuffType.ABILITY_COOLDOWN_REDUCTION.name() + ":" + ability + ":" + value, new String[] { "ABILITY_COOLDOWN_REDUCTION", ability, value });
                 }
             }
         }
@@ -482,20 +523,29 @@ public class PartyBuffHandler {
     }
 
     private void parseAbilityDuration(int level, String entry, String[] parts) {
+        parseAbilityBuff(level, entry, parts, PartyBuffType.ABILITY_DURATION, abilityDurationBonus, abilityDurationByLevel);
+    }
+
+    private void parseAbilityCooldownReduction(int level, String entry, String[] parts) {
+        parseAbilityBuff(level, entry, parts, PartyBuffType.ABILITY_COOLDOWN_REDUCTION, abilityCooldownReductionBonus, abilityCooldownReductionByLevel);
+    }
+
+    private void parseAbilityBuff(int level, String entry, String[] parts, PartyBuffType type,
+                                  Map<String, Integer> totalBonus, Map<Integer, Map<String, Integer>> bonusByLevel) {
         if (parts.length < 3) {
-            logger.warning("Invalid ABILITY_DURATION entry at level " + level + ": " + entry);
+            logger.warning("Invalid " + type.name() + " entry at level " + level + ": " + entry);
             return;
         }
 
         String ability = parts[1].trim().toUpperCase(Locale.ROOT);
         try {
             int seconds = Integer.parseInt(parts[2].trim());
-            abilityDurationBonus.merge(ability, seconds, Integer::sum);
-            abilityDurationByLevel
+            totalBonus.merge(ability, seconds, Integer::sum);
+            bonusByLevel
                     .computeIfAbsent(level, unused -> new HashMap<>())
                     .merge(ability, seconds, Integer::sum);
         } catch (NumberFormatException ex) {
-            logger.warning("Invalid ABILITY_DURATION value at level " + level + ": " + entry);
+            logger.warning("Invalid " + type.name() + " value at level " + level + ": " + entry);
         }
     }
 
@@ -512,6 +562,17 @@ public class PartyBuffHandler {
             return 0;
         }
         return abilityDurationBonus.getOrDefault(ability.toUpperCase(), 0);
+    }
+
+    public Map<String, Integer> getAbilityCooldownReductionBonuses() {
+        return Collections.unmodifiableMap(abilityCooldownReductionBonus);
+    }
+
+    public int getAbilityCooldownReductionBonus(String ability) {
+        if (ability == null) {
+            return 0;
+        }
+        return abilityCooldownReductionBonus.getOrDefault(ability.toUpperCase(Locale.ROOT), 0);
     }
 
     public Map<Integer, Double> getExpSharingRateByLevel() {
@@ -531,19 +592,19 @@ public class PartyBuffHandler {
     }
 
     public Map<Integer, Map<String, Integer>> getAbilityDurationByLevel() {
-        Map<Integer, Map<String, Integer>> copy = new TreeMap<>();
-        for (Map.Entry<Integer, Map<String, Integer>> entry : abilityDurationByLevel.entrySet()) {
-            copy.put(entry.getKey(), Collections.unmodifiableMap(entry.getValue()));
-        }
-        return Collections.unmodifiableMap(copy);
+        return getUnmodifiableAbilityMap(abilityDurationByLevel);
     }
 
     public Map<String, Map<Integer, Integer>> getAbilityDurationPointLevels() {
-        Map<String, Map<Integer, Integer>> copy = new HashMap<>();
-        for (Map.Entry<String, TreeMap<Integer, Integer>> entry : abilityDurationPointLevels.entrySet()) {
-            copy.put(entry.getKey(), Collections.unmodifiableMap(entry.getValue()));
-        }
-        return Collections.unmodifiableMap(copy);
+        return getUnmodifiablePointLevels(abilityDurationPointLevels);
+    }
+
+    public Map<Integer, Map<String, Integer>> getAbilityCooldownReductionByLevel() {
+        return getUnmodifiableAbilityMap(abilityCooldownReductionByLevel);
+    }
+
+    public Map<String, Map<Integer, Integer>> getAbilityCooldownReductionPointLevels() {
+        return getUnmodifiablePointLevels(abilityCooldownReductionPointLevels);
     }
 
     public boolean isSkillPointsMode() {
@@ -570,7 +631,7 @@ public class PartyBuffHandler {
         if (ability == null) {
             return getSpentPoints(type);
         }
-        return spentPointsByAbility.getOrDefault(ability.toUpperCase(Locale.ROOT), 0);
+        return spentPointsByAbility.getOrDefault(buildSkillPointKey(type, ability), 0);
     }
 
     public int getMaxPoints(PartyBuffType type) {
@@ -579,16 +640,41 @@ public class PartyBuffHandler {
             case EXP_SHARING_RADIUS -> getMaxPointKey(expSharingRadiusByLevel);
             case MEMBER_SLOTS -> getMaxPointKey(memberSlotsByLevel);
             case DUNGEON_INSTANCE_SLOTS -> getMaxPointKey(dungeonInstanceSlotsByLevel);
-            case ABILITY_DURATION -> 0;
+            case ABILITY_DURATION, ABILITY_COOLDOWN_REDUCTION -> 0;
         };
     }
 
     public int getMaxPoints(PartyBuffType type, String ability) {
-        if (type != PartyBuffType.ABILITY_DURATION || ability == null) {
+        if (!isAbilitySpecific(type) || ability == null) {
             return getMaxPoints(type);
         }
-        TreeMap<Integer, Integer> levels = abilityDurationPointLevels.get(ability.toUpperCase(Locale.ROOT));
+        Map<String, TreeMap<Integer, Integer>> pointLevels = switch (type) {
+            case ABILITY_DURATION -> abilityDurationPointLevels;
+            case ABILITY_COOLDOWN_REDUCTION -> abilityCooldownReductionPointLevels;
+            default -> Map.of();
+        };
+        TreeMap<Integer, Integer> levels = pointLevels.get(ability.toUpperCase(Locale.ROOT));
         return levels == null ? 0 : getMaxPointKey(levels);
+    }
+
+    private boolean isAbilitySpecific(PartyBuffType type) {
+        return type == PartyBuffType.ABILITY_DURATION || type == PartyBuffType.ABILITY_COOLDOWN_REDUCTION;
+    }
+
+    private Map<Integer, Map<String, Integer>> getUnmodifiableAbilityMap(Map<Integer, Map<String, Integer>> source) {
+        Map<Integer, Map<String, Integer>> copy = new TreeMap<>();
+        for (Map.Entry<Integer, Map<String, Integer>> entry : source.entrySet()) {
+            copy.put(entry.getKey(), Collections.unmodifiableMap(entry.getValue()));
+        }
+        return Collections.unmodifiableMap(copy);
+    }
+
+    private Map<String, Map<Integer, Integer>> getUnmodifiablePointLevels(Map<String, TreeMap<Integer, Integer>> source) {
+        Map<String, Map<Integer, Integer>> copy = new HashMap<>();
+        for (Map.Entry<String, TreeMap<Integer, Integer>> entry : source.entrySet()) {
+            copy.put(entry.getKey(), Collections.unmodifiableMap(entry.getValue()));
+        }
+        return Collections.unmodifiableMap(copy);
     }
 
     public double getNextUpgradeCost(PartyBuffType type, String ability) {

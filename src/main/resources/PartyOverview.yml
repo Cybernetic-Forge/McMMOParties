@@ -67,6 +67,98 @@ Icons:
     Lore:
       - "&eManage runtime dungeon entrance groups"
       - "&7Click to view details"
+  DungeonInstances:
+    Layout:
+      AvailableSlots:
+        - 10
+        - 11
+        - 12
+        - 13
+        - 14
+        - 15
+        - 16
+        - 19
+        - 20
+        - 21
+        - 22
+        - 23
+        - 24
+        - 25
+      MemberSlots:
+        - 37
+        - 38
+        - 39
+        - 40
+        - 41
+        - 42
+        - 43
+    Header:
+      Slot: 4
+      Material: TRIAL_KEY
+      Display: "&eDungeon Instance Party"
+      Lore:
+        - "&7Select online party members for the active instance group"
+        - "&7Current members: &f%current_members%&7/&f%max_members%"
+        - "&7Available page: &f%available_page%&7/&f%available_max_page%"
+        - "&7Member page: &f%member_page%&7/&f%member_max_page%"
+    ActionCreate:
+      Slot: 49
+      Material: EMERALD_BLOCK
+      Display: "&aCreate Instance Party"
+      Lore:
+        - "%status_text%"
+        - "&7Current members: &f%current_members%&7/&f%max_members%"
+        - "%permission_hint%"
+    ActionDisband:
+      Slot: 49
+      Material: BARRIER
+      Display: "&cDisband Instance Party"
+      Lore:
+        - "%status_text%"
+        - "&7Current members: &f%current_members%&7/&f%max_members%"
+        - "%permission_hint%"
+    AvailableMember:
+      Material: PLAYER_HEAD
+      Display: "&a%player_name%"
+      Lore:
+        - "&7Status: %member_status%"
+        - "%permission_hint%"
+    CurrentMember:
+      Material: PLAYER_HEAD
+      Display: "&b%player_name%"
+      Lore:
+        - "&7Status: %member_status%"
+        - "%leader_status%"
+        - "%member_action_hint%"
+    EmptyMemberSlot:
+      Material: WHITE_STAINED_GLASS_PANE
+      Display: "&8Empty Slot"
+      Lore:
+        - "&7Current members: &f%current_members%&7/&f%max_members%"
+    AvailablePrevPage:
+      Slot: 17
+      Material: ARROW
+      Display: "&7Previous Available Page"
+      Lore:
+        - "&7Page: &f%page%&7/&f%max_page%"
+    AvailableNextPage:
+      Slot: 26
+      Material: ARROW
+      Display: "&7Next Available Page"
+      Lore:
+        - "&7Page: &f%page%&7/&f%max_page%"
+    MemberPrevPage:
+      Slot: 36
+      Material: ARROW
+      Display: "&7Previous Member Page"
+      Lore:
+        - "&7Page: &f%page%&7/&f%max_page%"
+    MemberNextPage:
+      Slot: 44
+      Material: ARROW
+      Display: "&7Next Member Page"
+      Lore:
+        - "&7Page: &f%page%&7/&f%max_page%"
   EditParty:
     Slot: 7
     Material: WRITABLE_BOOK

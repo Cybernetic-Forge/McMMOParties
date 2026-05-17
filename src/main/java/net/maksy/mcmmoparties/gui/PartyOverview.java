@@ -64,13 +64,13 @@ public class PartyOverview implements Listener {
     private int instanceOnlinePage = 0;
     private int instanceMemberPage = 0;
 
-    private static final List<Integer> INSTANCE_AVAILABLE_LAYOUT = List.of(10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25);
-    private static final List<Integer> INSTANCE_MEMBER_LAYOUT = List.of(28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43);
-    private static final int INSTANCE_AVAILABLE_PREVIOUS_SLOT = 17;
-    private static final int INSTANCE_AVAILABLE_NEXT_SLOT = 26;
-    private static final int INSTANCE_MEMBER_PREVIOUS_SLOT = 36;
-    private static final int INSTANCE_MEMBER_NEXT_SLOT = 44;
-    private static final int INSTANCE_ACTION_SLOT = 49;
+    private static final List<Integer> DEFAULT_INSTANCE_AVAILABLE_LAYOUT = List.of(10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25);
+    private static final List<Integer> DEFAULT_INSTANCE_MEMBER_LAYOUT = List.of(28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43);
+    private static final int DEFAULT_INSTANCE_AVAILABLE_PREVIOUS_SLOT = 17;
+    private static final int DEFAULT_INSTANCE_AVAILABLE_NEXT_SLOT = 26;
+    private static final int DEFAULT_INSTANCE_MEMBER_PREVIOUS_SLOT = 36;
+    private static final int DEFAULT_INSTANCE_MEMBER_NEXT_SLOT = 44;
+    private static final int DEFAULT_INSTANCE_ACTION_SLOT = 49;
     private static final Map<PartyState, Integer> DEFAULT_ROLE_SELECTOR_SLOTS = Map.of(
             PartyState.MEMBER, 19,
             PartyState.CO_OWNER, 21,
@@ -341,6 +341,40 @@ public class PartyOverview implements Listener {
         return ItemUT.getItem(material, display, lore);
     }
 
+    private List<Integer> getDungeonAvailableLayout() {
+        return new ArrayList<>(McMMOParties.getPartyOverviewCfg().getIntegerList(
+                "Icons.DungeonInstances.Layout.AvailableSlots",
+                DEFAULT_INSTANCE_AVAILABLE_LAYOUT
+        ));
+    }
+
+    private List<Integer> getDungeonMemberLayout() {
+        return new ArrayList<>(McMMOParties.getPartyOverviewCfg().getIntegerList(
+                "Icons.DungeonInstances.Layout.MemberSlots",
+                DEFAULT_INSTANCE_MEMBER_LAYOUT
+        ));
+    }
+
+    private int getDungeonActionSlot() {
+        return McMMOParties.getPartyOverviewCfg().getInt("Icons.DungeonInstances.ActionCreate.Slot", DEFAULT_INSTANCE_ACTION_SLOT);
+    }
+
+    private int getDungeonAvailablePreviousSlot() {
+        return McMMOParties.getPartyOverviewCfg().getInt("Icons.DungeonInstances.AvailablePrevPage.Slot", DEFAULT_INSTANCE_AVAILABLE_PREVIOUS_SLOT);
+    }
+
+    private int getDungeonAvailableNextSlot() {
+        return McMMOParties.getPartyOverviewCfg().getInt("Icons.DungeonInstances.AvailableNextPage.Slot", DEFAULT_INSTANCE_AVAILABLE_NEXT_SLOT);
+    }
+
+    private int getDungeonMemberPreviousSlot() {
+        return McMMOParties.getPartyOverviewCfg().getInt("Icons.DungeonInstances.MemberPrevPage.Slot", DEFAULT_INSTANCE_MEMBER_PREVIOUS_SLOT);
+    }
+
+    private int getDungeonMemberNextSlot() {
+        return McMMOParties.getPartyOverviewCfg().getInt("Icons.DungeonInstances.MemberNextPage.Slot", DEFAULT_INSTANCE_MEMBER_NEXT_SLOT);
+    }
+
     private void displayDungeonInstances() {
         instanceAvailableSlots.clear();
         instanceMemberSlots.clear();
@@ -349,92 +383,144 @@ public class PartyOverview implements Listener {
         var dungeonParty = manager.get(party.getPartyID());
         boolean canManage = party.canManageDungeonInstances(playerUuid);
         int maxSlots = manager.getMaxSlots(party);
-        int visibleMemberSlots = Math.max(1, Math.min(manager.getVisibleSlotCount(party), INSTANCE_MEMBER_LAYOUT.size()));
+        List<Integer> availableLayout = getDungeonAvailableLayout();
+        List<Integer> memberLayout = getDungeonMemberLayout();
+        int visibleMemberSlots = Math.max(1, Math.min(manager.getVisibleSlotCount(party), memberLayout.size()));
         String maxSlotsDisplay = PartyDisplayUtils.getDungeonSlotDisplay(maxSlots);
         int currentMemberCount = dungeonParty == null ? 0 : dungeonParty.getPlayerUuids().size();
+        int onlinePageCount = getPageCount(manager.getSelectableOnlineMembers(party).size(), Math.max(1, availableLayout.size()));
+        int memberPageCount = getPageCount(currentMemberCount, visibleMemberSlots);
 
-        inventory.setItem(4, ItemUT.getItem(
-                Material.TRIAL_KEY,
-                LanguageConfig.get().getMessage(DUNGEON_INSTANCE_SELECT_ONLINE),
-                List.of(
-                        LanguageConfig.get().getMessage(DUNGEON_INSTANCE_CURRENT_MEMBERS),
-                        LanguageConfig.get().getMessage(
-                                DUNGEON_INSTANCE_STATUS_LINE,
-                                new Replaceable("%current%", String.valueOf(currentMemberCount)),
-                                new Replaceable("%max%", maxSlotsDisplay)
-                        )
-                )
-        ));
+        var headerIcon = McMMOParties.getPartyOverviewCfg().getIcon("DungeonInstances.Header",
+                new Replaceable("%current_members%", String.valueOf(currentMemberCount)),
+                new Replaceable("%max_members%", maxSlotsDisplay),
+                new Replaceable("%available_page%", String.valueOf(instanceOnlinePage + 1)),
+                new Replaceable("%available_max_page%", String.valueOf(onlinePageCount)),
+                new Replaceable("%member_page%", String.valueOf(instanceMemberPage + 1)),
+                new Replaceable("%member_max_page%", String.valueOf(memberPageCount))
+        );
+        inventory.setItem(headerIcon.getKey(), headerIcon.getValue());
 
         if (dungeonParty == null) {
-            inventory.setItem(INSTANCE_ACTION_SLOT, ItemUT.getItem(
-                    Material.EMERALD_BLOCK,
-                    LanguageConfig.get().getMessage(DUNGEON_INSTANCE_CREATE_BUTTON),
-                    List.of(
-                            LanguageConfig.get().getMessage(DUNGEON_INSTANCE_NONE),
-                            canManage ? LanguageConfig.get().getMessage(DUNGEON_INSTANCE_CREATE_HINT) : LanguageConfig.get().getMessage(DUNGEON_INSTANCE_NO_PERMISSION)
-                    )
-            ));
+            var createIcon = McMMOParties.getPartyOverviewCfg().getIcon("DungeonInstances.ActionCreate",
+                    new Replaceable("%current_members%", String.valueOf(currentMemberCount)),
+                    new Replaceable("%max_members%", maxSlotsDisplay),
+                    new Replaceable("%permission_hint%", canManage
+                            ? LanguageConfig.get().getMessage(DUNGEON_INSTANCE_CREATE_HINT)
+                            : LanguageConfig.get().getMessage(DUNGEON_INSTANCE_NO_PERMISSION)),
+                    new Replaceable("%status_text%", LanguageConfig.get().getMessage(DUNGEON_INSTANCE_NONE))
+            );
+            inventory.setItem(createIcon.getKey(), createIcon.getValue());
         } else {
-            inventory.setItem(INSTANCE_ACTION_SLOT, ItemUT.getItem(
-                    Material.BARRIER,
-                    LanguageConfig.get().getMessage(DUNGEON_INSTANCE_DISBAND_BUTTON),
-                    List.of(
-                        LanguageConfig.get().getMessage(DUNGEON_INSTANCE_CURRENT_MEMBERS),
-                        canManage ? LanguageConfig.get().getMessage(DUNGEON_INSTANCE_DISBAND_HINT) : LanguageConfig.get().getMessage(DUNGEON_INSTANCE_NO_PERMISSION)
-                    )
-            ));
+            var disbandIcon = McMMOParties.getPartyOverviewCfg().getIcon("DungeonInstances.ActionDisband",
+                    new Replaceable("%current_members%", String.valueOf(currentMemberCount)),
+                    new Replaceable("%max_members%", maxSlotsDisplay),
+                    new Replaceable("%permission_hint%", canManage
+                            ? LanguageConfig.get().getMessage(DUNGEON_INSTANCE_DISBAND_HINT)
+                            : LanguageConfig.get().getMessage(DUNGEON_INSTANCE_NO_PERMISSION)),
+                    new Replaceable("%status_text%", LanguageConfig.get().getMessage(DUNGEON_INSTANCE_CURRENT_MEMBERS))
+            );
+            inventory.setItem(disbandIcon.getKey(), disbandIcon.getValue());
         }
 
         List<UUID> selectableMembers = manager.getSelectableOnlineMembers(party);
-        instanceOnlinePage = clampPage(instanceOnlinePage, selectableMembers.size(), INSTANCE_AVAILABLE_LAYOUT.size());
-        int onlineStart = instanceOnlinePage * INSTANCE_AVAILABLE_LAYOUT.size();
-        for (int i = 0; i < INSTANCE_AVAILABLE_LAYOUT.size(); i++) {
-            int layoutSlot = INSTANCE_AVAILABLE_LAYOUT.get(i);
+        instanceOnlinePage = clampPage(instanceOnlinePage, selectableMembers.size(), Math.max(1, availableLayout.size()));
+        int onlineStart = instanceOnlinePage * Math.max(1, availableLayout.size());
+        for (int i = 0; i < availableLayout.size(); i++) {
+            int layoutSlot = availableLayout.get(i);
             int index = onlineStart + i;
             if (index >= selectableMembers.size()) {
                 continue;
             }
             UUID memberUuid = selectableMembers.get(index);
             OfflinePlayer member = Bukkit.getOfflinePlayer(memberUuid);
-            inventory.setItem(layoutSlot, PartyDisplayUtils.createPlayerHead(
-                    member,
-                    PartyDisplayUtils.getPlayerName(member),
-                    List.of(canManage ? LanguageConfig.get().getMessage(DUNGEON_INSTANCE_ADD_MEMBER_HINT) : LanguageConfig.get().getMessage(DUNGEON_INSTANCE_NO_PERMISSION))
-            ));
+            String memberName = PartyDisplayUtils.getPlayerName(member);
+            String statusDisplay = PartyDisplayUtils.getMemberStatusDisplay(member);
+            String permissionHint = canManage
+                    ? LanguageConfig.get().getMessage(DUNGEON_INSTANCE_ADD_MEMBER_HINT)
+                    : LanguageConfig.get().getMessage(DUNGEON_INSTANCE_NO_PERMISSION);
+            String display = McMMOParties.getPartyOverviewCfg().getFormattedString(
+                    "Icons.DungeonInstances.AvailableMember.Display",
+                    memberName,
+                    new Replaceable("%player_name%", memberName),
+                    new Replaceable("%member_status%", statusDisplay),
+                    new Replaceable("%permission_hint%", permissionHint)
+            );
+            List<String> lore = McMMOParties.getPartyOverviewCfg().getFormattedStringList(
+                    "Icons.DungeonInstances.AvailableMember.Lore",
+                    List.of(permissionHint),
+                    new Replaceable("%player_name%", memberName),
+                    new Replaceable("%member_status%", statusDisplay),
+                    new Replaceable("%permission_hint%", permissionHint)
+            );
+            inventory.setItem(layoutSlot, PartyDisplayUtils.createPlayerHead(member, display, lore));
             instanceAvailableSlots.put(layoutSlot, memberUuid);
         }
 
         List<UUID> currentMembers = dungeonParty == null ? List.of() : dungeonParty.getPlayerUuids();
         instanceMemberPage = clampPage(instanceMemberPage, currentMembers.size(), visibleMemberSlots);
         int memberStart = instanceMemberPage * visibleMemberSlots;
-        for (int i = 0; i < visibleMemberSlots && i < INSTANCE_MEMBER_LAYOUT.size(); i++) {
-            int layoutSlot = INSTANCE_MEMBER_LAYOUT.get(i);
+        for (int i = 0; i < visibleMemberSlots && i < memberLayout.size(); i++) {
+            int layoutSlot = memberLayout.get(i);
             int index = memberStart + i;
             if (index >= currentMembers.size()) {
-                inventory.setItem(layoutSlot, ItemUT.getItem(Material.GRAY_STAINED_GLASS_PANE, LanguageConfig.get().getMessage(DUNGEON_INSTANCE_EMPTY_SLOT), List.of()));
+                var emptySlotIcon = McMMOParties.getPartyOverviewCfg().getIcon("DungeonInstances.EmptyMemberSlot",
+                        new Replaceable("%current_members%", String.valueOf(currentMemberCount)),
+                        new Replaceable("%max_members%", maxSlotsDisplay)
+                );
+                inventory.setItem(layoutSlot, emptySlotIcon.getValue());
                 continue;
             }
             UUID memberUuid = currentMembers.get(index);
             OfflinePlayer member = Bukkit.getOfflinePlayer(memberUuid);
             boolean isLeader = dungeonParty != null && dungeonParty.getLeaderUniqueId().equals(memberUuid);
-            List<String> lore = List.of(isLeader
+            String memberName = PartyDisplayUtils.getPlayerName(member);
+            String statusDisplay = PartyDisplayUtils.getMemberStatusDisplay(member);
+            String actionHint = isLeader
                     ? LanguageConfig.get().getMessage(DUNGEON_INSTANCE_LEADER_HINT)
                     : canManage
                     ? LanguageConfig.get().getMessage(DUNGEON_INSTANCE_REMOVE_MEMBER_HINT)
-                    : LanguageConfig.get().getMessage(DUNGEON_INSTANCE_CURRENT_MEMBERS));
-            inventory.setItem(layoutSlot, PartyDisplayUtils.createPlayerHead(
-                    member,
-                    PartyDisplayUtils.getPlayerName(member),
-                    lore
-            ));
+                    : LanguageConfig.get().getMessage(DUNGEON_INSTANCE_CURRENT_MEMBERS);
+            String display = McMMOParties.getPartyOverviewCfg().getFormattedString(
+                    "Icons.DungeonInstances.CurrentMember.Display",
+                    memberName,
+                    new Replaceable("%player_name%", memberName),
+                    new Replaceable("%member_status%", statusDisplay),
+                    new Replaceable("%member_action_hint%", actionHint),
+                    new Replaceable("%leader_status%", isLeader ? LanguageConfig.get().getMessage(DUNGEON_INSTANCE_LEADER_HINT) : "")
+            );
+            List<String> lore = McMMOParties.getPartyOverviewCfg().getFormattedStringList(
+                    "Icons.DungeonInstances.CurrentMember.Lore",
+                    List.of(actionHint),
+                    new Replaceable("%player_name%", memberName),
+                    new Replaceable("%member_status%", statusDisplay),
+                    new Replaceable("%member_action_hint%", actionHint),
+                    new Replaceable("%leader_status%", isLeader ? LanguageConfig.get().getMessage(DUNGEON_INSTANCE_LEADER_HINT) : "")
+            );
+            inventory.setItem(layoutSlot, PartyDisplayUtils.createPlayerHead(member, display, lore));
             instanceMemberSlots.put(layoutSlot, memberUuid);
         }
 
-        inventory.setItem(INSTANCE_AVAILABLE_PREVIOUS_SLOT, ItemUT.getItem(Material.ARROW, LanguageConfig.get().getMessage(DUNGEON_INSTANCE_PAGE_PREVIOUS), List.of()));
-        inventory.setItem(INSTANCE_AVAILABLE_NEXT_SLOT, ItemUT.getItem(Material.ARROW, LanguageConfig.get().getMessage(DUNGEON_INSTANCE_PAGE_NEXT), List.of()));
-        inventory.setItem(INSTANCE_MEMBER_PREVIOUS_SLOT, ItemUT.getItem(Material.ARROW, LanguageConfig.get().getMessage(DUNGEON_INSTANCE_PAGE_PREVIOUS), List.of()));
-        inventory.setItem(INSTANCE_MEMBER_NEXT_SLOT, ItemUT.getItem(Material.ARROW, LanguageConfig.get().getMessage(DUNGEON_INSTANCE_PAGE_NEXT), List.of()));
+        var availablePrev = McMMOParties.getPartyOverviewCfg().getIcon("DungeonInstances.AvailablePrevPage",
+                new Replaceable("%page%", String.valueOf(instanceOnlinePage + 1)),
+                new Replaceable("%max_page%", String.valueOf(onlinePageCount))
+        );
+        var availableNext = McMMOParties.getPartyOverviewCfg().getIcon("DungeonInstances.AvailableNextPage",
+                new Replaceable("%page%", String.valueOf(instanceOnlinePage + 1)),
+                new Replaceable("%max_page%", String.valueOf(onlinePageCount))
+        );
+        var memberPrev = McMMOParties.getPartyOverviewCfg().getIcon("DungeonInstances.MemberPrevPage",
+                new Replaceable("%page%", String.valueOf(instanceMemberPage + 1)),
+                new Replaceable("%max_page%", String.valueOf(memberPageCount))
+        );
+        var memberNext = McMMOParties.getPartyOverviewCfg().getIcon("DungeonInstances.MemberNextPage",
+                new Replaceable("%page%", String.valueOf(instanceMemberPage + 1)),
+                new Replaceable("%max_page%", String.valueOf(memberPageCount))
+        );
+        inventory.setItem(availablePrev.getKey(), availablePrev.getValue());
+        inventory.setItem(availableNext.getKey(), availableNext.getValue());
+        inventory.setItem(memberPrev.getKey(), memberPrev.getValue());
+        inventory.setItem(memberNext.getKey(), memberNext.getValue());
         var backIcon = McMMOParties.getPartyOverviewCfg().getIcon("Back");
         inventory.setItem(backIcon.getKey(), backIcon.getValue());
     }
@@ -603,57 +689,34 @@ public class PartyOverview implements Listener {
             );
         }
 
-        // Ability duration (per ability)
-        if (skillPointsMode) {
-            String baseName = McMMOParties.getConfigManager().getBuffDisplayName("ABILITY_DURATION", "Ability Duration");
-            for (Map.Entry<String, Map<Integer, Integer>> abilityEntry : handler.getAbilityDurationPointLevels().entrySet()) {
-                SuperAbilityType ability = SuperAbilityType.valueOf(abilityEntry.getKey().toUpperCase());
-                int spentPoints = handler.getSpentPoints(PartyBuffType.ABILITY_DURATION, abilityEntry.getKey());
-                int maxPoints = handler.getMaxPoints(PartyBuffType.ABILITY_DURATION, abilityEntry.getKey());
-                int totalSeconds = handler.getAbilityDurationBonus(abilityEntry.getKey());
-                int nextSeconds = getSkillPointIntValue(abilityEntry.getValue(), spentPoints + 1, totalSeconds);
-                BuffKey buffKey = new BuffKey(PartyBuffType.ABILITY_DURATION, abilityEntry.getKey());
-                slot = placeBuffItem(
-                        getBuffItem(
-                                true,
-                                buffKey,
-                                baseName + " &7(" + ability.getLocalizedName() + ")",
-                                PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SECONDS, totalSeconds),
-                                PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SECONDS, nextSeconds),
-                                spentPoints,
-                                maxPoints,
-                                suggestionCounts,
-                                preferredBuff,
-                                playerSuggestionKey
-                        ),
-                        slot,
-                        buffKey
-                );
-            }
-        } else if (!handler.getAbilityDurationBonuses().isEmpty()) {
-            String baseName = McMMOParties.getConfigManager().getBuffDisplayName("ABILITY_DURATION", "Ability Duration");
-            for (Map.Entry<String, Integer> abilityEntry : handler.getAbilityDurationBonuses().entrySet()) {
-                String ability = abilityEntry.getKey();
-                int totalSeconds = abilityEntry.getValue();
-                int nextSeconds = getNextAbilityDurationValue(handler.getAbilityDurationByLevel(), ability, party.getLevel(), totalSeconds);
-                slot = placeBuffItem(
-                        getBuffItem(
-                                false,
-                                new BuffKey(PartyBuffType.ABILITY_DURATION, ability),
-                                baseName + " &7(" + ability + ")",
-                                PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SECONDS, totalSeconds),
-                                PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SECONDS, nextSeconds),
-                                0,
-                                0,
-                                suggestionCounts,
-                                preferredBuff,
-                                playerSuggestionKey
-                        ),
-                        slot,
-                        null
-                );
-            }
-        }
+        slot = displayAbilitySpecificBuff(
+                slot,
+                skillPointsMode,
+                handler,
+                suggestionCounts,
+                preferredBuff,
+                playerSuggestionKey,
+                PartyBuffType.ABILITY_DURATION,
+                "ABILITY_DURATION",
+                "Ability Duration",
+                handler.getAbilityDurationPointLevels(),
+                handler.getAbilityDurationBonuses(),
+                handler.getAbilityDurationByLevel()
+        );
+        slot = displayAbilitySpecificBuff(
+                slot,
+                skillPointsMode,
+                handler,
+                suggestionCounts,
+                preferredBuff,
+                playerSuggestionKey,
+                PartyBuffType.ABILITY_COOLDOWN_REDUCTION,
+                "ABILITY_COOLDOWN_REDUCTION",
+                "Ability Cooldown Reduction",
+                handler.getAbilityCooldownReductionPointLevels(),
+                handler.getAbilityCooldownReductionBonuses(),
+                handler.getAbilityCooldownReductionByLevel()
+        );
 
         var backIcon = McMMOParties.getPartyOverviewCfg().getIcon("Back");
         inventory.setItem(backIcon.getKey(), backIcon.getValue());
@@ -809,6 +872,72 @@ public class PartyOverview implements Listener {
         return currentTotal;
     }
 
+    private int displayAbilitySpecificBuff(int slot, boolean skillPointsMode,
+                                           net.maksy.mcmmoparties.configuration.PartyBuffHandler handler,
+                                           Map<String, Integer> suggestionCounts, BuffKey preferredBuff, String playerSuggestionKey,
+                                           PartyBuffType type, String displayKey, String fallbackName,
+                                           Map<String, Map<Integer, Integer>> pointLevels,
+                                           Map<String, Integer> totalBonuses,
+                                           Map<Integer, Map<String, Integer>> levelBonuses) {
+        if (skillPointsMode) {
+            String baseName = McMMOParties.getConfigManager().getBuffDisplayName(displayKey, fallbackName);
+            for (Map.Entry<String, Map<Integer, Integer>> abilityEntry : pointLevels.entrySet()) {
+                String abilityName = abilityEntry.getKey();
+                SuperAbilityType ability = SuperAbilityType.valueOf(abilityName.toUpperCase(Locale.ROOT));
+                int spentPoints = handler.getSpentPoints(type, abilityName);
+                int maxPoints = handler.getMaxPoints(type, abilityName);
+                int totalSeconds = totalBonuses.getOrDefault(abilityName.toUpperCase(Locale.ROOT), 0);
+                int nextSeconds = getSkillPointIntValue(abilityEntry.getValue(), spentPoints + 1, totalSeconds);
+                BuffKey buffKey = new BuffKey(type, abilityName);
+                slot = placeBuffItem(
+                        getBuffItem(
+                                true,
+                                buffKey,
+                                baseName + " &7(" + ability.getLocalizedName() + ")",
+                                PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SECONDS, totalSeconds),
+                                PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SECONDS, nextSeconds),
+                                spentPoints,
+                                maxPoints,
+                                suggestionCounts,
+                                preferredBuff,
+                                playerSuggestionKey
+                        ),
+                        slot,
+                        buffKey
+                );
+            }
+            return slot;
+        }
+
+        if (totalBonuses.isEmpty()) {
+            return slot;
+        }
+
+        String baseName = McMMOParties.getConfigManager().getBuffDisplayName(displayKey, fallbackName);
+        for (Map.Entry<String, Integer> abilityEntry : totalBonuses.entrySet()) {
+            String ability = abilityEntry.getKey();
+            int totalSeconds = abilityEntry.getValue();
+            int nextSeconds = getNextAbilityValue(levelBonuses, ability, party.getLevel(), totalSeconds);
+            slot = placeBuffItem(
+                    getBuffItem(
+                            false,
+                            new BuffKey(type, ability),
+                            baseName + " &7(" + ability + ")",
+                            PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SECONDS, totalSeconds),
+                            PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SECONDS, nextSeconds),
+                            0,
+                            0,
+                            suggestionCounts,
+                            preferredBuff,
+                            playerSuggestionKey
+                    ),
+                    slot,
+                    null
+            );
+        }
+        return slot;
+    }
+
     private double getNextLevelDoubleValue(Map<Integer, Double> levels, long currentLevel, double currentTotal) {
         for (Map.Entry<Integer, Double> entry : new TreeMap<>(levels).entrySet()) {
             if (entry.getKey() > currentLevel) {
@@ -818,7 +947,7 @@ public class PartyOverview implements Listener {
         return currentTotal;
     }
 
-    private int getNextAbilityDurationValue(Map<Integer, Map<String, Integer>> levels, String ability, long currentLevel, int currentTotal) {
+    private int getNextAbilityValue(Map<Integer, Map<String, Integer>> levels, String ability, long currentLevel, int currentTotal) {
         for (Map.Entry<Integer, Map<String, Integer>> entry : new TreeMap<>(levels).entrySet()) {
             if (entry.getKey() <= currentLevel) {
                 continue;
@@ -862,13 +991,17 @@ public class PartyOverview implements Listener {
     }
 
     private boolean isBuffMaxed(net.maksy.mcmmoparties.configuration.PartyBuffHandler handler, BuffKey key) {
-        int maxPoints = key.type() == PartyBuffType.ABILITY_DURATION
-                ? handler.getMaxPoints(PartyBuffType.ABILITY_DURATION, key.ability())
+        int maxPoints = isAbilitySpecific(key.type())
+                ? handler.getMaxPoints(key.type(), key.ability())
                 : handler.getMaxPoints(key.type());
-        int spentPoints = key.type() == PartyBuffType.ABILITY_DURATION
-                ? handler.getSpentPoints(PartyBuffType.ABILITY_DURATION, key.ability())
+        int spentPoints = isAbilitySpecific(key.type())
+                ? handler.getSpentPoints(key.type(), key.ability())
                 : handler.getSpentPoints(key.type());
         return maxPoints > 0 && spentPoints >= maxPoints;
+    }
+
+    private boolean isAbilitySpecific(PartyBuffType type) {
+        return type == PartyBuffType.ABILITY_DURATION || type == PartyBuffType.ABILITY_COOLDOWN_REDUCTION;
     }
 
     private String toSuggestionKey(BuffKey key) {
@@ -1231,8 +1364,8 @@ public class PartyOverview implements Listener {
                 player.sendMessage(LanguageConfig.get().getMessage(BUFF_CONDITIONS_NOT_MET));
                 return;
             }
-            int maxPoints = key.type() == PartyBuffType.ABILITY_DURATION
-                    ? handler.getMaxPoints(PartyBuffType.ABILITY_DURATION, key.ability())
+            int maxPoints = isAbilitySpecific(key.type())
+                    ? handler.getMaxPoints(key.type(), key.ability())
                     : handler.getMaxPoints(key.type());
             var upgradeEvent = McMMOParties.getPartyEventHandler().callPartyBuffUpgradeEvent(
                     player,
@@ -1302,8 +1435,10 @@ public class PartyOverview implements Listener {
     private void handleDungeonInstanceClick(Player player, int slot) {
         var manager = McMMOParties.getDungeonInstanceManager();
         var dungeonParty = manager.get(party.getPartyID());
+        List<Integer> availableLayout = getDungeonAvailableLayout();
+        List<Integer> memberLayout = getDungeonMemberLayout();
 
-        if (slot == INSTANCE_ACTION_SLOT) {
+        if (slot == getDungeonActionSlot()) {
             if (!party.canManageDungeonInstances(playerUuid)) {
                 player.sendMessage(LanguageConfig.get().getMessage(DUNGEON_INSTANCE_NO_PERMISSION));
                 return;
@@ -1329,30 +1464,30 @@ public class PartyOverview implements Listener {
             return;
         }
 
-        if (slot == INSTANCE_AVAILABLE_PREVIOUS_SLOT) {
+        if (slot == getDungeonAvailablePreviousSlot()) {
             if (instanceOnlinePage > 0) {
                 instanceOnlinePage--;
                 refreshInventory();
             }
             return;
         }
-        if (slot == INSTANCE_AVAILABLE_NEXT_SLOT) {
-            int maxPage = getPageCount(manager.getSelectableOnlineMembers(party).size(), INSTANCE_AVAILABLE_LAYOUT.size());
+        if (slot == getDungeonAvailableNextSlot()) {
+            int maxPage = getPageCount(manager.getSelectableOnlineMembers(party).size(), Math.max(1, availableLayout.size()));
             if (instanceOnlinePage + 1 < maxPage) {
                 instanceOnlinePage++;
                 refreshInventory();
             }
             return;
         }
-        if (slot == INSTANCE_MEMBER_PREVIOUS_SLOT) {
+        if (slot == getDungeonMemberPreviousSlot()) {
             if (instanceMemberPage > 0) {
                 instanceMemberPage--;
                 refreshInventory();
             }
             return;
         }
-        if (slot == INSTANCE_MEMBER_NEXT_SLOT) {
-            int pageSize = Math.max(1, Math.min(manager.getVisibleSlotCount(party), INSTANCE_MEMBER_LAYOUT.size()));
+        if (slot == getDungeonMemberNextSlot()) {
+            int pageSize = Math.max(1, Math.min(manager.getVisibleSlotCount(party), memberLayout.size()));
             int maxPage = getPageCount(dungeonParty == null ? 0 : dungeonParty.getPlayerUuids().size(), pageSize);
             if (instanceMemberPage + 1 < maxPage) {
                 instanceMemberPage++;

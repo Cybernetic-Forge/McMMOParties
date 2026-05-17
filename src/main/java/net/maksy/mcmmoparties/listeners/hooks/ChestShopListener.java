@@ -1,4 +1,4 @@
-package net.maksy.mcmmoparties.listeners;
+package net.maksy.mcmmoparties.listeners.hooks;
 
 import com.Acrobot.ChestShop.Events.ShopCreatedEvent;
 import net.maksy.mcmmoparties.McMMOParties;

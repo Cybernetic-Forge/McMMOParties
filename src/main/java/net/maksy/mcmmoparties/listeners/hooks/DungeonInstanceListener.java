@@ -1,4 +1,4 @@
-package net.maksy.mcmmoparties.listeners;
+package net.maksy.mcmmoparties.listeners.hooks;
 
 import net.maksy.mcmmoparties.McMMOParties;
 import org.bukkit.event.EventHandler;

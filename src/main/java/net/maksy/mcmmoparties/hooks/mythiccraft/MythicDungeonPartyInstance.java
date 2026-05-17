@@ -1,11 +1,13 @@
 package net.maksy.mcmmoparties.hooks.mythiccraft;
 
+import lombok.Getter;
 import net.maksy.mcmmoparties.McMMOParties;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.playavalon.mythicdungeons.api.party.IDungeonParty;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -13,21 +15,18 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-public class McMMOPartiesDungeonParty implements IDungeonParty {
+public class MythicDungeonPartyInstance implements IDungeonParty {
 
+    @Getter
     private final String partyId;
     private final UUID leader;
     private final Set<UUID> playerUuids = new LinkedHashSet<>();
 
-    public McMMOPartiesDungeonParty(McMMOParty party, Player leader) {
+    public MythicDungeonPartyInstance(McMMOParty party, Player leader) {
         this.partyId = party.getPartyID();
         this.leader = leader.getUniqueId();
-        this.playerUuids.add(this.leader);
+        playerUuids.add(this.leader);
         initDungeonParty(McMMOParties.getInstance());
-    }
-
-    public String getPartyId() {
-        return partyId;
     }
 
     public UUID getLeaderUniqueId() {
@@ -67,7 +66,7 @@ public class McMMOPartiesDungeonParty implements IDungeonParty {
     }
 
     @Override
-    public OfflinePlayer getLeader() {
+    public @NotNull OfflinePlayer getLeader() {
         return Bukkit.getOfflinePlayer(leader);
     }
 
