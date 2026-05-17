@@ -299,6 +299,11 @@ public class PartyCommandUtils {
             return;
         }
 
+        if (!party.canAccessPartyChat(player.getUniqueId())) {
+            player.sendMessage(LanguageConfig.get().getMessage(PARTY_CHAT_LOCKED));
+            return;
+        }
+
         if (args.length < 2) {
             player.sendMessage(LanguageConfig.get().getMessage(PARTY_CHAT_USAGE));
             return;
@@ -374,7 +379,7 @@ public class PartyCommandUtils {
             try {
                 int parsedPage = Integer.parseInt(arg);
                 if (parsedPage < 1) {
-                    player.sendMessage(LanguageConfig.get().getMessage(PARTY_TOP_USAGE));
+                    player.sendMessage(LanguageConfig.get().getMessage(PARTY_LIST_USAGE));
                     return;
                 }
                 page = parsedPage;
@@ -384,7 +389,7 @@ public class PartyCommandUtils {
 
             PartyListSortMode parsedSort = PartyListSortMode.fromInput(arg);
             if (parsedSort == null) {
-                player.sendMessage(LanguageConfig.get().getMessage(PARTY_TOP_USAGE));
+                player.sendMessage(LanguageConfig.get().getMessage(PARTY_LIST_USAGE));
                 return;
             }
             sortMode = parsedSort;

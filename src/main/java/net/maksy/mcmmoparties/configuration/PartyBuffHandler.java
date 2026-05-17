@@ -32,16 +32,30 @@ public class PartyBuffHandler {
     private int dungeonInstanceSlotBonus;
     @Getter
     private boolean dungeonInstanceSlotsInfinite;
-    private final Map<String, Integer> abilityDurationBonus = new HashMap<>();
+    @Getter
+    private int tresorSizeBonus;
+    @Getter
+    private boolean tresorSizeInfinite;
+    @Getter
+    private boolean accessPartyWaypoint;
+    @Getter
+    private boolean accessPartyTresor;
+    @Getter
+    private boolean accessPartyChat;
+    private int abilityDurationBonus;
     private final Map<String, Integer> abilityCooldownReductionBonus = new HashMap<>();
 
     private final Map<Integer, Double> expSharingRateByLevel = new TreeMap<>();
     private final Map<Integer, Integer> expSharingRadiusByLevel = new TreeMap<>();
     private final Map<Integer, Integer> memberSlotsByLevel = new TreeMap<>();
     private final Map<Integer, Integer> dungeonInstanceSlotsByLevel = new TreeMap<>();
-    private final Map<Integer, Map<String, Integer>> abilityDurationByLevel = new TreeMap<>();
+    private final Map<Integer, Integer> tresorSizeByLevel = new TreeMap<>();
+    private final Map<Integer, Integer> accessPartyWaypointByLevel = new TreeMap<>();
+    private final Map<Integer, Integer> accessPartyTresorByLevel = new TreeMap<>();
+    private final Map<Integer, Integer> accessPartyChatByLevel = new TreeMap<>();
+    private final Map<Integer, Integer> abilityDurationByLevel = new TreeMap<>();
     private final Map<Integer, Map<String, Integer>> abilityCooldownReductionByLevel = new TreeMap<>();
-    private final Map<String, TreeMap<Integer, Integer>> abilityDurationPointLevels = new HashMap<>();
+    private final TreeMap<Integer, Integer> abilityDurationPointLevels = new TreeMap<>();
     private final Map<String, TreeMap<Integer, Integer>> abilityCooldownReductionPointLevels = new HashMap<>();
     private final Map<String, TreeMap<Integer, Double>> skillPointUpgradeCosts = new HashMap<>();
     private final Map<String, Map<Integer, List<SkillRequirement>>> skillPointUpgradeConditions = new HashMap<>();
@@ -64,12 +78,21 @@ public class PartyBuffHandler {
         memberSlotBonus = 0;
         dungeonInstanceSlotBonus = 0;
         dungeonInstanceSlotsInfinite = false;
-        abilityDurationBonus.clear();
+        tresorSizeBonus = 0;
+        tresorSizeInfinite = false;
+        accessPartyWaypoint = false;
+        accessPartyTresor = false;
+        accessPartyChat = false;
+        abilityDurationBonus = 0;
         abilityCooldownReductionBonus.clear();
         expSharingRateByLevel.clear();
         expSharingRadiusByLevel.clear();
         memberSlotsByLevel.clear();
         dungeonInstanceSlotsByLevel.clear();
+        tresorSizeByLevel.clear();
+        accessPartyWaypointByLevel.clear();
+        accessPartyTresorByLevel.clear();
+        accessPartyChatByLevel.clear();
         abilityDurationByLevel.clear();
         abilityCooldownReductionByLevel.clear();
         abilityDurationPointLevels.clear();
@@ -145,18 +168,37 @@ public class PartyBuffHandler {
             loadSkillPointUpgradeConfig(dungeonSlotsSection, buildSkillPointKey(PartyBuffType.DUNGEON_INSTANCE_SLOTS, null));
         }
 
-        loadSkillPointAbilityBuffs(
-                skillpoints.getConfigurationSection(PartyBuffType.ABILITY_DURATION.name()),
-                PartyBuffType.ABILITY_DURATION,
-                abilityDurationByLevel,
-                abilityDurationPointLevels
-        );
+        ConfigurationSection tresorSizeSection = skillpoints.getConfigurationSection(PartyBuffType.TRESOR_SIZE.name());
+        if (tresorSizeSection != null) {
+            loadTresorSizeLevels(tresorSizeSection, tresorSizeByLevel);
+            loadSkillPointUpgradeConfig(tresorSizeSection, buildSkillPointKey(PartyBuffType.TRESOR_SIZE, null));
+        }
+
+        ConfigurationSection waypointAccessSection = skillpoints.getConfigurationSection(PartyBuffType.ACCESS_PARTY_WAYPOINT.name());
+        if (waypointAccessSection != null) {
+            loadIntLevels(waypointAccessSection, accessPartyWaypointByLevel);
+            loadSkillPointUpgradeConfig(waypointAccessSection, buildSkillPointKey(PartyBuffType.ACCESS_PARTY_WAYPOINT, null));
+        }
+
+        ConfigurationSection tresorAccessSection = skillpoints.getConfigurationSection(PartyBuffType.ACCESS_PARTY_TRESOR.name());
+        if (tresorAccessSection != null) {
+            loadIntLevels(tresorAccessSection, accessPartyTresorByLevel);
+            loadSkillPointUpgradeConfig(tresorAccessSection, buildSkillPointKey(PartyBuffType.ACCESS_PARTY_TRESOR, null));
+        }
+
+        ConfigurationSection partyChatAccessSection = skillpoints.getConfigurationSection(PartyBuffType.ACCESS_PARTY_CHAT.name());
+        if (partyChatAccessSection != null) {
+            loadIntLevels(partyChatAccessSection, accessPartyChatByLevel);
+            loadSkillPointUpgradeConfig(partyChatAccessSection, buildSkillPointKey(PartyBuffType.ACCESS_PARTY_CHAT, null));
+        }
+
         loadSkillPointAbilityBuffs(
                 skillpoints.getConfigurationSection(PartyBuffType.ABILITY_COOLDOWN_REDUCTION.name()),
                 PartyBuffType.ABILITY_COOLDOWN_REDUCTION,
                 abilityCooldownReductionByLevel,
                 abilityCooldownReductionPointLevels
         );
+        loadSkillPointDurationBuff(skillpoints.getConfigurationSection(PartyBuffType.ABILITY_DURATION.name()));
 
         expSharingRatePercent = getValueForPointsDouble(expSharingRateByLevel, getSpentPoints(PartyBuffType.EXP_SHARING_RATE)) / 100.0;
         expSharingRadius = getValueForPointsInt(expSharingRadiusByLevel, getSpentPoints(PartyBuffType.EXP_SHARING_RADIUS));
@@ -164,14 +206,14 @@ public class PartyBuffHandler {
         int dungeonSlotsValue = getValueForPointsInt(dungeonInstanceSlotsByLevel, getSpentPoints(PartyBuffType.DUNGEON_INSTANCE_SLOTS));
         dungeonInstanceSlotsInfinite = dungeonSlotsValue == Integer.MAX_VALUE;
         dungeonInstanceSlotBonus = dungeonInstanceSlotsInfinite ? 0 : dungeonSlotsValue;
+        int tresorSizeValue = getValueForPointsInt(tresorSizeByLevel, getSpentPoints(PartyBuffType.TRESOR_SIZE));
+        tresorSizeInfinite = tresorSizeValue == Integer.MAX_VALUE;
+        tresorSizeBonus = tresorSizeInfinite ? 0 : tresorSizeValue;
+        accessPartyWaypoint = getValueForPointsInt(accessPartyWaypointByLevel, getSpentPoints(PartyBuffType.ACCESS_PARTY_WAYPOINT)) > 0;
+        accessPartyTresor = getValueForPointsInt(accessPartyTresorByLevel, getSpentPoints(PartyBuffType.ACCESS_PARTY_TRESOR)) > 0;
+        accessPartyChat = getValueForPointsInt(accessPartyChatByLevel, getSpentPoints(PartyBuffType.ACCESS_PARTY_CHAT)) > 0;
 
-        for (Map.Entry<String, TreeMap<Integer, Integer>> entry : abilityDurationPointLevels.entrySet()) {
-            int spent = getSpentPoints(PartyBuffType.ABILITY_DURATION, entry.getKey());
-            int seconds = getValueForPointsInt(entry.getValue(), spent);
-            if (seconds > 0) {
-                abilityDurationBonus.put(entry.getKey(), seconds);
-            }
-        }
+        abilityDurationBonus = getValueForPointsInt(abilityDurationPointLevels, getSpentPoints(PartyBuffType.ABILITY_DURATION));
         for (Map.Entry<String, TreeMap<Integer, Integer>> entry : abilityCooldownReductionPointLevels.entrySet()) {
             int spent = getSpentPoints(PartyBuffType.ABILITY_COOLDOWN_REDUCTION, entry.getKey());
             int seconds = getValueForPointsInt(entry.getValue(), spent);
@@ -210,6 +252,38 @@ public class PartyBuffHandler {
             pointLevels.put(normalizedAbility, levels);
             loadSkillPointUpgradeConfig(abilityLevels, buildSkillPointKey(type, normalizedAbility));
         }
+    }
+
+    private void loadSkillPointDurationBuff(ConfigurationSection durationSection) {
+        if (durationSection == null) {
+            return;
+        }
+
+        if (durationSection.isConfigurationSection("Configuration")) {
+            loadIntLevels(durationSection, abilityDurationByLevel);
+            abilityDurationPointLevels.putAll(abilityDurationByLevel);
+            loadSkillPointUpgradeConfig(durationSection, buildSkillPointKey(PartyBuffType.ABILITY_DURATION, null));
+            return;
+        }
+
+        // Backward compatibility for legacy per-ability duration config.
+        for (String ability : durationSection.getKeys(false)) {
+            ConfigurationSection abilityLevels = durationSection.getConfigurationSection(ability);
+            if (abilityLevels == null) {
+                continue;
+            }
+            for (String levelKey : abilityLevels.getKeys(false)) {
+                int level = parsePositiveInt(levelKey);
+                if (level <= 0) {
+                    continue;
+                }
+                abilityDurationByLevel.merge(level, abilityLevels.getInt(levelKey), Integer::sum);
+            }
+            if (abilityDurationPointLevels.isEmpty()) {
+                loadSkillPointUpgradeConfig(abilityLevels, buildSkillPointKey(PartyBuffType.ABILITY_DURATION, null));
+            }
+        }
+        abilityDurationPointLevels.putAll(abilityDurationByLevel);
     }
 
     private void loadSpentSkillPoints() {
@@ -260,6 +334,22 @@ public class PartyBuffHandler {
             Integer parsed = parseDungeonInstanceSlotValue(rawValue);
             if (parsed == null) {
                 logger.warning("Invalid DUNGEON_INSTANCE_SLOTS value at level " + level + ": " + rawValue);
+                continue;
+            }
+            target.put(level, parsed);
+        }
+    }
+
+    private void loadTresorSizeLevels(ConfigurationSection section, Map<Integer, Integer> target) {
+        for (String levelKey : section.getKeys(false)) {
+            int level = parsePositiveInt(levelKey);
+            if (level <= 0) {
+                continue;
+            }
+            Object rawValue = section.get(levelKey);
+            Integer parsed = parseUnlimitedIntValue(rawValue);
+            if (parsed == null) {
+                logger.warning("Invalid TRESOR_SIZE value at level " + level + ": " + rawValue);
                 continue;
             }
             target.put(level, parsed);
@@ -397,7 +487,11 @@ public class PartyBuffHandler {
                 case EXP_SHARING_RADIUS -> parseExpSharingRadius(level, entry, parts[1]);
                 case MEMBER_SLOTS -> parseMemberSlots(level, entry, parts[1]);
                 case DUNGEON_INSTANCE_SLOTS -> parseDungeonInstanceSlots(level, entry, parts[1]);
-                case ABILITY_DURATION -> parseAbilityDuration(level, entry, parts);
+                case TRESOR_SIZE -> parseTresorSize(level, entry, parts[1]);
+                case ACCESS_PARTY_WAYPOINT -> parseAccessUnlock(level, entry, parts[1], PartyBuffType.ACCESS_PARTY_WAYPOINT);
+                case ACCESS_PARTY_TRESOR -> parseAccessUnlock(level, entry, parts[1], PartyBuffType.ACCESS_PARTY_TRESOR);
+                case ACCESS_PARTY_CHAT -> parseAccessUnlock(level, entry, parts[1], PartyBuffType.ACCESS_PARTY_CHAT);
+                case ABILITY_DURATION -> parseAbilityDuration(level, entry, parts.length > 1 ? parts[1] : null);
                 case ABILITY_COOLDOWN_REDUCTION -> parseAbilityCooldownReduction(level, entry, parts);
             }
         }
@@ -416,12 +510,27 @@ public class PartyBuffHandler {
         if (section.contains(PartyBuffType.DUNGEON_INSTANCE_SLOTS.name())) {
             parseDungeonInstanceSlots(level, PartyBuffType.DUNGEON_INSTANCE_SLOTS.name(), section.getString(PartyBuffType.DUNGEON_INSTANCE_SLOTS.name()));
         }
+        if (section.contains(PartyBuffType.TRESOR_SIZE.name())) {
+            parseTresorSize(level, PartyBuffType.TRESOR_SIZE.name(), section.getString(PartyBuffType.TRESOR_SIZE.name()));
+        }
+        if (section.contains(PartyBuffType.ACCESS_PARTY_WAYPOINT.name())) {
+            parseAccessUnlock(level, PartyBuffType.ACCESS_PARTY_WAYPOINT.name(), section.getString(PartyBuffType.ACCESS_PARTY_WAYPOINT.name()), PartyBuffType.ACCESS_PARTY_WAYPOINT);
+        }
+        if (section.contains(PartyBuffType.ACCESS_PARTY_TRESOR.name())) {
+            parseAccessUnlock(level, PartyBuffType.ACCESS_PARTY_TRESOR.name(), section.getString(PartyBuffType.ACCESS_PARTY_TRESOR.name()), PartyBuffType.ACCESS_PARTY_TRESOR);
+        }
+        if (section.contains(PartyBuffType.ACCESS_PARTY_CHAT.name())) {
+            parseAccessUnlock(level, PartyBuffType.ACCESS_PARTY_CHAT.name(), section.getString(PartyBuffType.ACCESS_PARTY_CHAT.name()), PartyBuffType.ACCESS_PARTY_CHAT);
+        }
+        if (section.contains(PartyBuffType.ABILITY_DURATION.name()) && !section.isConfigurationSection(PartyBuffType.ABILITY_DURATION.name())) {
+            parseAbilityDuration(level, PartyBuffType.ABILITY_DURATION.name(), section.getString(PartyBuffType.ABILITY_DURATION.name()));
+        }
         if (section.isConfigurationSection(PartyBuffType.ABILITY_DURATION.name())) {
             ConfigurationSection abilities = section.getConfigurationSection(PartyBuffType.ABILITY_DURATION.name());
             if (abilities != null) {
                 for (String ability : abilities.getKeys(false)) {
                     String value = abilities.getString(ability);
-                    parseAbilityDuration(level, PartyBuffType.ABILITY_DURATION.name() + ":" + ability + ":" + value, new String[] { "ABILITY_DURATION", ability, value });
+                    parseAbilityDuration(level, PartyBuffType.ABILITY_DURATION.name() + ":" + ability + ":" + value, value);
                 }
             }
         }
@@ -502,7 +611,64 @@ public class PartyBuffHandler {
         }
     }
 
+    private void parseTresorSize(int level, String entry, String value) {
+        if (value == null) {
+            logger.warning("Invalid TRESOR_SIZE entry at level " + level + ": " + entry);
+            return;
+        }
+
+        Integer parsed = parseUnlimitedIntValue(value);
+        if (parsed == null) {
+            logger.warning("Invalid TRESOR_SIZE value at level " + level + ": " + entry);
+            return;
+        }
+
+        tresorSizeByLevel.put(level, parsed);
+        if (parsed == Integer.MAX_VALUE) {
+            tresorSizeInfinite = true;
+            tresorSizeBonus = 0;
+        } else if (!tresorSizeInfinite) {
+            tresorSizeBonus += parsed;
+        }
+    }
+
+    private void parseAccessUnlock(int level, String entry, String value, PartyBuffType type) {
+        if (value == null) {
+            logger.warning("Invalid " + type.name() + " entry at level " + level + ": " + entry);
+            return;
+        }
+
+        try {
+            int unlock = Integer.parseInt(value.trim());
+            Map<Integer, Integer> target = switch (type) {
+                case ACCESS_PARTY_WAYPOINT -> accessPartyWaypointByLevel;
+                case ACCESS_PARTY_TRESOR -> accessPartyTresorByLevel;
+                case ACCESS_PARTY_CHAT -> accessPartyChatByLevel;
+                default -> null;
+            };
+            if (target == null) {
+                return;
+            }
+            target.put(level, unlock);
+            if (unlock > 0) {
+                switch (type) {
+                    case ACCESS_PARTY_WAYPOINT -> accessPartyWaypoint = true;
+                    case ACCESS_PARTY_TRESOR -> accessPartyTresor = true;
+                    case ACCESS_PARTY_CHAT -> accessPartyChat = true;
+                    default -> {
+                    }
+                }
+            }
+        } catch (NumberFormatException ex) {
+            logger.warning("Invalid " + type.name() + " value at level " + level + ": " + entry);
+        }
+    }
+
     private Integer parseDungeonInstanceSlotValue(Object rawValue) {
+        return parseUnlimitedIntValue(rawValue);
+    }
+
+    private Integer parseUnlimitedIntValue(Object rawValue) {
         if (rawValue == null) {
             return null;
         }
@@ -522,8 +688,19 @@ public class PartyBuffHandler {
         }
     }
 
-    private void parseAbilityDuration(int level, String entry, String[] parts) {
-        parseAbilityBuff(level, entry, parts, PartyBuffType.ABILITY_DURATION, abilityDurationBonus, abilityDurationByLevel);
+    private void parseAbilityDuration(int level, String entry, String value) {
+        if (value == null) {
+            logger.warning("Invalid ABILITY_DURATION entry at level " + level + ": " + entry);
+            return;
+        }
+
+        try {
+            int seconds = Integer.parseInt(value.trim());
+            abilityDurationByLevel.merge(level, seconds, Integer::sum);
+            abilityDurationBonus += seconds;
+        } catch (NumberFormatException ex) {
+            logger.warning("Invalid ABILITY_DURATION value at level " + level + ": " + entry);
+        }
     }
 
     private void parseAbilityCooldownReduction(int level, String entry, String[] parts) {
@@ -553,15 +730,24 @@ public class PartyBuffHandler {
         return expSharingRatePercent;
     }
 
-    public Map<String, Integer> getAbilityDurationBonuses() {
-        return Collections.unmodifiableMap(abilityDurationBonus);
+    public int getAbilityDurationBonus() {
+        return abilityDurationBonus;
+    }
+
+    public boolean canAccessPartyWaypoint() {
+        return accessPartyWaypoint;
+    }
+
+    public boolean canAccessPartyTresor() {
+        return accessPartyTresor;
+    }
+
+    public boolean canAccessPartyChat() {
+        return accessPartyChat;
     }
 
     public int getAbilityDurationBonus(String ability) {
-        if (ability == null) {
-            return 0;
-        }
-        return abilityDurationBonus.getOrDefault(ability.toUpperCase(), 0);
+        return abilityDurationBonus;
     }
 
     public Map<String, Integer> getAbilityCooldownReductionBonuses() {
@@ -572,7 +758,9 @@ public class PartyBuffHandler {
         if (ability == null) {
             return 0;
         }
-        return abilityCooldownReductionBonus.getOrDefault(ability.toUpperCase(Locale.ROOT), 0);
+        String normalizedAbility = ability.toUpperCase(Locale.ROOT);
+        return abilityCooldownReductionBonus.getOrDefault(normalizedAbility,
+                abilityCooldownReductionBonus.getOrDefault("ALL", 0));
     }
 
     public Map<Integer, Double> getExpSharingRateByLevel() {
@@ -591,12 +779,28 @@ public class PartyBuffHandler {
         return Collections.unmodifiableMap(dungeonInstanceSlotsByLevel);
     }
 
-    public Map<Integer, Map<String, Integer>> getAbilityDurationByLevel() {
-        return getUnmodifiableAbilityMap(abilityDurationByLevel);
+    public Map<Integer, Integer> getTresorSizeByLevel() {
+        return Collections.unmodifiableMap(tresorSizeByLevel);
     }
 
-    public Map<String, Map<Integer, Integer>> getAbilityDurationPointLevels() {
-        return getUnmodifiablePointLevels(abilityDurationPointLevels);
+    public Map<Integer, Integer> getAccessPartyWaypointByLevel() {
+        return Collections.unmodifiableMap(accessPartyWaypointByLevel);
+    }
+
+    public Map<Integer, Integer> getAccessPartyTresorByLevel() {
+        return Collections.unmodifiableMap(accessPartyTresorByLevel);
+    }
+
+    public Map<Integer, Integer> getAccessPartyChatByLevel() {
+        return Collections.unmodifiableMap(accessPartyChatByLevel);
+    }
+
+    public Map<Integer, Integer> getAbilityDurationByLevel() {
+        return Collections.unmodifiableMap(abilityDurationByLevel);
+    }
+
+    public Map<Integer, Integer> getAbilityDurationPointLevels() {
+        return Collections.unmodifiableMap(abilityDurationPointLevels);
     }
 
     public Map<Integer, Map<String, Integer>> getAbilityCooldownReductionByLevel() {
@@ -640,7 +844,12 @@ public class PartyBuffHandler {
             case EXP_SHARING_RADIUS -> getMaxPointKey(expSharingRadiusByLevel);
             case MEMBER_SLOTS -> getMaxPointKey(memberSlotsByLevel);
             case DUNGEON_INSTANCE_SLOTS -> getMaxPointKey(dungeonInstanceSlotsByLevel);
-            case ABILITY_DURATION, ABILITY_COOLDOWN_REDUCTION -> 0;
+            case TRESOR_SIZE -> getMaxPointKey(tresorSizeByLevel);
+            case ACCESS_PARTY_WAYPOINT -> getMaxPointKey(accessPartyWaypointByLevel);
+            case ACCESS_PARTY_TRESOR -> getMaxPointKey(accessPartyTresorByLevel);
+            case ACCESS_PARTY_CHAT -> getMaxPointKey(accessPartyChatByLevel);
+            case ABILITY_DURATION -> getMaxPointKey(abilityDurationPointLevels);
+            case ABILITY_COOLDOWN_REDUCTION -> 0;
         };
     }
 
@@ -649,7 +858,6 @@ public class PartyBuffHandler {
             return getMaxPoints(type);
         }
         Map<String, TreeMap<Integer, Integer>> pointLevels = switch (type) {
-            case ABILITY_DURATION -> abilityDurationPointLevels;
             case ABILITY_COOLDOWN_REDUCTION -> abilityCooldownReductionPointLevels;
             default -> Map.of();
         };
@@ -658,7 +866,7 @@ public class PartyBuffHandler {
     }
 
     private boolean isAbilitySpecific(PartyBuffType type) {
-        return type == PartyBuffType.ABILITY_DURATION || type == PartyBuffType.ABILITY_COOLDOWN_REDUCTION;
+        return type == PartyBuffType.ABILITY_COOLDOWN_REDUCTION;
     }
 
     private Map<Integer, Map<String, Integer>> getUnmodifiableAbilityMap(Map<Integer, Map<String, Integer>> source) {

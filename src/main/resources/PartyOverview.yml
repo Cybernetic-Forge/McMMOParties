@@ -52,6 +52,7 @@ Icons:
     Lore:
       - "&7[&aLeft-Click&7] &eTeleport to your party's waypoint"
       - "&7[&aRight-Click&7] &eSet the waypoint to your current location"
+      - "%unlock_hint%"
   PartyTresor:
     Slot: 31
     Material: BUNDLE
@@ -60,6 +61,7 @@ Icons:
       - "&eBalance: &a%party_balance%"
       - "&7[&aLeft-Click&7] &eDeposit Money"
       - "&7[&aRight-Click&7] &eWithdraw Money"
+      - "%unlock_hint%"
   PartyInstances:
     Slot: 33
     Material: TRIAL_KEY
@@ -402,7 +404,7 @@ Icons:
       - "&7Handler: &fSkillpoints"
       - "&7Total: &f%skillpoints_total%"
       - "&7Available: &f%skillpoints_available%"
-  PartyTop:
+  PartyList:
     DefaultSort: RANKING
     Header:
       Slot: 4

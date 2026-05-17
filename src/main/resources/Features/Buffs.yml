@@ -3,8 +3,7 @@
 # Each entry under a level is a buff definition in the form:
 #   BUFF_TYPE: VALUE
 # or for ability duration:
-#   ABILITY_DURATION:
-#     <ABILITY>: <AMOUNT>
+#   ABILITY_DURATION: <AMOUNT>
 # or for ability cooldown reduction:
 #   ABILITY_COOLDOWN_REDUCTION:
 #     <ABILITY>: <AMOUNT>
@@ -16,15 +15,18 @@
 # 3:
 #   MEMBER_SLOTS: 2
 # 7:
-#   ABILITY_DURATION:
-#     SUPER_BREAKER: 10
+#   ABILITY_DURATION: 10
 #
 # Supported (suggested) buff keys:
 # - EXP_SHARING_RATE: <percent>
 # - EXP_SHARING_RADIUS: <blocks>
 # - MEMBER_SLOTS: <count>
-# - ABILITY_DURATION: <ability>: <seconds>
-# - ABILITY_COOLDOWN_REDUCTION: <ability>: <seconds>
+# - TRESOR_SIZE: <amount|-1 for unlimited>
+# - ACCESS_PARTY_WAYPOINT: 1
+# - ACCESS_PARTY_TRESOR: 1
+# - ACCESS_PARTY_CHAT: 1
+# - ABILITY_DURATION: <seconds>
+# - ABILITY_COOLDOWN_REDUCTION: <ability|ALL>: <seconds>
 
 # Level-based buffs (default)
 Level:
@@ -33,12 +35,17 @@ Level:
     EXP_SHARING_RADIUS: 25
   3:
     MEMBER_SLOTS: 2
+    ACCESS_PARTY_CHAT: 1
   7:
-    ABILITY_DURATION:
-      SUPER_BREAKER: 10
+    ABILITY_DURATION: 10
     ABILITY_COOLDOWN_REDUCTION:
-      SUPER_BREAKER: 5
+      ALL: 5
     MEMBER_SLOTS: 1
+    TRESOR_SIZE: 25000
+  10:
+    ACCESS_PARTY_TRESOR: 1
+  12:
+    ACCESS_PARTY_WAYPOINT: 1
 
 # Skillpoint-based buffs (spent points map to levels below)
 Skillpoints:
@@ -65,21 +72,44 @@ Skillpoints:
     1: 25
     2: 40
     3: 60
+  TRESOR_SIZE:
+    Configuration:
+      Costs:
+        1: 250.0
+        2: 500.0
+        3: 750.0
+    1: 25000
+    2: 50000
+    3: 75000
+  ACCESS_PARTY_WAYPOINT:
+    Configuration:
+      Costs:
+        1: 250.0
+    1: 1
+  ACCESS_PARTY_TRESOR:
+    Configuration:
+      Costs:
+        1: 250.0
+    1: 1
+  ACCESS_PARTY_CHAT:
+    Configuration:
+      Costs:
+        1: 250.0
+    1: 1
   ABILITY_DURATION:
-    SUPER_BREAKER:
-      Configuration:
-        Costs:
-          1: 200.0
-          2: 400.0
-          3: 600.0
-        Conditions:
-          2:
-            MINING: 300
-      1: 3
-      2: 6
-      3: 9
+    Configuration:
+      Costs:
+        1: 200.0
+        2: 400.0
+        3: 600.0
+      Conditions:
+        2:
+          MINING: 300
+    1: 3
+    2: 6
+    3: 9
   ABILITY_COOLDOWN_REDUCTION:
-    SUPER_BREAKER:
+    ALL:
       Configuration:
         Costs:
           1: 250.0

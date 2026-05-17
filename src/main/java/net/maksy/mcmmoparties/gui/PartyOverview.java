@@ -144,9 +144,17 @@ public class PartyOverview implements Listener {
         var statsIcon = McMMOParties.getPartyOverviewCfg().getIcon("PartyStats");
         var buffsIcon = McMMOParties.getPartyOverviewCfg().getIcon("PartyBuffs");
         var instanceIcon = McMMOParties.getPartyOverviewCfg().getIcon("PartyInstances");
-        var waypointIcon = McMMOParties.getPartyOverviewCfg().getIcon("PartyWaypoint");
+        String waypointUnlockHint = party.canAccessWaypoint(playerUuid)
+                ? ""
+                : LanguageConfig.get().getMessage(PARTY_WAYPOINT_LOCKED);
+        var waypointIcon = McMMOParties.getPartyOverviewCfg().getIcon("PartyWaypoint",
+                new Replaceable("%unlock_hint%", waypointUnlockHint)
+        );
         var tresorIcon = McMMOParties.getPartyOverviewCfg().getIcon("PartyTresor",
-                new Replaceable("%party_balance%", String.format(Locale.US, "%.2f", party.getBalance()))
+                new Replaceable("%party_balance%", String.format(Locale.US, "%.2f", party.getBalance())),
+                new Replaceable("%unlock_hint%", party.canAccessTresor(playerUuid)
+                        ? ""
+                        : LanguageConfig.get().getMessage(PARTY_TRESOR_LOCKED))
         );
         var backIcon = McMMOParties.getPartyOverviewCfg().getIcon("Back");
 
@@ -689,20 +697,77 @@ public class PartyOverview implements Listener {
             );
         }
 
-        slot = displayAbilitySpecificBuff(
-                slot,
-                skillPointsMode,
-                handler,
-                suggestionCounts,
-                preferredBuff,
-                playerSuggestionKey,
-                PartyBuffType.ABILITY_DURATION,
-                "ABILITY_DURATION",
-                "Ability Duration",
-                handler.getAbilityDurationPointLevels(),
-                handler.getAbilityDurationBonuses(),
-                handler.getAbilityDurationByLevel()
+        if (!handler.getTresorSizeByLevel().isEmpty()) {
+            int spentPoints = handler.getSpentPoints(PartyBuffType.TRESOR_SIZE);
+            int maxPoints = handler.getMaxPoints(PartyBuffType.TRESOR_SIZE);
+            boolean currentInfinite = handler.isTresorSizeInfinite();
+            int totalSize = handler.getTresorSizeBonus();
+            int nextSize = skillPointsMode
+                    ? getSkillPointIntValue(handler.getTresorSizeByLevel(), spentPoints + 1, currentInfinite ? Integer.MAX_VALUE : totalSize)
+                    : getNextLevelIntValue(handler.getTresorSizeByLevel(), party.getLevel(), currentInfinite ? Integer.MAX_VALUE : totalSize);
+            boolean nextInfinite = currentInfinite || nextSize == Integer.MAX_VALUE;
+            String name = McMMOParties.getConfigManager().getBuffDisplayName("TRESOR_SIZE", "Tresor Size");
+            BuffKey buffKey = new BuffKey(PartyBuffType.TRESOR_SIZE, null);
+            slot = placeBuffItem(
+                    getBuffItem(
+                            skillPointsMode,
+                            buffKey,
+                            name,
+                            PartyDisplayUtils.formatTresorAmount(currentInfinite, totalSize),
+                            PartyDisplayUtils.formatTresorAmount(nextInfinite, nextSize),
+                            spentPoints,
+                            maxPoints,
+                            suggestionCounts,
+                            preferredBuff,
+                            playerSuggestionKey
+                    ),
+                    slot,
+                    skillPointsMode ? buffKey : null
+            );
+        }
+
+        slot = displayAccessBuff(
+                slot, skillPointsMode, handler, suggestionCounts, preferredBuff, playerSuggestionKey,
+                PartyBuffType.ACCESS_PARTY_WAYPOINT, "ACCESS_PARTY_WAYPOINT", "Party Waypoint Access",
+                handler.getAccessPartyWaypointByLevel(), handler.isAccessPartyWaypoint()
         );
+        slot = displayAccessBuff(
+                slot, skillPointsMode, handler, suggestionCounts, preferredBuff, playerSuggestionKey,
+                PartyBuffType.ACCESS_PARTY_TRESOR, "ACCESS_PARTY_TRESOR", "Party Tresor Access",
+                handler.getAccessPartyTresorByLevel(), handler.isAccessPartyTresor()
+        );
+        slot = displayAccessBuff(
+                slot, skillPointsMode, handler, suggestionCounts, preferredBuff, playerSuggestionKey,
+                PartyBuffType.ACCESS_PARTY_CHAT, "ACCESS_PARTY_CHAT", "Party Chat Access",
+                handler.getAccessPartyChatByLevel(), handler.isAccessPartyChat()
+        );
+
+        if (!handler.getAbilityDurationByLevel().isEmpty()) {
+            int spentPoints = handler.getSpentPoints(PartyBuffType.ABILITY_DURATION);
+            int maxPoints = handler.getMaxPoints(PartyBuffType.ABILITY_DURATION);
+            int totalSeconds = handler.getAbilityDurationBonus();
+            int nextSeconds = skillPointsMode
+                    ? getSkillPointIntValue(handler.getAbilityDurationPointLevels(), spentPoints + 1, totalSeconds)
+                    : getNextLevelIntValue(handler.getAbilityDurationByLevel(), party.getLevel(), totalSeconds);
+            String name = McMMOParties.getConfigManager().getBuffDisplayName("ABILITY_DURATION", "Ability Duration");
+            BuffKey buffKey = new BuffKey(PartyBuffType.ABILITY_DURATION, null);
+            slot = placeBuffItem(
+                    getBuffItem(
+                            skillPointsMode,
+                            buffKey,
+                            name,
+                            PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SECONDS, totalSeconds),
+                            PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SECONDS, nextSeconds),
+                            spentPoints,
+                            maxPoints,
+                            suggestionCounts,
+                            preferredBuff,
+                            playerSuggestionKey
+                    ),
+                    slot,
+                    skillPointsMode ? buffKey : null
+            );
+        }
         slot = displayAbilitySpecificBuff(
                 slot,
                 skillPointsMode,
@@ -883,7 +948,6 @@ public class PartyOverview implements Listener {
             String baseName = McMMOParties.getConfigManager().getBuffDisplayName(displayKey, fallbackName);
             for (Map.Entry<String, Map<Integer, Integer>> abilityEntry : pointLevels.entrySet()) {
                 String abilityName = abilityEntry.getKey();
-                SuperAbilityType ability = SuperAbilityType.valueOf(abilityName.toUpperCase(Locale.ROOT));
                 int spentPoints = handler.getSpentPoints(type, abilityName);
                 int maxPoints = handler.getMaxPoints(type, abilityName);
                 int totalSeconds = totalBonuses.getOrDefault(abilityName.toUpperCase(Locale.ROOT), 0);
@@ -893,7 +957,7 @@ public class PartyOverview implements Listener {
                         getBuffItem(
                                 true,
                                 buffKey,
-                                baseName + " &7(" + ability.getLocalizedName() + ")",
+                                baseName + " &7(" + getAbilityDisplayName(abilityName) + ")",
                                 PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SECONDS, totalSeconds),
                                 PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SECONDS, nextSeconds),
                                 spentPoints,
@@ -922,7 +986,7 @@ public class PartyOverview implements Listener {
                     getBuffItem(
                             false,
                             new BuffKey(type, ability),
-                            baseName + " &7(" + ability + ")",
+                            baseName + " &7(" + getAbilityDisplayName(ability) + ")",
                             PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SECONDS, totalSeconds),
                             PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SECONDS, nextSeconds),
                             0,
@@ -936,6 +1000,54 @@ public class PartyOverview implements Listener {
             );
         }
         return slot;
+    }
+
+    private int displayAccessBuff(int slot, boolean skillPointsMode,
+                                  net.maksy.mcmmoparties.configuration.PartyBuffHandler handler,
+                                  Map<String, Integer> suggestionCounts, BuffKey preferredBuff, String playerSuggestionKey,
+                                  PartyBuffType type, String displayKey, String fallbackName,
+                                  Map<Integer, Integer> levels, boolean unlocked) {
+        if (levels.isEmpty()) {
+            return slot;
+        }
+
+        int spentPoints = handler.getSpentPoints(type);
+        int maxPoints = handler.getMaxPoints(type);
+        boolean nextUnlocked = skillPointsMode
+                ? getSkillPointIntValue(levels, spentPoints + 1, unlocked ? 1 : 0) > 0
+                : getNextLevelIntValue(levels, party.getLevel(), unlocked ? 1 : 0) > 0;
+        String name = McMMOParties.getConfigManager().getBuffDisplayName(displayKey, fallbackName);
+        BuffKey buffKey = new BuffKey(type, null);
+        return placeBuffItem(
+                getBuffItem(
+                        skillPointsMode,
+                        buffKey,
+                        name,
+                        PartyDisplayUtils.formatUnlockState(unlocked),
+                        PartyDisplayUtils.formatUnlockState(nextUnlocked),
+                        spentPoints,
+                        maxPoints,
+                        suggestionCounts,
+                        preferredBuff,
+                        playerSuggestionKey
+                ),
+                slot,
+                skillPointsMode ? buffKey : null
+        );
+    }
+
+    private String getAbilityDisplayName(String abilityName) {
+        if (abilityName == null || abilityName.isBlank()) {
+            return "Unknown";
+        }
+        if (abilityName.equalsIgnoreCase("ALL")) {
+            return "All Abilities";
+        }
+        try {
+            return SuperAbilityType.valueOf(abilityName.toUpperCase(Locale.ROOT)).getLocalizedName();
+        } catch (IllegalArgumentException ignored) {
+            return abilityName.replace('_', ' ');
+        }
     }
 
     private double getNextLevelDoubleValue(Map<Integer, Double> levels, long currentLevel, double currentTotal) {
@@ -1001,7 +1113,7 @@ public class PartyOverview implements Listener {
     }
 
     private boolean isAbilitySpecific(PartyBuffType type) {
-        return type == PartyBuffType.ABILITY_DURATION || type == PartyBuffType.ABILITY_COOLDOWN_REDUCTION;
+        return type == PartyBuffType.ABILITY_COOLDOWN_REDUCTION;
     }
 
     private String toSuggestionKey(BuffKey key) {
@@ -1097,6 +1209,10 @@ public class PartyOverview implements Listener {
                     if (!isPartyMember(playerUuid)) {
                         return;
                     }
+                    if (!party.canAccessTresor(playerUuid)) {
+                        player.sendMessage(LanguageConfig.get().getMessage(PARTY_TRESOR_LOCKED));
+                        return;
+                    }
                     if (clickType.isLeftClick()) {
                         openTresorDialog(player, true);
                     } else if (clickType.isRightClick()) {
@@ -1108,6 +1224,10 @@ public class PartyOverview implements Listener {
                         return;
                     }
                     if (clickType.isLeftClick()) {
+                        if (!party.canAccessWaypoint(playerUuid)) {
+                            player.sendMessage(LanguageConfig.get().getMessage(PARTY_WAYPOINT_LOCKED));
+                            return;
+                        }
                         PartyWaypoint waypoint = McMMOParties.getSQL().getPartyWaypoint(party.getPartyID());
                         if (waypoint == null) {
                             player.sendMessage(LanguageConfig.get().getMessage(WAYPOINT_NOT_SET));
@@ -1128,6 +1248,10 @@ public class PartyOverview implements Listener {
                                 waypointEvent.getWaypoint().pitch()
                         );
                     } else if (clickType.isRightClick()) {
+                        if (!party.canAccessWaypoint(playerUuid)) {
+                            player.sendMessage(LanguageConfig.get().getMessage(PARTY_WAYPOINT_LOCKED));
+                            return;
+                        }
                         if (!party.canManageParty(playerUuid)) {
                             player.sendMessage(LanguageConfig.get().getMessage(NOT_OWNER));
                             return;
@@ -1231,6 +1355,11 @@ public class PartyOverview implements Listener {
             amount = depositEvent.getAmount();
             if (amount <= 0.0) {
                 player.sendMessage(LanguageConfig.get().getMessage(AMOUNT_MUST_BE_POSITIVE));
+                return;
+            }
+            int maxTresorSize = party.getMaxTresorSize();
+            if (maxTresorSize >= 0 && party.getBalance() + amount > maxTresorSize) {
+                player.sendMessage(LanguageConfig.get().getMessage(PARTY_TRESOR_FULL));
                 return;
             }
 

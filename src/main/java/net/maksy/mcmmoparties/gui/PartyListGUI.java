@@ -39,8 +39,8 @@ public class PartyListGUI implements Listener {
 		this.player = player;
 		this.page = Math.max(1, page);
 		this.sortMode = sortMode == null ? getConfiguredDefaultSort() : sortMode;
-		this.ownEntrySlot = McMMOParties.getPartyOverviewCfg().getInt("Icons.PartyTop.EntryOwn.Slot", 44);
-		this.entrySlots = new ArrayList<>(McMMOParties.getPartyOverviewCfg().getIntegerList("Icons.PartyTop.EntrySlots", DEFAULT_ENTRY_SLOTS));
+		this.ownEntrySlot = McMMOParties.getPartyOverviewCfg().getInt("Icons.PartyList.EntryOwn.Slot", 44);
+		this.entrySlots = new ArrayList<>(McMMOParties.getPartyOverviewCfg().getIntegerList("Icons.PartyList.EntrySlots", DEFAULT_ENTRY_SLOTS));
 		if (this.entrySlots.isEmpty()) {
 			this.entrySlots.addAll(DEFAULT_ENTRY_SLOTS);
 		}
@@ -59,7 +59,7 @@ public class PartyListGUI implements Listener {
 		page = Math.max(1, Math.min(page, maxPage));
 
 		Component title = ChatUT.hexComp(McMMOParties.getPartyOverviewCfg().getFormattedString(
-				"Icons.PartyTop.PageTitle",
+				"Icons.PartyList.PageTitle",
 				"",
 				new Replaceable("%page%", String.valueOf(page)),
 				new Replaceable("%max_page%", String.valueOf(maxPage)),
@@ -70,7 +70,7 @@ public class PartyListGUI implements Listener {
         ItemUT.setFillerItem(inventory, Material.GRAY_STAINED_GLASS_PANE);
 		partyBySlot.clear();
 
-		var header = McMMOParties.getPartyOverviewCfg().getIcon("PartyTop.Header",
+		var header = McMMOParties.getPartyOverviewCfg().getIcon("PartyList.Header",
 				new Replaceable("%page%", String.valueOf(page)),
 				new Replaceable("%max_page%", String.valueOf(maxPage)),
 				new Replaceable("%total_parties%", String.valueOf(rankings.size())),
@@ -79,7 +79,7 @@ public class PartyListGUI implements Listener {
 		inventory.setItem(header.getKey(), header.getValue());
 
 		if (rankings.isEmpty()) {
-			var empty = McMMOParties.getPartyOverviewCfg().getIcon("PartyTop.Empty",
+			var empty = McMMOParties.getPartyOverviewCfg().getIcon("PartyList.Empty",
 					new Replaceable("%page%", String.valueOf(page)),
 					new Replaceable("%max_page%", String.valueOf(maxPage))
 			);
@@ -92,28 +92,28 @@ public class PartyListGUI implements Listener {
 				PartyRankingService.PartyRankingEntry entry = pageEntries.get(i);
 				int slot = entrySlots.get(i);
 				boolean ownParty = isOwnParty(entry.party().getPartyID());
-				ItemStack item = PartyRankingRenderer.createItem(ownParty ? "PartyTop.EntryOwn" : "PartyTop.Entry", entry, true);
+				ItemStack item = PartyRankingRenderer.createItem(ownParty ? "PartyList.EntryOwn" : "PartyList.Entry", entry, true);
 				inventory.setItem(slot, item);
 				partyBySlot.put(slot, entry.party().getPartyID());
 			}
 		}
 		renderOwnPartyEntry();
 
-		var prev = McMMOParties.getPartyOverviewCfg().getIcon("PartyTop.PrevPage",
+		var prev = McMMOParties.getPartyOverviewCfg().getIcon("PartyList.PrevPage",
 				new Replaceable("%page%", String.valueOf(page)),
 				new Replaceable("%max_page%", String.valueOf(maxPage))
 		);
-		var next = McMMOParties.getPartyOverviewCfg().getIcon("PartyTop.NextPage",
+		var next = McMMOParties.getPartyOverviewCfg().getIcon("PartyList.NextPage",
 				new Replaceable("%page%", String.valueOf(page)),
 				new Replaceable("%max_page%", String.valueOf(maxPage))
 		);
-		var pageInfo = McMMOParties.getPartyOverviewCfg().getIcon("PartyTop.PageInfo",
+		var pageInfo = McMMOParties.getPartyOverviewCfg().getIcon("PartyList.PageInfo",
 				new Replaceable("%page%", String.valueOf(page)),
 				new Replaceable("%max_page%", String.valueOf(maxPage)),
 				new Replaceable("%total_parties%", String.valueOf(rankings.size())),
 				new Replaceable("%page_size%", String.valueOf(entrySlots.size()))
 		);
-		var sort = McMMOParties.getPartyOverviewCfg().getIcon("PartyTop.Sort",
+		var sort = McMMOParties.getPartyOverviewCfg().getIcon("PartyList.Sort",
 				new Replaceable("%sort_mode%", sortMode.getDisplayName())
 		);
 		var back = McMMOParties.getPartyOverviewCfg().getIcon("Back");
@@ -149,7 +149,7 @@ public class PartyListGUI implements Listener {
 
 		for (PartyRankingService.PartyRankingEntry entry : rankings) {
 			if (entry.party().getPartyID().equalsIgnoreCase(viewerParty.getPartyID())) {
-				inventory.setItem(ownEntrySlot, PartyRankingRenderer.createItem("PartyTop.EntryOwn", entry, true));
+				inventory.setItem(ownEntrySlot, PartyRankingRenderer.createItem("PartyList.EntryOwn", entry, true));
 				partyBySlot.put(ownEntrySlot, entry.party().getPartyID());
 				return;
 			}
@@ -182,7 +182,7 @@ public class PartyListGUI implements Listener {
 	}
 
 	private static PartyListSortMode getConfiguredDefaultSort() {
-		String configured = McMMOParties.getPartyOverviewCfg().getString("Icons.PartyTop.DefaultSort", PartyListSortMode.RANKING.getKey());
+		String configured = McMMOParties.getPartyOverviewCfg().getString("Icons.PartyList.DefaultSort", PartyListSortMode.RANKING.getKey());
 		PartyListSortMode parsed = PartyListSortMode.fromInput(configured);
 		return parsed == null ? PartyListSortMode.RANKING : parsed;
 	}
@@ -199,11 +199,11 @@ public class PartyListGUI implements Listener {
 		}
 
 		int slot = event.getSlot();
-		var prev = McMMOParties.getPartyOverviewCfg().getIcon("PartyTop.PrevPage");
-		var next = McMMOParties.getPartyOverviewCfg().getIcon("PartyTop.NextPage");
+		var prev = McMMOParties.getPartyOverviewCfg().getIcon("PartyList.PrevPage");
+		var next = McMMOParties.getPartyOverviewCfg().getIcon("PartyList.NextPage");
 		var back = McMMOParties.getPartyOverviewCfg().getIcon("Back");
-		var header = McMMOParties.getPartyOverviewCfg().getIcon("PartyTop.Header");
-		var sort = McMMOParties.getPartyOverviewCfg().getIcon("PartyTop.Sort");
+		var header = McMMOParties.getPartyOverviewCfg().getIcon("PartyList.Header");
+		var sort = McMMOParties.getPartyOverviewCfg().getIcon("PartyList.Sort");
 
 		if (slot == prev.getKey() && page > 1) {
 			page--;

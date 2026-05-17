@@ -163,6 +163,26 @@ public class McMMOParty {
         return McMMOParties.getConfigManager().getBaseMemberSlots() + buffHandler.getMemberSlotBonus();
     }
 
+    public int getMaxTresorSize() {
+        int defaultSize = McMMOParties.getConfigManager().getDefaultTresorSize();
+        if (defaultSize < 0 || buffHandler.isTresorSizeInfinite()) {
+            return -1;
+        }
+        return defaultSize + Math.max(0, buffHandler.getTresorSizeBonus());
+    }
+
+    public boolean canAccessWaypoint(UUID uuid) {
+        return getPartyState(uuid).isActiveMember() && buffHandler.canAccessPartyWaypoint();
+    }
+
+    public boolean canAccessTresor(UUID uuid) {
+        return getPartyState(uuid).isActiveMember() && buffHandler.canAccessPartyTresor();
+    }
+
+    public boolean canAccessPartyChat(UUID uuid) {
+        return getPartyState(uuid).isActiveMember() && buffHandler.canAccessPartyChat();
+    }
+
     public void refreshBuffs() {
         buffHandler.reload();
         partySettings.setExpSharing(new ExpSharing(buffHandler.getExpSharingRateBonus(), buffHandler.getExpSharingRadius()));

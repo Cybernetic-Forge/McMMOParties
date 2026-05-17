@@ -280,6 +280,10 @@ public class SQLManager {
 
                 double currentBalance = partyTable.getBalance(connection, normalizedPartyID);
                 double newBalance = currentBalance + amount;
+                if (isTresorDepositBlocked(normalizedPartyID, newBalance)) {
+                    connection.rollback();
+                    return false;
+                }
                 partyTable.updateBalance(connection, normalizedPartyID, newBalance);
 
                 double currentShare = partyShareTable.getShareAmount(connection, normalizedPartyID, playerUuid);
@@ -415,7 +419,12 @@ public class SQLManager {
                 }
 
                 double currentBalance = partyTable.getBalance(connection, normalizedPartyID);
-                partyTable.updateBalance(connection, normalizedPartyID, currentBalance + amount);
+                double newBalance = currentBalance + amount;
+                if (isTresorDepositBlocked(normalizedPartyID, newBalance)) {
+                    connection.rollback();
+                    return false;
+                }
+                partyTable.updateBalance(connection, normalizedPartyID, newBalance);
                 connection.commit();
                 return true;
             } catch (SQLException e) {
@@ -428,6 +437,14 @@ public class SQLManager {
             plugin.getLogger().log(Level.SEVERE, "[SQL] Could not deposit direct party balance for " + partyID, e);
         }
         return false;
+    }
+
+    private boolean isTresorDepositBlocked(String partyID, double newBalance) {
+        var party = McMMOParties.getPartyLoader().getParty(partyID);
+        int maxBalance = party != null
+                ? party.getMaxTresorSize()
+                : McMMOParties.getConfigManager().getDefaultTresorSize();
+        return maxBalance >= 0 && newBalance > maxBalance;
     }
 
     public boolean withdrawPartyBalanceDirect(String partyID, double amount) {

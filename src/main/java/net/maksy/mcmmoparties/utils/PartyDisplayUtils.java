@@ -87,6 +87,16 @@ public final class PartyDisplayUtils {
                 : formatAmount(Lang.BUFF_AMOUNT_SLOTS, amount);
     }
 
+    public static String formatTresorAmount(boolean infinite, int amount) {
+        return infinite
+                ? "Unlimited"
+                : LanguageConfig.get().getMessage(Lang.BUFF_AMOUNT_MONEY, new Replaceable("%amount%", String.valueOf(Math.max(0, amount))));
+    }
+
+    public static String formatUnlockState(boolean unlocked) {
+        return LanguageConfig.get().getMessage(unlocked ? Lang.BUFF_AMOUNT_UNLOCKED : Lang.BUFF_AMOUNT_LOCKED);
+    }
+
     public static String getDungeonSlotDisplay(int amount) {
         return amount == Integer.MAX_VALUE
                 ? LanguageConfig.get().getMessage(Lang.BUFF_AMOUNT_UNLIMITED_SLOTS)

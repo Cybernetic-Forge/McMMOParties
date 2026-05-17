@@ -24,6 +24,7 @@ DungeonInstance:
 
 Party:
   BaseMemberSlots: 10
+  DefaultTresorSize: 50000
 
 Buffs:
   Handler: LEVEL
@@ -32,6 +33,10 @@ Buffs:
     EXP_SHARING_RATE: "&aExp Sharing Rate"
     EXP_SHARING_RADIUS: "&aExp Sharing Radius"
     MEMBER_SLOTS: "&aMember Slots"
+    TRESOR_SIZE: "&aTresor Size"
+    ACCESS_PARTY_WAYPOINT: "&aParty Waypoint Access"
+    ACCESS_PARTY_TRESOR: "&aParty Tresor Access"
+    ACCESS_PARTY_CHAT: "&aParty Chat Access"
     ABILITY_DURATION: "&aAbility Duration"
     ABILITY_COOLDOWN_REDUCTION: "&aAbility Cooldown Reduction"
     DUNGEON_INSTANCE_SLOTS: "&aDungeon Instance Slots"

@@ -29,13 +29,13 @@ public final class PartyRankingRenderer {
 
 		if (detailed) {
 			lore.addAll(McMMOParties.getPartyOverviewCfg().getFormattedStringList(
-					"Icons.PartyTop.SkillHeader",
+					"Icons.PartyList.SkillHeader",
 					List.of(),
 					placeholders
 			));
 			for (PrimarySkillType skill : PrimarySkillType.values()) {
 				lore.addAll(McMMOParties.getPartyOverviewCfg().getFormattedStringList(
-						"Icons.PartyTop.SkillLine",
+						"Icons.PartyList.SkillLine",
 						List.of(),
 						placeholders(entry,
 								new Replaceable("%skill_name%", McMMOParties.getConfigManager().getSkillDisplayName(skill)),

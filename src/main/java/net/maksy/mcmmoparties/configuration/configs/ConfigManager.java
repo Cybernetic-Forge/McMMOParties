@@ -34,6 +34,10 @@ public class ConfigManager {
         config.addMissing("Buffs.DisplayNames.EXP_SHARING_RATE", "&aExp Sharing Rate");
         config.addMissing("Buffs.DisplayNames.EXP_SHARING_RADIUS", "&aExp Sharing Radius");
         config.addMissing("Buffs.DisplayNames.MEMBER_SLOTS", "&aMember Slots");
+        config.addMissing("Buffs.DisplayNames.TRESOR_SIZE", "&aTresor Size");
+        config.addMissing("Buffs.DisplayNames.ACCESS_PARTY_WAYPOINT", "&aParty Waypoint Access");
+        config.addMissing("Buffs.DisplayNames.ACCESS_PARTY_TRESOR", "&aParty Tresor Access");
+        config.addMissing("Buffs.DisplayNames.ACCESS_PARTY_CHAT", "&aParty Chat Access");
         config.addMissing("Buffs.DisplayNames.ABILITY_DURATION", "&aAbility Duration");
         config.addMissing("Buffs.DisplayNames.ABILITY_COOLDOWN_REDUCTION", "&aAbility Cooldown Reduction");
         config.addMissing("Buffs.DisplayNames.DUNGEON_INSTANCE_SLOTS", "&aDungeon Instance Slots");
@@ -49,6 +53,7 @@ public class ConfigManager {
         config.addMissing("Network.PartyChatChannel", "mcmmoparties:partychat");
         config.addMissing("Hooks.ChestShop.Enabled", true);
         config.addMissing("DungeonInstance.DefaultSlots", 3);
+        config.addMissing("Party.DefaultTresorSize", 50000);
 
         for (PrimarySkillType skill : PrimarySkillType.values()) {
             config.addMissing("Experience.Scaling." + skill.name(), 0.2D);
@@ -63,6 +68,11 @@ public class ConfigManager {
 
     public int getBaseMemberSlots() {
         return config.getInt("Party.BaseMemberSlots", 10);
+    }
+
+    public int getDefaultTresorSize() {
+        int configured = config.getInt("Party.DefaultTresorSize", 50000);
+        return configured < 0 ? -1 : Math.max(0, configured);
     }
 
     public String getBuffDisplayName(String key, String fallback) {
