@@ -1,0 +1,93 @@
+[CENTER][SIZE=6][B][COLOR=#27CDD3]Progression-based mcMMO parties built for modern RPG, survival, and MMO servers.[/COLOR][/B][/SIZE][/CENTER]
+[CENTER]Turn simple party management into a full progression system with unlockable perks, shared utility, and meaningful integrations.[/CENTER]
+
+[CENTER][BUTTON="DOCS_URL"]Documentation[/BUTTON] [BUTTON="SUPPORT_URL"]Support[/BUTTON] [BUTTON="API_URL"]API[/BUTTON][/CENTER]
+
+
+[HR][/HR]
+
+[HEADING=2][COLOR=#27CDD3]Why McMMOParties?[/COLOR][/HEADING]
+[B]McMMOParties expands traditional mcMMO groups into a true shared progression experience.[/B]
+
+[QUOTE]
+Level up together, unlock party-wide perks, improve utility over time, and connect your group system with economy and dungeon gameplay. McMMOParties is designed for servers that want parties to feel like a real long-term progression layer instead of a simple invite list.
+[/QUOTE]
+
+[B][SIZE=5][COLOR=#27CDD3]Best for[/COLOR][/SIZE][/B]
+RPG, survival, and MMO-inspired Paper networks using mcMMO.
+
+[B][SIZE=5][COLOR=#27CDD3]What players feel[/COLOR][/SIZE][/B]
+A stronger sense of teamwork through shared progression, unlockable quality-of-life perks, and party identity that grows over time.
+
+[HR][/HR]
+
+[HEADING=2][COLOR=#27CDD3]Core Features[/COLOR][/HEADING]
+
+[TABLE]
+[TR]
+[TD][B]Shared party progression[/B]
+Party EXP is earned from mcMMO skill activity and scaled through a configurable level curve.[/TD]
+[TD][B]Flexible progression model[/B]
+Use the modern skillpoint system or keep a legacy level-based unlock flow.[/TD]
+[/TR]
+[TR]
+[TD][B]Upgradeable perk tree[/B]
+Increase EXP sharing rate, sharing radius, member slots, dungeon instance slots, treasury size, ability duration, and cooldown reduction.[/TD]
+[TD][B]Unlockable party utility[/B]
+Progression can unlock party chat, party treasury access, and party waypoint access.[/TD]
+[/TR]
+[TR]
+[TD][B]Private and configurable parties[/B]
+Support open parties, invite-only parties, and password-protected joining rules.[/TD]
+[TD][B]GUI-driven experience[/B]
+Players can use party overview and list interfaces instead of relying on plain command output.[/TD]
+[/TR]
+[TR]
+[TD][B]Cross-server ready[/B]
+Includes Velocity messaging support for party chat and teleport-related network communication.[/TD]
+[TD][B]Storage and administration[/B]
+Works with SQLite, MySQL, and MariaDB, and includes admin tools for reloads and party management.[/TD]
+[/TR]
+[/TABLE]
+
+[HR][/HR]
+
+[HEADING=2][COLOR=#27CDD3]Developer Support[/COLOR][/HEADING]
+[LIST]
+[*]API access for party services and party loading
+[*]Custom events for member changes, progression, buffs, treasury actions, chat, and waypoints
+[*]Designed for plugin ecosystems that need to react to party state
+[/LIST]
+
+[HR][/HR]
+
+[HEADING=2][COLOR=#27CDD3]Integrations[/COLOR][/HEADING]
+
+[TABLE]
+[TR]
+[TD][CENTER][SIZE=5][B]ChestShop[/B][/SIZE][/CENTER]
+
+Let parties interact with shared economy workflows through ChestShop integration, including protected management and party-aware account behavior.[/TD]
+[TD][CENTER][SIZE=5][B]MythicDungeons[/B][/SIZE][/CENTER]
+
+Connect party progression to dungeon gameplay with party-linked dungeon instances and upgradeable dungeon slot support.[/TD]
+[/TR]
+[/TABLE]
+
+[CENTER][B]Also works alongside Vault and includes Velocity companion support for networked setups.[/B][/CENTER]
+
+[HR][/HR]
+
+[CENTER][SIZE=5][B][COLOR=#27CDD3]Built for servers where parties should matter.[/COLOR][/B][/SIZE][/CENTER]
+[CENTER]If you want mcMMO parties to feel like progression, not just permission management, McMMOParties gives your players a reason to level and play together.[/CENTER]
+
+[HR][/HR]
+
+[CENTER][HEADING=2][COLOR=#27CDD3]Showcase[/COLOR][/HEADING][/CENTER]
+[CENTER]Add, remove, or duplicate the GIF blocks below depending on how many previews you want to show.[/CENTER]
+
+[CENTER][IMG]GIF_URL_1[/IMG][/CENTER]
+[HR][/HR]
+[CENTER][IMG]GIF_URL_2[/IMG][/CENTER]
+[HR][/HR]
+[CENTER][IMG]GIF_URL_3[/IMG][/CENTER]

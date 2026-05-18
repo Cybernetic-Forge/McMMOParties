@@ -52,7 +52,7 @@ public class PartyOverview implements Listener {
     @Getter
     private final McMMOParty party;
     private final Inventory inventory;
-    private int currentView = 0; // 0 = Overview, 1 = Members, 2 = Skills, 3 = Buffs, 4 = Role selector, 5 = Dungeon instances
+    private int currentView = 0; // 0 = Overview, 1 = Members, 2 = Skills, 3 = Buffs, 4 = Role selector, 5 = Dungeon instances, 6 = Level path
     private int memberSortFilter = 0; // 0 = All, 1 = Online, 2 = Offline#
     private final Map<Integer, PartyFeature> mainSlots = new HashMap<>();
     private final Map<Integer, BuffKey> buffSlots = new HashMap<>();
@@ -64,6 +64,7 @@ public class PartyOverview implements Listener {
     private int instanceOnlinePage = 0;
     private int instanceMemberPage = 0;
     private int buffPage = 0;
+    private int levelPathPage = 0;
 
     private static final List<Integer> DEFAULT_INSTANCE_AVAILABLE_LAYOUT = List.of(10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25);
     private static final List<Integer> DEFAULT_INSTANCE_MEMBER_LAYOUT = List.of(28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43);
@@ -75,6 +76,9 @@ public class PartyOverview implements Listener {
     private static final List<Integer> DEFAULT_BUFF_LAYOUT = List.of(10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34);
     private static final int DEFAULT_BUFF_PREVIOUS_SLOT = 27;
     private static final int DEFAULT_BUFF_NEXT_SLOT = 35;
+    private static final List<Integer> DEFAULT_LEVEL_PATH_LAYOUT = List.of(10, 11, 12, 13, 14, 15, 16, 25, 24, 23, 22, 21, 20, 19, 28, 29, 30, 31, 32, 33, 34, 43, 42, 41, 40, 39, 38, 37);
+    private static final int DEFAULT_LEVEL_PATH_PREVIOUS_SLOT = 45;
+    private static final int DEFAULT_LEVEL_PATH_NEXT_SLOT = 53;
     private static final Map<PartyState, Integer> DEFAULT_ROLE_SELECTOR_SLOTS = Map.of(
             PartyState.MEMBER, 19,
             PartyState.CO_OWNER, 21,
@@ -124,6 +128,8 @@ public class PartyOverview implements Listener {
             if(!McMMOParties.getHookManager().isHooked(HookType.MythicDungeons))
                 return;
             displayDungeonInstances();
+        } else if (currentView == 6) {
+            displayLevelPath();
         }
     }
 
@@ -135,7 +141,11 @@ public class PartyOverview implements Listener {
                 new Replaceable("%party_id%", party.getPartyID()),
                 new Replaceable("%party_display%", party.getDisplay()),
                 new Replaceable("%owner_name%", PartyDisplayUtils.getPlayerName(owner)),
-                new Replaceable("%member_count%", String.valueOf(party.getMembers().size()))
+                new Replaceable("%member_count%", String.valueOf(party.getMembers().size())),
+                new Replaceable("%current_level%", String.valueOf(party.getLevel())),
+                new Replaceable("%max_level%", getPartyLevelCapDisplay()),
+                new Replaceable("%current_exp%", String.format("%.0f", party.getCurrentExperience())),
+                new Replaceable("%next_level_exp%", String.format("%.0f", party.getNeededExperience()))
         );
 
         double cumulativePower = PartyDisplayUtils.calculateCumulativePower(party);
@@ -165,6 +175,7 @@ public class PartyOverview implements Listener {
         var backIcon = McMMOParties.getPartyOverviewCfg().getIcon("Back");
 
         inventory.setItem(partyInfoIcon.getKey(), partyInfoIcon.getValue());
+        mainSlots.put(partyInfoIcon.getKey(), PartyFeature.PARTY_INFO);
         inventory.setItem(partyStatsIcon.getKey(), partyStatsIcon.getValue());
         inventory.setItem(membersIcon.getKey(), membersIcon.getValue());
         mainSlots.put(membersIcon.getKey(), PartyFeature.MEMBERS);
@@ -375,6 +386,18 @@ public class PartyOverview implements Listener {
 
     private int getDungeonDisbandActionSlot() {
         return McMMOParties.getPartyOverviewCfg().getInt("Icons.DungeonInstances.ActionDisband.Slot", DEFAULT_INSTANCE_ACTION_SLOT);
+    }
+
+    private List<Integer> getLevelPathLayoutSlots() {
+        return McMMOParties.getPartyOverviewCfg().getIntegerList("Icons.LevelPath.Layout.Slots", DEFAULT_LEVEL_PATH_LAYOUT);
+    }
+
+    private int getLevelPathPreviousSlot() {
+        return McMMOParties.getPartyOverviewCfg().getInt("Icons.LevelPath.PreviousPage.Slot", DEFAULT_LEVEL_PATH_PREVIOUS_SLOT);
+    }
+
+    private int getLevelPathNextSlot() {
+        return McMMOParties.getPartyOverviewCfg().getInt("Icons.LevelPath.NextPage.Slot", DEFAULT_LEVEL_PATH_NEXT_SLOT);
     }
 
     private List<Integer> getBuffLayoutSlots() {
@@ -592,6 +615,195 @@ public class PartyOverview implements Listener {
 
         var backIcon = McMMOParties.getPartyOverviewCfg().getIcon("Back");
         inventory.setItem(backIcon.getKey(), backIcon.getValue());
+    }
+
+    private void displayLevelPath() {
+        List<Integer> layoutSlots = getLevelPathLayoutSlots();
+        int pageSize = Math.max(1, layoutSlots.size());
+        int totalEntries = getLevelPathEntryCount(pageSize);
+        int pageCount = getPageCount(totalEntries, pageSize);
+        levelPathPage = clampPage(levelPathPage, totalEntries, pageSize);
+
+        var headerIcon = McMMOParties.getPartyOverviewCfg().getIcon("LevelPath.Header",
+                new Replaceable("%page%", String.valueOf(levelPathPage + 1)),
+                new Replaceable("%max_page%", String.valueOf(pageCount)),
+                new Replaceable("%current_level%", String.valueOf(party.getLevel())),
+                new Replaceable("%max_level%", getPartyLevelCapDisplay()),
+                new Replaceable("%current_exp%", String.format("%.0f", party.getCurrentExperience())),
+                new Replaceable("%next_level_exp%", String.format("%.0f", party.getNeededExperience()))
+        );
+        inventory.setItem(headerIcon.getKey(), headerIcon.getValue());
+
+        int startIndex = levelPathPage * pageSize;
+        for (int i = 0; i < layoutSlots.size(); i++) {
+            int entryIndex = startIndex + i;
+            if (entryIndex >= totalEntries) {
+                break;
+            }
+            long level = entryIndex;
+            inventory.setItem(layoutSlots.get(i), createLevelPathItem(level));
+        }
+
+        if (pageCount > 1) {
+            if (levelPathPage > 0) {
+                var previousPage = McMMOParties.getPartyOverviewCfg().getIcon("LevelPath.PreviousPage",
+                        new Replaceable("%page%", String.valueOf(levelPathPage + 1)),
+                        new Replaceable("%max_page%", String.valueOf(pageCount))
+                );
+                inventory.setItem(previousPage.getKey(), previousPage.getValue());
+            }
+            if (levelPathPage + 1 < pageCount) {
+                var nextPage = McMMOParties.getPartyOverviewCfg().getIcon("LevelPath.NextPage",
+                        new Replaceable("%page%", String.valueOf(levelPathPage + 1)),
+                        new Replaceable("%max_page%", String.valueOf(pageCount))
+                );
+                inventory.setItem(nextPage.getKey(), nextPage.getValue());
+            }
+        }
+
+        var backIcon = McMMOParties.getPartyOverviewCfg().getIcon("Back");
+        inventory.setItem(backIcon.getKey(), backIcon.getValue());
+    }
+
+    private ItemStack createLevelPathItem(long level) {
+        boolean currentLevel = level == party.getLevel();
+        boolean completedLevel = level < party.getLevel();
+        long nextLevel = level + 1;
+        float requiredExp = McMMOParties.getConfigManager().getNeededExperience(nextLevel);
+        float cumulativeExp = McMMOParties.getConfigManager().getPastExp(level);
+        String status = completedLevel
+                ? McMMOParties.getPartyOverviewCfg().getString("Icons.LevelPath.CompletedStatus", "&aReached")
+                : currentLevel
+                ? McMMOParties.getPartyOverviewCfg().getString("Icons.LevelPath.CurrentStatus", "&eCurrent")
+                : McMMOParties.getPartyOverviewCfg().getString("Icons.LevelPath.UpcomingStatus", "&7Upcoming");
+
+        String iconPath = currentLevel ? "LevelPath.CurrentEntry" : completedLevel ? "LevelPath.CompletedEntry" : "LevelPath.Entry";
+        Material fallbackMaterial = currentLevel
+                ? Material.EXPERIENCE_BOTTLE
+                : completedLevel
+                ? Material.GREEN_STAINED_GLASS_PANE
+                : Material.RED_STAINED_GLASS_PANE;
+        Material material = McMMOParties.getPartyOverviewCfg().getMaterial(iconPath, fallbackMaterial);
+        String display = McMMOParties.getPartyOverviewCfg().getFormattedString(
+                "Icons." + iconPath + ".Display",
+                currentLevel ? "&eLevel %level%" : "&aLevel %level%",
+                new Replaceable("%level%", String.valueOf(level)),
+                new Replaceable("%next_level%", String.valueOf(nextLevel))
+        );
+        List<String> lore = new ArrayList<>(McMMOParties.getPartyOverviewCfg().getFormattedStringList(
+                "Icons." + iconPath + ".Lore",
+                List.of("&7Status: %status%", "&7Exp to next: &f%needed_exp%", "&7Total exp: &f%cumulative_exp%"),
+                new Replaceable("%level%", String.valueOf(level)),
+                new Replaceable("%next_level%", String.valueOf(nextLevel)),
+                new Replaceable("%status%", status),
+                new Replaceable("%needed_exp%", String.format("%.0f", requiredExp)),
+                new Replaceable("%cumulative_exp%", String.format("%.0f", cumulativeExp))
+        ));
+
+        if (!party.getBuffHandler().isSkillPointsMode()) {
+            List<String> buffLines = getLevelBuffLines(level);
+            if (!buffLines.isEmpty()) {
+                lore.addAll(McMMOParties.getPartyOverviewCfg().getFormattedStringList(
+                        "Icons.LevelPath.BuffHeader",
+                        List.of(" ", "&eBuffs on this level:")
+                ));
+                lore.addAll(buffLines);
+            }
+        }
+
+        return ItemUT.getItem(material, display, lore);
+    }
+
+    private List<String> getLevelBuffLines(long level) {
+        List<String> buffLines = new ArrayList<>();
+        var handler = party.getBuffHandler();
+
+        addLevelBuffLine(buffLines, level, PartyBuffType.EXP_SHARING_RATE, handler.getExpSharingRateByLevel().get((int) level) == null
+                ? null
+                : PartyDisplayUtils.formatPercent(handler.getExpSharingRateByLevel().get((int) level)));
+        addLevelBuffLine(buffLines, level, PartyBuffType.EXP_SHARING_RADIUS, handler.getExpSharingRadiusByLevel().containsKey((int) level)
+                ? PartyDisplayUtils.formatAmount(BUFF_AMOUNT_BLOCKS, handler.getExpSharingRadiusByLevel().get((int) level))
+                : null);
+        addLevelBuffLine(buffLines, level, PartyBuffType.MEMBER_SLOTS, handler.getMemberSlotsByLevel().containsKey((int) level)
+                ? PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SLOTS, handler.getMemberSlotsByLevel().get((int) level))
+                : null);
+        if (handler.getDungeonInstanceSlotsByLevel().containsKey((int) level)) {
+            int amount = handler.getDungeonInstanceSlotsByLevel().get((int) level);
+            addLevelBuffLine(buffLines, level, PartyBuffType.DUNGEON_INSTANCE_SLOTS, PartyDisplayUtils.getDungeonSlotDisplay(amount));
+        }
+        if (handler.getTresorSizeByLevel().containsKey((int) level)) {
+            int amount = handler.getTresorSizeByLevel().get((int) level);
+            addLevelBuffLine(buffLines, level, PartyBuffType.TRESOR_SIZE, PartyDisplayUtils.formatTresorAmount(amount == Integer.MAX_VALUE, amount == Integer.MAX_VALUE ? 0 : amount));
+        }
+        addLevelBuffLine(buffLines, level, PartyBuffType.ACCESS_PARTY_WAYPOINT, handler.getAccessPartyWaypointByLevel().containsKey((int) level)
+                ? PartyDisplayUtils.formatUnlockState(handler.getAccessPartyWaypointByLevel().get((int) level) > 0)
+                : null);
+        addLevelBuffLine(buffLines, level, PartyBuffType.ACCESS_PARTY_TRESOR, handler.getAccessPartyTresorByLevel().containsKey((int) level)
+                ? PartyDisplayUtils.formatUnlockState(handler.getAccessPartyTresorByLevel().get((int) level) > 0)
+                : null);
+        addLevelBuffLine(buffLines, level, PartyBuffType.ACCESS_PARTY_CHAT, handler.getAccessPartyChatByLevel().containsKey((int) level)
+                ? PartyDisplayUtils.formatUnlockState(handler.getAccessPartyChatByLevel().get((int) level) > 0)
+                : null);
+        addLevelBuffLine(buffLines, level, PartyBuffType.ABILITY_DURATION, handler.getAbilityDurationByLevel().containsKey((int) level)
+                ? PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SECONDS, handler.getAbilityDurationByLevel().get((int) level))
+                : null);
+
+        Map<String, Integer> abilityReductions = handler.getAbilityCooldownReductionByLevel().get((int) level);
+        if (abilityReductions != null) {
+            for (Map.Entry<String, Integer> entry : abilityReductions.entrySet()) {
+                String buffName = McMMOParties.getConfigManager().getBuffDisplayName(PartyBuffType.ABILITY_COOLDOWN_REDUCTION.name(), "Ability Cooldown Reduction");
+                String abilityName = formatAbilityName(entry.getKey());
+                buffLines.addAll(McMMOParties.getPartyOverviewCfg().getFormattedStringList(
+                        "Icons.LevelPath.BuffLine",
+                        List.of("&7- &f%buff_name%: &a%buff_amount%"),
+                        new Replaceable("%buff_name%", buffName + " (" + abilityName + ")"),
+                        new Replaceable("%buff_amount%", PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SECONDS, entry.getValue()))
+                ));
+            }
+        }
+
+        return buffLines;
+    }
+
+    private void addLevelBuffLine(List<String> lines, long level, PartyBuffType type, String amountDisplay) {
+        if (amountDisplay == null) {
+            return;
+        }
+        String buffName = McMMOParties.getConfigManager().getBuffDisplayName(type.name(), type.name());
+        lines.addAll(McMMOParties.getPartyOverviewCfg().getFormattedStringList(
+                "Icons.LevelPath.BuffLine",
+                List.of("&7- &f%buff_name%: &a%buff_amount%"),
+                new Replaceable("%level%", String.valueOf(level)),
+                new Replaceable("%buff_name%", buffName),
+                new Replaceable("%buff_amount%", amountDisplay)
+        ));
+    }
+
+    private String formatAbilityName(String abilityKey) {
+        if (abilityKey == null || abilityKey.isBlank()) {
+            return "";
+        }
+        if ("ALL".equalsIgnoreCase(abilityKey)) {
+            return "All";
+        }
+        return Arrays.stream(abilityKey.toLowerCase(Locale.ROOT).split("_"))
+                .filter(part -> !part.isBlank())
+                .map(part -> Character.toUpperCase(part.charAt(0)) + part.substring(1))
+                .reduce((left, right) -> left + " " + right)
+                .orElse(abilityKey);
+    }
+
+    private int getLevelPathEntryCount(int pageSize) {
+        int cap = McMMOParties.getConfigManager().getPartyLevelCap();
+        if (cap >= 0) {
+            return cap + 1;
+        }
+        return Math.max((levelPathPage + 3) * pageSize, (int) party.getLevel() + (pageSize * 2));
+    }
+
+    private String getPartyLevelCapDisplay() {
+        int cap = McMMOParties.getConfigManager().getPartyLevelCap();
+        return cap < 0 ? "Unlimited" : String.valueOf(cap);
     }
 
     private void displayBuffs() {
@@ -1309,6 +1521,11 @@ public class PartyOverview implements Listener {
                     currentView = 1;
                     refreshInventory();
                 }
+                case PARTY_INFO -> {
+                    currentView = 6;
+                    levelPathPage = 0;
+                    refreshInventory();
+                }
                 case STATS -> {
                     currentView = 2;
                     refreshInventory();
@@ -1564,6 +1781,26 @@ public class PartyOverview implements Listener {
                 refreshInventory();
             }
         } else if (currentView == 2) {
+            return;
+        } else if (currentView == 6) {
+            int pageSize = Math.max(1, getLevelPathLayoutSlots().size());
+            int pageCount = getPageCount(getLevelPathEntryCount(pageSize), pageSize);
+            if (pageCount > 1) {
+                if (slot == getLevelPathPreviousSlot()) {
+                    if (levelPathPage > 0) {
+                        levelPathPage--;
+                        refreshInventory();
+                    }
+                    return;
+                }
+                if (slot == getLevelPathNextSlot()) {
+                    if (levelPathPage + 1 < pageCount) {
+                        levelPathPage++;
+                        refreshInventory();
+                    }
+                    return;
+                }
+            }
             return;
         } else if (currentView == 3) {
             var handler = party.getBuffHandler();

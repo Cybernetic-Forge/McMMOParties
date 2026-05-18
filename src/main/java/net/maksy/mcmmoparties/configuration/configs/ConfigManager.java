@@ -16,13 +16,18 @@ import org.bukkit.boss.BossBar;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 
 public class ConfigManager {
 
     private final ScriptEngine engine = new ScriptEngineManager().getEngineByName("JavaScript");
+    private final Map<Long, Float> neededExperienceCache = new HashMap<>();
+    private final Map<Long, Float> pastExperienceCache = new HashMap<>();
     private YamlParser config;
+    private String levelCurveExpression;
 
     public void init() {
         config = YamlParser.loadOrExtract(McMMOParties.getInstance(), "config.yml");
@@ -49,6 +54,10 @@ public class ConfigManager {
         }
 
         config.saveChanges();
+        neededExperienceCache.clear();
+        pastExperienceCache.clear();
+        levelCurveExpression = config.getString("Experience.LevelCurve", "(x * (20 + (2.5 * x))) * 25");
+        pastExperienceCache.put(0L, getNeededExperience(0));
     }
 
     public float getScaledExp(PrimarySkillType skill, float exp) {
@@ -133,10 +142,15 @@ public class ConfigManager {
     }
 
     public float getPastExp(long level) {
-        float amount = 0;
-        for (int i = 0; i <= level; i++) {
-            amount += getNeededExperience(i);
+        if (level <= 0) {
+            return getNeededExperience(0);
         }
+        Float cached = pastExperienceCache.get(level);
+        if (cached != null) {
+            return cached;
+        }
+        float amount = getPastExp(level - 1) + getNeededExperience(level);
+        pastExperienceCache.put(level, amount);
         return amount;
     }
 
@@ -146,10 +160,16 @@ public class ConfigManager {
             return 0.0F;
         }
 
-        String expression = config.getString("Experience.LevelCurve", "(x * (20 + (2.5 * x))) * 25")
-                .replace("x", String.valueOf(level));
+        Float cached = neededExperienceCache.get(level);
+        if (cached != null) {
+            return cached;
+        }
+
+        String expression = levelCurveExpression.replace("x", String.valueOf(level));
         try {
-            return Float.parseFloat(engine.eval(expression).toString());
+            float result = Float.parseFloat(engine.eval(expression).toString());
+            neededExperienceCache.put(level, result);
+            return result;
         } catch (ScriptException e) {
             e.printStackTrace();
             return 0;

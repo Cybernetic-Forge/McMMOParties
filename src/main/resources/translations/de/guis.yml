@@ -1,4 +1,4 @@
-PartyOverview:
+﻿PartyOverview:
   Title: "McMMO Party"
   InvSize: 54
   Icons:
@@ -11,6 +11,9 @@ PartyOverview:
         - "&eAnzeige: &a%party_display%"
         - "&eLeiter: &a%owner_name%"
         - "&eMitglieder: &a%member_count%"
+        - "&eLevel: &a%current_level% &7/ &a%max_level%"
+        - "&eExp: &a%current_exp% &7/ &a%next_level_exp%"
+        - "&7Klick für Levelpfad"
     PlayersMember:
       Slot: 20
       Material: PLAYER_HEAD
@@ -70,6 +73,86 @@ PartyOverview:
       Lore:
         - "&eInstanzgruppe verwalten"
         - "&7Klick für Details"
+    LevelPath:
+      Layout:
+        Slots:
+          - 10
+          - 11
+          - 12
+          - 13
+          - 14
+          - 15
+          - 16
+          - 25
+          - 24
+          - 23
+          - 22
+          - 21
+          - 20
+          - 19
+          - 28
+          - 29
+          - 30
+          - 31
+          - 32
+          - 33
+          - 34
+          - 43
+          - 42
+          - 41
+          - 40
+          - 39
+          - 38
+          - 37
+      Header:
+        Slot: 4
+        Material: EXPERIENCE_BOTTLE
+        Display: "&aLevelpfad"
+        Lore:
+          - "&7Level: &f%current_level%&7/&f%max_level%"
+          - "&7Exp: &f%current_exp%&7/&f%next_level_exp%"
+          - "&7Seite: &f%page%&7/&f%max_page%"
+      Entry:
+        Material: RED_STAINED_GLASS_PANE
+        Display: "&aLevel %level%"
+        Lore:
+          - "&7Status: %status%"
+          - "&7Exp bis nächstes: &f%needed_exp%"
+          - "&7Gesamt-Exp: &f%cumulative_exp%"
+      CompletedEntry:
+        Material: GREEN_STAINED_GLASS_PANE
+        Display: "&aLevel %level%"
+        Lore:
+          - "&7Status: %status%"
+          - "&7Exp bis nächstes: &f%needed_exp%"
+          - "&7Gesamt-Exp: &f%cumulative_exp%"
+      CurrentEntry:
+        Material: EXPERIENCE_BOTTLE
+        Display: "&eLevel %level%"
+        Lore:
+          - "&7Status: %status%"
+          - "&7Exp bis nächstes: &f%needed_exp%"
+          - "&7Gesamt-Exp: &f%cumulative_exp%"
+      BuffHeader:
+        - " "
+        - "&eBuffs auf diesem Level:"
+      BuffLine:
+        - "&7- &f%buff_name%: &a%buff_amount%"
+      CompletedStatus: "&aErreicht"
+      CurrentStatus: "&eAktuell"
+      UpcomingStatus: "&7Später"
+      PreviousPage:
+        Slot: 45
+        Material: ARROW
+        Display: "&7Vorige Level-Seite"
+        Lore:
+          - "&7Seite: &f%page%&7/&f%max_page%"
+      NextPage:
+        Slot: 53
+        Material: ARROW
+        Display: "&7Nächste Level-Seite"
+        Lore:
+          - "&7Seite: &f%page%&7/&f%max_page%"
     DungeonInstances:
       Layout:
         AvailableSlots:
@@ -746,3 +829,5 @@ PartyEditor:
         Display: "&9Verwertung"
         Lore:
           - "&7Benötigt: &a%level%"
+
+
