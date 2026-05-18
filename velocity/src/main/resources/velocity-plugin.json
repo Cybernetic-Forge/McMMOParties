@@ -1,0 +1,10 @@
+{
+  "id": "mcmmopartiesvelocity",
+  "name": "McMMOPartiesVelocity",
+  "version": "${project.version}",
+  "authors": [
+    "MaksyKun"
+  ],
+  "dependencies": [],
+  "main": "net.maksy.mcmmoparties.velocity.McMMOPartiesVelocity"
+}

@@ -65,7 +65,6 @@ public final class McMMOParties extends JavaPlugin {
         init();
         sql = new SQLManager();
         partyLoader = new PartyLoader();
-        dungeonInstanceManager = new DungeonInstanceManager();
         PartyCommands partyCommands = new PartyCommands();
         getCommand("party").setExecutor(partyCommands);
         getCommand("party").setTabCompleter(partyCommands);
@@ -95,8 +94,12 @@ public final class McMMOParties extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new ExpEvents(), this);
         getServer().getPluginManager().registerEvents(new AbilityBuffListener(), this);
-        getServer().getPluginManager().registerEvents(new DungeonInstanceListener(), this);
-        registerChestShopIntegration();
+        if(hookManager.isHooked(HookType.MythicDungeons)) {
+            registerMythicDungeonsIntegration();
+        }
+        if(hookManager.isHooked(HookType.ChestShop)) {
+            registerChestShopIntegration();
+        }
     }
 
     @Override
@@ -139,6 +142,12 @@ public final class McMMOParties extends JavaPlugin {
 
         getServer().getScheduler().runTaskLater(this, accountProvider::registerLoadedParties, 40L);
         getLogger().info("Registered ChestShop party integration.");
+    }
+
+    private void registerMythicDungeonsIntegration() {
+        dungeonInstanceManager = new DungeonInstanceManager();
+        getServer().getPluginManager().registerEvents(new DungeonInstanceListener(), this);
+        getLogger().info("Registered MythicDungeons party integration.");
     }
 
     public static SQLManager getSQL() { return sql; }

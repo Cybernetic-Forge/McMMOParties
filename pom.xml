@@ -25,6 +25,7 @@
     <modules>
         <module>paper</module>
         <module>velocity</module>
+        <module>universal</module>
     </modules>
 
     <repositories>

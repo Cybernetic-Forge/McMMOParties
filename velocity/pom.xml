@@ -17,24 +17,23 @@
     <name>McMMOParties Velocity</name>
 
     <build>
-        <directory>${project.basedir}/../target</directory>
         <finalName>McMMOParties-velocity-${project.version}</finalName>
+        <resources>
+            <resource>
+                <directory>${project.basedir}/src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version>
                 <configuration>
-                    <source>21</source>
-                    <target>21</target>
-                    <release>21</release>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>com.velocitypowered</groupId>
-                            <artifactId>velocity-api</artifactId>
-                            <version>${velocity.version}</version>
-                        </path>
-                    </annotationProcessorPaths>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <release>${java.version}</release>
+                    <proc>none</proc>
                 </configuration>
             </plugin>
         </plugins>

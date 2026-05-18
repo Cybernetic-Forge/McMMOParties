@@ -11,21 +11,44 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>McMMOParties-paper</artifactId>
+    <artifactId>McMMOParties-universal</artifactId>
     <packaging>jar</packaging>
 
-    <name>McMMOParties Paper</name>
+    <name>McMMOParties Universal</name>
 
     <build>
-        <finalName>McMMOParties-paper-${project.version}</finalName>
+        <finalName>McMMOParties-${project.version}</finalName>
         <sourceDirectory>${project.basedir}/../src/main/java</sourceDirectory>
         <resources>
             <resource>
                 <directory>${project.basedir}/../src/main/resources</directory>
                 <filtering>true</filtering>
             </resource>
+            <resource>
+                <directory>${project.basedir}/../velocity/src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
         </resources>
         <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>add-velocity-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.basedir}/../velocity/src/main/java</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -35,22 +58,6 @@
                     <target>${java.version}</target>
                     <release>${java.version}</release>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.2.4</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <createDependencyReducedPom>false</createDependencyReducedPom>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>
@@ -86,7 +93,6 @@
             <version>${vault.version}</version>
             <scope>provided</scope>
         </dependency>
-
         <dependency>
             <groupId>net.maksy</groupId>
             <artifactId>MythicDungeons</artifactId>
@@ -100,6 +106,12 @@
             <version>3.12.3</version>
             <scope>system</scope>
             <systemPath>${project.basedir}/../libs/ChestShop.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>com.velocitypowered</groupId>
+            <artifactId>velocity-api</artifactId>
+            <version>${velocity.version}</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 </project>
