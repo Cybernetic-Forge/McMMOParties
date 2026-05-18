@@ -34,31 +34,6 @@ public class AbilityBuffListener implements Listener {
         // Even though ticks is mentioned, the method is taking seconds, so we can directly add the bonus seconds without converting to ticks.
         event.setTicks(event.getTicks() + bonusSeconds);
     }
-    @EventHandler
-    public void onAbilityActivate(McMMOPlayerAbilityActivateEvent event) {
-        /*Player player = event.getPlayer();
-        McMMOParty party = McMMOParties.getPartyLoader().getPartyOfPlayer(player.getUniqueId());
-        if (party == null) {
-            return;
-        }
-
-        McMMOPlayer mcMMOPlayer = UserManager.getPlayer(player);
-        if(mcMMOPlayer == null) {
-            return;
-        }
-        SuperAbilityType ability = event.getAbility();
-        int bonusSeconds = party.getBuffHandler().getAbilityDurationBonus(ability.name());
-        if (bonusSeconds <= 0) {
-            return;
-        }
-        Bukkit.getScheduler().runTaskLater(McMMOParties.getInstance(), () -> mcMMOPlayer.setAbilityDATS(ability, (mcMMOPlayer.calculateTimeRemaining(ability) * 1000L) + (bonusSeconds * 1000L)), 1L);
-
-        long currentDats = mcMMOPlayer.getProfile().getAbilityDATS(activeAbility);
-        long newDats = currentDats + (bonusSeconds * 1000L);
-        mcMMOPlayer.setAbilityDATS(activeAbility, newDats);
-        mcMMOPlayer.getProfile().save(true);
-         */
-    }
 
     @EventHandler
     public void onAbilityDeactivate(McMMOPlayerAbilityDeactivateEvent event) {

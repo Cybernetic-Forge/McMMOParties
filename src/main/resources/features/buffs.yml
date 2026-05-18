@@ -260,7 +260,7 @@ Skillpoints:
   ACCESS_PARTY_TRESOR:
     Configuration:
       Costs:
-        1: 750
+        1: 0
       Conditions:
         1:
           PartyLevel: 10
