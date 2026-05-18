@@ -1,0 +1,108 @@
+name: Release
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - main
+    types: [closed]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create versioned release
+    # Only run if the PR was merged
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event.pull_request.base.ref }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Compute next semantic version
+        id: version
+        run: |
+          git fetch --tags
+          latest_tag=$(git tag -l 'v*' --sort=-v:refname | head -n 1)
+          if [ -z "$latest_tag" ]; then
+            latest_tag="v0.0.0"
+          fi
+
+          IFS='.' read -r major minor patch <<<"${latest_tag#v}"
+          base_branch="${{ github.event.pull_request.base.ref }}"
+
+          if [ "$base_branch" = "dev" ]; then
+            patch=$((patch + 1))
+          elif [ "$base_branch" = "main" ]; then
+            minor=$((minor + 1))
+            patch=0
+          else
+            echo "Unsupported base branch: $base_branch" >&2
+            exit 1
+          fi
+
+          next_tag="v${major}.${minor}.${patch}"
+          next_version="${major}.${minor}.${patch}"
+          echo "tag=$next_tag" | tee -a "$GITHUB_OUTPUT"
+          echo "version=$next_version" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Update pom.xml version
+        run: |
+          mvn -B -ntp versions:set -DnewVersion=${{ steps.version.outputs.version }} -DgenerateBackupPoms=false
+
+      - name: Update plugin.yml version
+        run: |
+          sed -i "s/^version: .*/version: ${{ steps.version.outputs.version }}/" src/main/resources/plugin.yml
+
+      - name: Commit version changes
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pom.xml src/main/resources/plugin.yml
+          if git diff --staged --quiet; then
+            echo "No version files changed; skipping commit."
+          else
+            git commit -m "chore: bump version to ${{ steps.version.outputs.version }}"
+            git push
+          fi
+          echo "sha=$(git rev-parse HEAD)" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Clean corrupted Maven dependencies
+        run: |
+          echo "Cleaning potentially corrupted Adventure dependencies..."
+          rm -rf ~/.m2/repository/net/kyori/adventure-text-serializer-gson || true
+          rm -rf ~/.m2/repository/net/kyori/adventure-text-serializer-legacy || true
+          rm -rf ~/.m2/repository/net/kyori/adventure-text-logger-slf4j || true
+          echo "Cleaning Maven cache for Paper API..."
+          rm -rf ~/.m2/repository/io/papermc/paper || true
+          echo "Running Maven dependency resolution with forced updates..."
+          mvn -B -ntp dependency:purge-local-repository -DreResolve=true -DactTransitively=false || true
+
+      - name: Build project
+        run: mvn -B -ntp clean package
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ steps.commit.outputs.sha }}
+          body: |
+            Automated release for merged PR #${{ github.event.pull_request.number }} to `${{ github.event.pull_request.base.ref }}`.
+          files: |
+            target/AbyssalDao-*.jar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
