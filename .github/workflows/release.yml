@@ -36,15 +36,26 @@ jobs:
         id: version
         shell: bash
         run: |
-          git fetch --tags
+          current_version=$(mvn \
+            -q \
+            -ntp \
+            -Dstyle.color=never \
+            help:evaluate \
+            -Dexpression=project.version \
+            -DforceStdout \
+            | tail -n 1 \
+            | tr -d '\r')
 
-          latest_tag=$(git tag -l 'v*' --sort=-v:refname | head -n 1)
+          # Remove suffixes such as -SNAPSHOT.
+          current_version="${current_version%%-*}"
 
-          if [ -z "$latest_tag" ]; then
-            latest_tag="v0.0.0"
+          if [[ ! "$current_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid Maven version: $current_version" >&2
+            exit 1
           fi
 
-          IFS='.' read -r major minor patch <<< "${latest_tag#v}"
+          IFS='.' read -r major minor patch <<< "$current_version"
+
           base_branch="${{ github.event.pull_request.base.ref }}"
 
           if [ "$base_branch" = "dev" ]; then
@@ -57,11 +68,21 @@ jobs:
             exit 1
           fi
 
-          next_tag="v${major}.${minor}.${patch}"
           next_version="${major}.${minor}.${patch}"
+          next_tag="v${next_version}"
 
-          echo "tag=$next_tag" | tee -a "$GITHUB_OUTPUT"
-          echo "version=$next_version" | tee -a "$GITHUB_OUTPUT"
+          echo "Current Maven version: $current_version"
+          echo "Target branch: $base_branch"
+          echo "Next version: $next_version"
+          echo "Next tag: $next_tag"
+
+          if git rev-parse "$next_tag" >/dev/null 2>&1; then
+            echo "Tag already exists: $next_tag" >&2
+            exit 1
+          fi
+
+          echo "version=$next_version" >> "$GITHUB_OUTPUT"
+          echo "tag=$next_tag" >> "$GITHUB_OUTPUT"
 
       - name: Update Maven versions
         run: |
@@ -96,7 +117,7 @@ jobs:
             git push origin "${{ github.event.pull_request.base.ref }}"
           fi
 
-          echo "sha=$(git rev-parse HEAD)" | tee -a "$GITHUB_OUTPUT"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Clean corrupted Maven dependencies
         shell: bash
