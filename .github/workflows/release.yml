@@ -16,6 +16,7 @@ jobs:
     # Only run if the PR was merged
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -33,14 +34,17 @@ jobs:
 
       - name: Compute next semantic version
         id: version
+        shell: bash
         run: |
           git fetch --tags
+
           latest_tag=$(git tag -l 'v*' --sort=-v:refname | head -n 1)
+
           if [ -z "$latest_tag" ]; then
             latest_tag="v0.0.0"
           fi
 
-          IFS='.' read -r major minor patch <<<"${latest_tag#v}"
+          IFS='.' read -r major minor patch <<< "${latest_tag#v}"
           base_branch="${{ github.event.pull_request.base.ref }}"
 
           if [ "$base_branch" = "dev" ]; then
@@ -55,54 +59,109 @@ jobs:
 
           next_tag="v${major}.${minor}.${patch}"
           next_version="${major}.${minor}.${patch}"
+
           echo "tag=$next_tag" | tee -a "$GITHUB_OUTPUT"
           echo "version=$next_version" | tee -a "$GITHUB_OUTPUT"
 
-      - name: Update pom.xml version
+      - name: Update Maven version
         run: |
-          mvn -B -ntp versions:set -DnewVersion=${{ steps.version.outputs.version }} -DgenerateBackupPoms=false
+          mvn -B -ntp versions:set \
+            -DnewVersion=${{ steps.version.outputs.version }} \
+            -DgenerateBackupPoms=false
 
       - name: Update plugin.yml version
         run: |
-          sed -i "s/^version: .*/version: ${{ steps.version.outputs.version }}/" src/main/resources/plugin.yml
+          sed -i \
+            "s/^version: .*/version: ${{ steps.version.outputs.version }}/" \
+            universal/src/main/resources/plugin.yml
 
       - name: Commit version changes
         id: commit
+        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add pom.xml src/main/resources/plugin.yml
+
+          git add pom.xml
+          git add '*/pom.xml'
+          git add universal/src/main/resources/plugin.yml
+
           if git diff --staged --quiet; then
             echo "No version files changed; skipping commit."
           else
             git commit -m "chore: bump version to ${{ steps.version.outputs.version }}"
             git push
           fi
+
           echo "sha=$(git rev-parse HEAD)" | tee -a "$GITHUB_OUTPUT"
 
       - name: Clean corrupted Maven dependencies
+        shell: bash
         run: |
           echo "Cleaning potentially corrupted Adventure dependencies..."
           rm -rf ~/.m2/repository/net/kyori/adventure-text-serializer-gson || true
           rm -rf ~/.m2/repository/net/kyori/adventure-text-serializer-legacy || true
           rm -rf ~/.m2/repository/net/kyori/adventure-text-logger-slf4j || true
+
           echo "Cleaning Maven cache for Paper API..."
           rm -rf ~/.m2/repository/io/papermc/paper || true
+
           echo "Running Maven dependency resolution with forced updates..."
-          mvn -B -ntp dependency:purge-local-repository -DreResolve=true -DactTransitively=false || true
+          mvn -B -ntp dependency:purge-local-repository \
+            -DreResolve=true \
+            -DactTransitively=false || true
 
       - name: Build project
         run: mvn -B -ntp clean package
+
+      - name: Verify release JAR
+        shell: bash
+        run: |
+          RELEASE_FILE="universal/target/McMMOParties-${{ steps.version.outputs.version }}.jar"
+
+          if [ ! -f "$RELEASE_FILE" ]; then
+            echo "Expected release file does not exist: $RELEASE_FILE" >&2
+            echo "Available JAR files:" >&2
+            find . -path '*/target/*.jar' -type f -print >&2
+            exit 1
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: Release ${{ steps.version.outputs.tag }}
+          name: McMMOParties ${{ steps.version.outputs.version }}
           target_commitish: ${{ steps.commit.outputs.sha }}
           body: |
-            Automated release for merged PR #${{ github.event.pull_request.number }} to `${{ github.event.pull_request.base.ref }}`.
+            Automated release for merged PR #${{ github.event.pull_request.number }}
+            into `${{ github.event.pull_request.base.ref }}`.
+
+            ${{ github.event.pull_request.title }}
           files: |
-            target/AbyssalDao-*.jar
+            universal/target/McMMOParties-${{ steps.version.outputs.version }}.jar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to Modrinth
+        uses: cloudnode-pro/modrinth-publish@v2
+        with:
+          token: ${{ secrets.MODRINTH_TOKEN }}
+          project: 232N6Nha
+          name: McMMOParties ${{ steps.version.outputs.version }}
+          version: ${{ steps.version.outputs.version }}
+          channel: release
+          environment: dedicated_server_only
+          loaders: |-
+            paper
+            purpur
+            velocity
+          game-versions: |-
+            1.21.x
+            26.1.x
+          files: universal/target/McMMOParties-${{ steps.version.outputs.version }}.jar
+          primary-file: McMMOParties-${{ steps.version.outputs.version }}.jar
+          changelog: |-
+            Automated release for merged PR #${{ github.event.pull_request.number }}
+            into `${{ github.event.pull_request.base.ref }}`.
+
+            ${{ github.event.pull_request.title }}
