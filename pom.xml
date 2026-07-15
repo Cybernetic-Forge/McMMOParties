@@ -54,5 +54,15 @@
             <id>chestshop-repo</id>
             <url>https://repo.minebench.de/</url>
         </repository>
+         <repository>
+             <id>neetgames-snapshots</id>
+             <url>https://nexus.neetgames.com/repository/maven-snapshots/</url>
+             <releases>
+                 <enabled>false</enabled>
+             </releases>
+             <snapshots>
+                 <enabled>true</enabled>
+             </snapshots>
+         </repository>
     </repositories>
 </project>
