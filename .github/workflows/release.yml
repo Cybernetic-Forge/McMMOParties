@@ -5,7 +5,8 @@ on:
     branches:
       - dev
       - main
-    types: [closed]
+    types:
+      - closed
 
 permissions:
   contents: write
@@ -13,7 +14,6 @@ permissions:
 jobs:
   release:
     name: Create versioned release
-    # Only run if the PR was merged
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
@@ -63,17 +63,18 @@ jobs:
           echo "tag=$next_tag" | tee -a "$GITHUB_OUTPUT"
           echo "version=$next_version" | tee -a "$GITHUB_OUTPUT"
 
-      - name: Update Maven version
+      - name: Update Maven versions
         run: |
           mvn -B -ntp versions:set \
             -DnewVersion=${{ steps.version.outputs.version }} \
+            -DprocessAllModules=true \
             -DgenerateBackupPoms=false
 
       - name: Update plugin.yml version
         run: |
           sed -i \
             "s/^version: .*/version: ${{ steps.version.outputs.version }}/" \
-            universal/src/main/resources/plugin.yml
+            src/main/resources/plugin.yml
 
       - name: Commit version changes
         id: commit
@@ -83,14 +84,16 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git add pom.xml
-          git add '*/pom.xml'
-          git add universal/src/main/resources/plugin.yml
+          git add paper/pom.xml
+          git add velocity/pom.xml
+          git add universal/pom.xml
+          git add src/main/resources/plugin.yml
 
           if git diff --staged --quiet; then
             echo "No version files changed; skipping commit."
           else
             git commit -m "chore: bump version to ${{ steps.version.outputs.version }}"
-            git push
+            git push origin "${{ github.event.pull_request.base.ref }}"
           fi
 
           echo "sha=$(git rev-parse HEAD)" | tee -a "$GITHUB_OUTPUT"
@@ -99,20 +102,24 @@ jobs:
         shell: bash
         run: |
           echo "Cleaning potentially corrupted Adventure dependencies..."
+
           rm -rf ~/.m2/repository/net/kyori/adventure-text-serializer-gson || true
           rm -rf ~/.m2/repository/net/kyori/adventure-text-serializer-legacy || true
           rm -rf ~/.m2/repository/net/kyori/adventure-text-logger-slf4j || true
 
           echo "Cleaning Maven cache for Paper API..."
+
           rm -rf ~/.m2/repository/io/papermc/paper || true
 
           echo "Running Maven dependency resolution with forced updates..."
+
           mvn -B -ntp dependency:purge-local-repository \
             -DreResolve=true \
             -DactTransitively=false || true
 
       - name: Build project
-        run: mvn -B -ntp clean package
+        run: |
+          mvn -B -ntp -U clean package
 
       - name: Verify release JAR
         shell: bash
@@ -122,9 +129,11 @@ jobs:
           if [ ! -f "$RELEASE_FILE" ]; then
             echo "Expected release file does not exist: $RELEASE_FILE" >&2
             echo "Available JAR files:" >&2
-            find . -path '*/target/*.jar' -type f -print >&2
+            find . -path "*/target/*.jar" -type f -print >&2
             exit 1
           fi
+
+          echo "Release file found: $RELEASE_FILE"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -132,6 +141,7 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: McMMOParties ${{ steps.version.outputs.version }}
           target_commitish: ${{ steps.commit.outputs.sha }}
+          generate_release_notes: true
           body: |
             Automated release for merged PR #${{ github.event.pull_request.number }}
             into `${{ github.event.pull_request.base.ref }}`.
