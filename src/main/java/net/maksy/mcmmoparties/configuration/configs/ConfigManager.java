@@ -17,6 +17,7 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -45,6 +46,9 @@ public class ConfigManager {
         config.addMissing("Network.TeleportChannel", "mcmmoparties:teleport");
         config.addMissing("Network.PartyChatChannel", "mcmmoparties:partychat");
         config.addMissing("translation", "en");
+        config.addMissing("command-aliases", List.of("pa", "party", "mcmmoparty"));
+        config.addMissing("force-disable.native-mcmmo-parties", true);
+        config.addMissing("force-disable.native-mythicdungeons-party", true);
         config.addMissing("Hooks.ChestShop.Enabled", true);
         config.addMissing("DungeonInstance.DefaultSlots", 2);
         config.addMissing("Party.DefaultTresorSize", 50000);
@@ -114,6 +118,22 @@ public class ConfigManager {
         String configured = config.getString("translation", "en");
         String normalized = configured == null ? "en" : configured.trim().toLowerCase(Locale.ROOT);
         return normalized.isBlank() ? "en" : normalized;
+    }
+
+    public List<String> getCommandAliases() {
+        return config.getStringList("command-aliases", List.of("pa", "party", "mcmmoparty")).stream()
+                .map(alias -> alias == null ? "" : alias.trim().toLowerCase(Locale.ROOT))
+                .filter(alias -> !alias.isBlank())
+                .distinct()
+                .toList();
+    }
+
+    public boolean isNativeMcMMOPartiesForceDisabled() {
+        return config.getBoolean("force-disable.native-mcmmo-parties", true);
+    }
+
+    public boolean isNativeMythicDungeonsPartyForceDisabled() {
+        return config.getBoolean("force-disable.native-mythicdungeons-party", true);
     }
 
     public String getTranslationFilePath(String fileName) {
