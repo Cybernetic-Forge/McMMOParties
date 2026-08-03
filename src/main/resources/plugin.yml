@@ -8,8 +8,6 @@ commands:
   party:
     description: Party command
     usage: /party
-    aliases:
-      - pa
   pa-admin:
     description: Party admin command
     usage: /pa-admin

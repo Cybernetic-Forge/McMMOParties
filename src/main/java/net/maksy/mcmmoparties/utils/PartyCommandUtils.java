@@ -2,6 +2,7 @@ package net.maksy.mcmmoparties.utils;
 
 import net.maksy.mcmmoparties.McMMOParties;
 import net.maksy.mcmmoparties.api.events.PartyEventHandler;
+import net.maksy.mcmmoparties.commands.PartyCommands;
 import net.maksy.mcmmoparties.configuration.PartyLoader;
 import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
 import net.maksy.mcmmoparties.configuration.enums.PartyState;
@@ -351,7 +352,10 @@ public class PartyCommandUtils {
 
     public static void infoPartyCommand(Player player, String[] args) {
         McMMOParty party;
-        if (args.length != 2)
+
+        if(args == null)
+            party = partyLoader.getPartyOfPlayer(player.getUniqueId());
+        else if (args.length != 2)
             party = partyLoader.getPartyOfPlayer(player.getUniqueId());
         else
             party = partyLoader.getParty(args[1]);
@@ -440,6 +444,7 @@ public class PartyCommandUtils {
 
         McMMOParties.getInstance().reloadConfig();
         McMMOParties.getConfigManager().init();
+        McMMOParties.getInstance().registerPartyCommand(new PartyCommands());
         McMMOParties.reloadTranslationConfigs();
         net.maksy.mcmmoparties.configuration.YamlParser.reloadAll(true);
         McMMOParties.getPartyLoader().flushPendingSaves();

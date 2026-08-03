@@ -8,6 +8,12 @@ SQL:
 
 translation: en
 
+command-aliases: ["pa", "party", "mcmmoparty"]
+
+force-disable:
+  native-mcmmo-parties: true
+  native-mythicdungeons-party: true
+
 Network:
   ServerName: paper
   TeleportChannel: "mcmmoparties:teleport"
