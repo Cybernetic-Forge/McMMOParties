@@ -31,6 +31,7 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
 
         switch(args.length) {
             case 0:
+                PartyCommandUtils.infoPartyCommand(player, null);
                 break;
             case 1:
                 switch(args[0]) {
