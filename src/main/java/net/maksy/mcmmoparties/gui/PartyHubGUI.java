@@ -73,7 +73,11 @@ public class PartyHubGUI implements Listener {
         if (slot == McMMOParties.getPartyOverviewCfg().getIcon("PartyHub.Browse").getKey()) {
             new PartyListGUI(player, 1).open();
         } else if (slot == McMMOParties.getPartyOverviewCfg().getIcon("PartyHub.Create").getKey()) {
-            openPartyIdDialog();
+            if (event.getClick().isRightClick()) {
+                new MyPartiesGUI(player).open();
+            } else {
+                openPartyIdDialog();
+            }
         } else if (slot == McMMOParties.getPartyOverviewCfg().getIcon("PartyHub.Invitations").getKey()) {
             new PartyInvitationsGUI(player).open();
         }

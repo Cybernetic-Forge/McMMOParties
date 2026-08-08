@@ -89,4 +89,15 @@ public class SQLAsyncManager {
             }
         });
     }
+
+    public static void setActiveParty(UUID uuid, String partyID, Consumer<Boolean> consumer) {
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            boolean success = sql.setActiveParty(uuid, partyID);
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                if (consumer != null) {
+                    consumer.accept(success);
+                }
+            });
+        });
+    }
 }

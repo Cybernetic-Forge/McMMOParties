@@ -51,6 +51,7 @@ public class SQLManager {
     private final PartyBuffSuggestionTableSQL buffSuggestionTable;
     private final PartyWaypointTableSQL waypointTable;
     private final PartyInvitationTableSQL invitationTable;
+    private final PlayerPreferenceTableSQL playerPreferenceTable;
 
     public SQLManager() {
         try {
@@ -64,6 +65,7 @@ public class SQLManager {
             buffSuggestionTable = new PartyBuffSuggestionTableSQL();
             waypointTable = new PartyWaypointTableSQL();
             invitationTable = new PartyInvitationTableSQL();
+            playerPreferenceTable = new PlayerPreferenceTableSQL();
 
             try (Connection connection = connection()) {
                 skillTable.migrateSkillColumnsIfPresent(connection);
@@ -814,6 +816,9 @@ public class SQLManager {
 
         try (Connection connection = connection()) {
             playerTable.setPartyState(connection, uuid, normalizedPartyID, state);
+            if (state == PartyState.NONE) {
+                playerPreferenceTable.clearIfMatches(connection, uuid, normalizedPartyID);
+            }
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "[SQL] Could not update party state for " + uuid, e);
         }
@@ -893,6 +898,7 @@ public class SQLManager {
                 buffSkillPointsTable.deleteByParty(connection, normalizedPartyID);
                 buffSuggestionTable.deleteByParty(connection, normalizedPartyID);
                 invitationTable.deleteByParty(connection, normalizedPartyID);
+                playerPreferenceTable.clearByParty(connection, normalizedPartyID);
                 waypointTable.deleteByParty(connection, normalizedPartyID);
                 partyShareTable.deleteByParty(connection, normalizedPartyID);
                 skillTable.deleteByParty(connection, normalizedPartyID);
@@ -917,5 +923,29 @@ public class SQLManager {
 
     private String normalizePartyID(String partyID) {
         return partyID == null ? null : partyID.toLowerCase(Locale.ROOT);
+    }
+
+    public Map<UUID, String> getActivePartySelections() {
+        try (Connection connection = connection()) {
+            return playerPreferenceTable.getActiveParties(connection);
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not load active party selections", e);
+            return Map.of();
+        }
+    }
+
+    public boolean setActiveParty(UUID uuid, String partyID) {
+        String normalizedPartyID = normalizePartyID(partyID);
+        try (Connection connection = connection()) {
+            PartyState state = playerTable.getPartyState(connection, uuid, normalizedPartyID);
+            if (state == null || !state.isActiveMember()) {
+                return false;
+            }
+            playerPreferenceTable.setActiveParty(connection, uuid, normalizedPartyID);
+            return true;
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not save active party selection for " + uuid, e);
+            return false;
+        }
     }
 }

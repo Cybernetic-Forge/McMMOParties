@@ -525,7 +525,7 @@
         - "&7Gesamt: &f%skillpoints_total%"
         - "&7Frei: &f%skillpoints_available%"
     PartyHub:
-      Title: "&6Finde eine Party"
+      Title: "&8Finde eine Party"
       InvSize: 45
       Browse:
         Slot: 20
@@ -540,7 +540,8 @@
         Material: OAK_SIGN
         Display: "&aParty erstellen"
         Lore:
-          - "&7Wähle zuerst eine ID/einen Namen"
+          - "&aLinksklick: &7neue Party erstellen"
+          - "&eRechtsklick: &7deine Partys ansehen"
           - "&7Deine Partys: &f%membership_count%&7/&f%max_parties%"
       Invitations:
         Slot: 24
@@ -555,6 +556,44 @@
         Prompt: "Gib eine eindeutige ID/einen Namen für deine Party ein."
         Input: "Party-ID/Name"
         Submit: "Weiter"
+    MyParties:
+      Title: "&6Meine Partys &7| &fSeite %page%/%max_page%"
+      EntrySlots: [10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43]
+      Entry:
+        Material: BOOK
+        Display: "&f%party_display% &8(&7%party_id%&8)"
+        Lore:
+          - "&7Leiter: &f%owner_name%"
+          - "&7Deine Rolle: %role%"
+          - "&7Level: &f%party_level%"
+          - "&7Mitglieder: &f%member_count%&7/&f%max_members%"
+          - "&7Kontostand: &a%party_balance%"
+          - "&7Zugang: %party_access%"
+          - "&7Auswahl: %active_status%"
+          - ""
+          - "&aLinksklick zum Ansehen"
+          - "%edit_status%"
+          - "&bShift-Linksklick zum Aktivieren"
+      Empty:
+        Slot: 22
+        Material: BARRIER
+        Display: "&cDu bist in keiner Party"
+      PreviousPage:
+        Slot: 45
+        Material: ARROW
+        Display: "&aVorherige Seite"
+      Back:
+        Slot: 48
+        Material: BARRIER
+        Display: "&cZurück"
+      PageInfo:
+        Slot: 49
+        Material: BOOK
+        Display: "&eSeite %page%/%max_page%"
+      NextPage:
+        Slot: 53
+        Material: ARROW
+        Display: "&aNächste Seite"
     PartyInvitations:
       Title: "&6Partyanfragen &7| &fSeite %page%/%max_page%"
       IncomingSlots: [10, 11, 12, 19, 20, 21, 28, 29, 30, 37, 38, 39]
@@ -690,8 +729,6 @@
           - "&7Kontostand: &a%party_balance%"
           - "&7Zugang: %party_access%"
           - "&7Passwort: &f%party_password_required%"
-          - "&eLinksklick: Party ansehen"
-          - "&eRechtsklick: Beitritt anfragen"
       EntryOwn:
         Slot: 44
         Material: PLAYER_HEAD
@@ -706,12 +743,14 @@
           - "&7Kontostand: &a%party_balance%"
           - "&7Zugang: %party_access%"
           - "&7Passwort: &f%party_password_required%"
-          - "&eLinksklick: Party ansehen"
-          - "&eRechtsklick: Beitritt anfragen"
       SkillHeader:
         - "&7Gesamte Skillwerte:"
       SkillLine:
         - "&7- &f%skill_name%: &a%skill_level%"
+      InteractionLore:
+        - ""
+        - "&aLinksklick zum Ansehen"
+        - "&eRechtsklick, um Beitritt anzufragen"
       PageTitle: "&6Partyliste &7| &f%sort_mode% &7| &fSeite %page%/%max_page%"
       PrevPage:
         Slot: 45
@@ -925,4 +964,3 @@ PartyEditor:
         Display: "&9Verwertung"
         Lore:
           - "&7Benötigt: &a%level%"
-

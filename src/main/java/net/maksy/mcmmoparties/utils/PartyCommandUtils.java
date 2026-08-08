@@ -18,6 +18,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.UUID;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 import static net.maksy.mcmmoparties.configuration.enums.Lang.*;
@@ -111,9 +112,8 @@ public class PartyCommandUtils {
             return;
         }
 
-        McMMOParty party = partyLoader.getPartyOfPlayer(player.getUniqueId());
+        McMMOParty party = resolveMemberParty(player, args.length >= 3 ? args[2] : null);
         if (party == null) {
-            player.sendMessage(LanguageConfig.get().getMessage(NOT_IN_PARTY));
             return;
         }
 
@@ -160,10 +160,9 @@ public class PartyCommandUtils {
             return;
         }
 
-        McMMOParty party = partyLoader.getPartyOfPlayer(player.getUniqueId());
+        McMMOParty party = resolveMemberParty(player, args.length >= 3 ? args[2] : null);
 
         if (party == null) {
-            player.sendMessage(LanguageConfig.get().getMessage(NOT_IN_PARTY));
             return;
         }
 
@@ -213,10 +212,9 @@ public class PartyCommandUtils {
             return;
         }
 
-        McMMOParty party = partyLoader.getPartyOfPlayer(player.getUniqueId());
+        McMMOParty party = resolveMemberParty(player, args.length >= 3 ? args[2] : null);
 
         if (party == null) {
-            player.sendMessage(LanguageConfig.get().getMessage(NOT_IN_PARTY));
             return;
         }
 
@@ -238,11 +236,10 @@ public class PartyCommandUtils {
         partyEventHandler.callPartyMemberKickEvent(party, request);
     }
 
-    public static void leavePartyCommand(Player player) {
-        McMMOParty party = partyLoader.getPartyOfPlayer(player.getUniqueId());
+    public static void leavePartyCommand(Player player, String[] args) {
+        McMMOParty party = resolveMemberParty(player, args.length >= 2 ? args[1] : null);
 
         if (party == null) {
-            player.sendMessage(LanguageConfig.get().getMessage(NOT_IN_PARTY));
             return;
         }
 
@@ -254,11 +251,10 @@ public class PartyCommandUtils {
         partyEventHandler.callPartyMemberLeaveEvent(party, player);
     }
 
-    public static void disbandPartyCommand(Player player) {
-        McMMOParty party = partyLoader.getPartyOfPlayer(player.getUniqueId());
+    public static void disbandPartyCommand(Player player, String[] args) {
+        McMMOParty party = resolveMemberParty(player, args.length >= 2 ? args[1] : null);
 
         if (party == null) {
-            player.sendMessage(LanguageConfig.get().getMessage(NOT_IN_PARTY));
             return;
         }
 
@@ -294,7 +290,18 @@ public class PartyCommandUtils {
     }
 
     public static void chatPartyCommand(Player player, String[] args) {
-        McMMOParty party = partyLoader.getPartyOfPlayer(player.getUniqueId());
+        McMMOParty party = null;
+        int messageStart = 1;
+        if (args.length >= 3) {
+            McMMOParty requested = partyLoader.getParty(args[1].toLowerCase(Locale.ROOT));
+            if (requested != null && requested.getMembers().contains(player.getUniqueId())) {
+                party = requested;
+                messageStart = 2;
+            }
+        }
+        if (party == null) {
+            party = partyLoader.getPartyOfPlayer(player.getUniqueId());
+        }
         if (party == null) {
             player.sendMessage(LanguageConfig.get().getMessage(NOT_IN_PARTY));
             return;
@@ -311,7 +318,7 @@ public class PartyCommandUtils {
         }
 
         String message = java.util.Arrays.stream(args)
-                .skip(1)
+                .skip(messageStart)
                 .collect(Collectors.joining(" "))
                 .trim();
         if (message.isEmpty()) {
@@ -323,10 +330,9 @@ public class PartyCommandUtils {
     }
 
     public static void setOwnerPartyCommand(Player player, String[] args) {
-        McMMOParty party = partyLoader.getPartyOfPlayer(player.getUniqueId());
+        McMMOParty party = resolveMemberParty(player, args.length >= 3 ? args[2] : null);
 
         if (party == null) {
-            player.sendMessage(LanguageConfig.get().getMessage(NOT_IN_PARTY));
             return;
         }
 
@@ -455,6 +461,26 @@ public class PartyCommandUtils {
         int maximum = McMMOParties.getConfigManager().getMaxPartiesPerPlayer();
         return LanguageConfig.get().getMessage("party_limit_reached", "&cYou have reached the limit of &f%max_parties% &cparties.",
                 new Replaceable("%max_parties%", maximum < 0 ? "unlimited" : String.valueOf(maximum)));
+    }
+
+    private static McMMOParty resolveMemberParty(Player player, String explicitPartyId) {
+        if (explicitPartyId == null || explicitPartyId.isBlank()) {
+            McMMOParty active = partyLoader.getPartyOfPlayer(player.getUniqueId());
+            if (active == null) {
+                player.sendMessage(LanguageConfig.get().getMessage(NOT_IN_PARTY));
+            }
+            return active;
+        }
+        McMMOParty party = partyLoader.getParty(explicitPartyId.toLowerCase(Locale.ROOT));
+        if (party == null) {
+            player.sendMessage(LanguageConfig.get().getMessage(PARTY_NOT_EXISTS));
+            return null;
+        }
+        if (!party.getMembers().contains(player.getUniqueId())) {
+            player.sendMessage(LanguageConfig.get().getMessage(NOT_IN_PARTY));
+            return null;
+        }
+        return party;
     }
 
     public static void reloadPartyCommand(CommandSender sender) {

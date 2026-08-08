@@ -126,6 +126,10 @@ public class PartyEditor implements Listener {
     public void open(String partyID) {
         this.partyID = partyID;
         McMMOParty existingParty = McMMOParties.getPartyLoader().getParty(partyID);
+        if (existingParty != null && !existingParty.isOwner(player.getUniqueId())) {
+            player.sendMessage(LanguageConfig.get().getMessage("party_edit_owner_only", "&cOnly the party leader can edit this party."));
+            return;
+        }
         this.editingExisting = existingParty != null;
         loadPartyData(existingParty);
         initInventory();

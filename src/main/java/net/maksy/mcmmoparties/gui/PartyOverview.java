@@ -195,8 +195,8 @@ public class PartyOverview implements Listener {
 
         inventory.setItem(backIcon.getKey(), backIcon.getValue());
 
-        // Show edit button for party managers
-        if (party.canManageParty(playerUuid)) {
+        // Full party configuration is restricted to the actual party owner.
+        if (party.isOwner(playerUuid)) {
             var editIcon = McMMOParties.getPartyOverviewCfg().getIcon("EditParty");
             inventory.setItem(editIcon.getKey(), editIcon.getValue());
             mainSlots.put(editIcon.getKey(), PartyFeature.EDIT_PARTY);
@@ -1544,7 +1544,7 @@ public class PartyOverview implements Listener {
                     refreshInventory();
                 }
                 case EDIT_PARTY -> {
-                    if (party.canManageParty(playerUuid)) {
+                    if (party.isOwner(playerUuid)) {
                         player.closeInventory();
                         PartyEditor editor = EditorRegistry.getPartyEditor(player);
                         editor.open(party.getPartyID());

@@ -10,6 +10,7 @@ import java.util.*;
 
 public class PartyLoader {
     private final HashMap<String, McMMOParty> partyMap = new HashMap<>();
+    private final Map<UUID, String> activePartyByPlayer = new HashMap<>();
     private final Map<String, BukkitTask> pendingSaveTasks = new HashMap<>();
 
     public PartyLoader() {
@@ -22,6 +23,8 @@ public class PartyLoader {
             for (McMMOParty party : parties) {
                 partyMap.put(party.getPartyID(), party);
             }
+            activePartyByPlayer.clear();
+            activePartyByPlayer.putAll(McMMOParties.getSQL().getActivePartySelections());
         });
     }
 
@@ -41,7 +44,18 @@ public class PartyLoader {
 
     public McMMOParty getPartyOfPlayer(UUID uuid) {
         List<McMMOParty> parties = getPartiesOfPlayer(uuid);
-        return parties.isEmpty() ? null : parties.get(0);
+        if (parties.isEmpty()) {
+            return null;
+        }
+        String activePartyId = activePartyByPlayer.get(uuid);
+        if (activePartyId != null) {
+            for (McMMOParty party : parties) {
+                if (party.getPartyID().equalsIgnoreCase(activePartyId)) {
+                    return party;
+                }
+            }
+        }
+        return parties.get(0);
     }
 
     public List<McMMOParty> getPartiesOfPlayer(UUID uuid) {
@@ -52,6 +66,29 @@ public class PartyLoader {
                 .filter(party -> party.getMembers().contains(uuid))
                 .sorted(Comparator.comparing(McMMOParty::getPartyID, String.CASE_INSENSITIVE_ORDER))
                 .toList();
+    }
+
+    public boolean isActiveParty(UUID uuid, String partyId) {
+        McMMOParty active = getPartyOfPlayer(uuid);
+        return active != null && active.getPartyID().equalsIgnoreCase(partyId);
+    }
+
+    public void setActiveParty(UUID uuid, String partyId, java.util.function.Consumer<Boolean> callback) {
+        McMMOParty party = getParty(partyId);
+        if (party == null || !party.getMembers().contains(uuid)) {
+            if (callback != null) {
+                callback.accept(false);
+            }
+            return;
+        }
+        SQLAsyncManager.setActiveParty(uuid, party.getPartyID(), success -> {
+            if (success) {
+                activePartyByPlayer.put(uuid, party.getPartyID());
+            }
+            if (callback != null) {
+                callback.accept(success);
+            }
+        });
     }
 
     public void update(McMMOParty party) {
