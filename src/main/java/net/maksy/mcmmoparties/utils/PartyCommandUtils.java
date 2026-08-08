@@ -40,8 +40,8 @@ public class PartyCommandUtils {
             return;
         }
 
-        if (partyLoader.getPartyOfPlayer(player.getUniqueId()) != null) {
-            player.sendMessage(LanguageConfig.get().getMessage(ALREADY_IN_PARTY));
+        if (hasReachedPartyLimit(player.getUniqueId())) {
+            player.sendMessage(partyLimitMessage());
             return;
         }
 
@@ -61,13 +61,17 @@ public class PartyCommandUtils {
             return;
         }
 
-        if (partyLoader.getPartyOfPlayer(player.getUniqueId()) != null) {
+        if (party.getMembers().contains(player.getUniqueId())) {
             player.sendMessage(LanguageConfig.get().getMessage(ALREADY_IN_PARTY));
             return;
         }
 
-        PartyState state = McMMOParties.getSQL().getPartyState(player.getUniqueId(), party.getPartyID());
-        boolean invited = state == PartyState.PENDING;
+        if (hasReachedPartyLimit(player.getUniqueId())) {
+            player.sendMessage(partyLimitMessage());
+            return;
+        }
+
+        boolean invited = McMMOParties.getSQL().hasActivePartyInvite(player.getUniqueId(), party.getPartyID());
         boolean privateParty = party.getPartySettings().isLocked();
         String password = party.getPartySettings().getPassword();
         boolean hasPassword = password != null && !password.isBlank();
@@ -128,12 +132,7 @@ public class PartyCommandUtils {
             return;
         }
 
-        if (partyLoader.getPartyOfPlayer(target.getUniqueId()) != null) {
-            player.sendMessage(LanguageConfig.get().getMessage(ALREADY_IN_PARTY));
-            return;
-        }
-
-        if (McMMOParties.getSQL().getPartyState(target.getUniqueId(), party.getPartyID()) == PartyState.PENDING) {
+        if (McMMOParties.getSQL().hasActivePartyInvite(target.getUniqueId(), party.getPartyID())) {
             player.sendMessage(LanguageConfig.get().getMessage(ALREADY_REQUESTING));
             return;
         }
@@ -183,24 +182,25 @@ public class PartyCommandUtils {
             return;
         }
 
-        party.getMembers().add(request.getUniqueId());
-        party.setPartyState(request.getUniqueId(), PartyState.MEMBER);
-
-        SQLAsyncManager.getPartyState(request.getUniqueId(), party.getPartyID(), state -> {
-            if (state != PartyState.PENDING) {
-                player.sendMessage(LanguageConfig.get().getMessage(NOT_REQUESTING));
-                return;
-            }
-
-            SQLAsyncManager.setPartyState(request.getUniqueId(), party.getPartyID(), PartyState.MEMBER, () -> {
-                SQLAsyncManager.updateParty(party, () -> {
-                    for (UUID uuid : party.getMembers()) {
+        Bukkit.getScheduler().runTaskAsynchronously(McMMOParties.getInstance(), () -> {
+            boolean accepted = McMMOParties.getSQL().acceptJoinRequest(player.getUniqueId(), request.getUniqueId(), party.getPartyID());
+            Bukkit.getScheduler().runTask(McMMOParties.getInstance(), () -> {
+                if (!accepted) {
+                    player.sendMessage(LanguageConfig.get().getMessage(NOT_REQUESTING));
+                    return;
+                }
+                partyLoader.reload(party.getPartyID());
+                Bukkit.getScheduler().runTaskLater(McMMOParties.getInstance(), () -> {
+                    McMMOParty reloaded = partyLoader.getParty(party.getPartyID());
+                    if (reloaded == null) {
+                        return;
+                    }
+                    for (UUID uuid : reloaded.getMembers()) {
                         OfflinePlayer member = Bukkit.getOfflinePlayer(uuid);
                         if (member.isOnline())
                             member.getPlayer().sendMessage(LanguageConfig.get().getMessage(PARTY_JOINED, new Replaceable("%player%", request.getName())));
                     }
-                    partyLoader.reload();
-                });
+                }, 2L);
             });
         });
     }
@@ -407,6 +407,10 @@ public class PartyCommandUtils {
     }
 
     public static void addMember(Player player, String partyID) {
+        if (hasReachedPartyLimit(player.getUniqueId())) {
+            player.sendMessage(partyLimitMessage());
+            return;
+        }
         partyLoader.getParty(partyID).getMembers().add(player.getUniqueId());
         partyLoader.getParty(partyID).setPartyState(player.getUniqueId(), PartyState.MEMBER);
         McMMOParties.getPartyLoader().update(partyLoader.getParty(partyID));
@@ -418,20 +422,39 @@ public class PartyCommandUtils {
             return;
         }
 
-        party.getMembers().add(player.getUniqueId());
-        party.setPartyState(player.getUniqueId(), PartyState.MEMBER);
-
-        SQLAsyncManager.setPartyState(player.getUniqueId(), party.getPartyID(), PartyState.MEMBER, () ->
-                SQLAsyncManager.updateParty(party, () -> Bukkit.getScheduler().runTask(McMMOParties.getInstance(), () -> {
-                    for (UUID uuid : party.getMembers()) {
+        Bukkit.getScheduler().runTaskAsynchronously(McMMOParties.getInstance(), () -> {
+            boolean joined = McMMOParties.getSQL().joinParty(player.getUniqueId(), party.getPartyID());
+            Bukkit.getScheduler().runTask(McMMOParties.getInstance(), () -> {
+                if (!joined) {
+                    player.sendMessage(partyLimitMessage());
+                    return;
+                }
+                partyLoader.reload(party.getPartyID());
+                Bukkit.getScheduler().runTaskLater(McMMOParties.getInstance(), () -> {
+                    McMMOParty reloaded = partyLoader.getParty(party.getPartyID());
+                    if (reloaded == null) {
+                        return;
+                    }
+                    for (UUID uuid : reloaded.getMembers()) {
                         OfflinePlayer member = Bukkit.getOfflinePlayer(uuid);
                         if (member.isOnline() && member.getPlayer() != null) {
                             member.getPlayer().sendMessage(LanguageConfig.get().getMessage(PARTY_JOINED, new Replaceable("%player%", player.getName())));
                         }
                     }
-                    partyLoader.reload();
-                }))
-        );
+                }, 2L);
+            });
+        });
+    }
+
+    private static boolean hasReachedPartyLimit(UUID uuid) {
+        int maximum = McMMOParties.getConfigManager().getMaxPartiesPerPlayer();
+        return maximum >= 0 && partyLoader.getPartiesOfPlayer(uuid).size() >= maximum;
+    }
+
+    private static String partyLimitMessage() {
+        int maximum = McMMOParties.getConfigManager().getMaxPartiesPerPlayer();
+        return LanguageConfig.get().getMessage("party_limit_reached", "&cYou have reached the limit of &f%max_parties% &cparties.",
+                new Replaceable("%max_parties%", maximum < 0 ? "unlimited" : String.valueOf(maximum)));
     }
 
     public static void reloadPartyCommand(CommandSender sender) {

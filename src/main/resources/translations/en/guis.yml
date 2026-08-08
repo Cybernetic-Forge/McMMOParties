@@ -524,6 +524,100 @@ PartyOverview:
         - "&7Handler: &fSkillpoints"
         - "&7Total: &f%skillpoints_total%"
         - "&7Available: &f%skillpoints_available%"
+    PartyHub:
+      Title: "&6Get a Party"
+      InvSize: 45
+      Browse:
+        Slot: 20
+        Material: BOOK
+        Display: "&6Browse Parties"
+        Lore:
+          - "&7Explore %party_count% available parties"
+          - "&eLeft-click a party to inspect it"
+          - "&eRight-click a party to request joining"
+      Create:
+        Slot: 22
+        Material: OAK_SIGN
+        Display: "&aCreate Party"
+        Lore:
+          - "&7Choose an ID/name, then configure it"
+          - "&7Your parties: &f%membership_count%&7/&f%max_parties%"
+      Invitations:
+        Slot: 24
+        Material: ENCHANTED_BOOK
+        Display: "&dInvitations & Requests"
+        Lore:
+          - "&7Review incoming join requests"
+          - "&7Track or cancel your sent requests"
+          - "&7Requests expire after &f%expiration_hours% hours"
+      CreateDialog:
+        Title: "&aCreate Party"
+        Prompt: "Enter a unique ID/name for your party."
+        Input: "Party ID/name"
+        Submit: "Continue"
+    PartyInvitations:
+      Title: "&6Party Requests &7| &fPage %page%/%max_page%"
+      IncomingSlots: [10, 11, 12, 19, 20, 21, 28, 29, 30, 37, 38, 39]
+      OutgoingSlots: [14, 15, 16, 23, 24, 25, 32, 33, 34, 41, 42, 43]
+      IncomingHeader:
+        Slot: 1
+        Material: CHEST
+        Display: "&aIncoming Requests &7(%count%)"
+        Lore:
+          - "&7Requests to join parties you manage"
+          - "&7Left-click: &aaccept"
+          - "&7Right-click: &cdeny"
+          - "&7Expiration: &f%expiration_hours% hours"
+      OutgoingHeader:
+        Slot: 7
+        Material: ENDER_CHEST
+        Display: "&eSent Requests &7(%count%)"
+        Lore:
+          - "&7Your requests to join other parties"
+          - "&7Click an entry to cancel it"
+          - "&7Expiration: &f%expiration_hours% hours"
+      IncomingEntry:
+        Material: PLAYER_HEAD
+        Display: "&a%player% &7→ &f%party%"
+        Lore:
+          - "&7Expires in: &f%expires_in%"
+          - "&7Expires at: &f%expires_at%"
+          - ""
+          - "&aLeft-click to accept"
+          - "&cRight-click to deny"
+      OutgoingEntry:
+        Material: PAPER
+        Display: "&e%party%"
+        Lore:
+          - "&7Requested by: &f%player%"
+          - "&7Expires in: &f%expires_in%"
+          - "&7Expires at: &f%expires_at%"
+          - ""
+          - "&cClick to cancel"
+      NoIncoming:
+        Slot: 20
+        Material: GRAY_DYE
+        Display: "&7No incoming requests"
+      NoOutgoing:
+        Slot: 24
+        Material: GRAY_DYE
+        Display: "&7No sent requests"
+      PreviousPage:
+        Slot: 45
+        Material: ARROW
+        Display: "&aPrevious Page"
+      Back:
+        Slot: 48
+        Material: BARRIER
+        Display: "&cBack"
+      PageInfo:
+        Slot: 49
+        Material: BOOK
+        Display: "&ePage %page%/%max_page%"
+      NextPage:
+        Slot: 53
+        Material: ARROW
+        Display: "&aNext Page"
     PartyList:
       DefaultSort: RANKING
       Header:
@@ -596,7 +690,8 @@ PartyOverview:
           - "&7Balance: &a%party_balance%"
           - "&7Access: %party_access%"
           - "&7Password required: &f%party_password_required%"
-          - "&7Click to inspect this party"
+          - "&eLeft-click to inspect this party"
+          - "&eRight-click to request joining"
       EntryOwn:
         Slot: 44
         Material: PLAYER_HEAD
@@ -611,7 +706,8 @@ PartyOverview:
           - "&7Balance: &a%party_balance%"
           - "&7Access: %party_access%"
           - "&7Password required: &f%party_password_required%"
-          - "&7Click to inspect this party"
+          - "&eLeft-click to inspect this party"
+          - "&eRight-click to request joining"
       SkillHeader:
         - "&7Cumulative skill stats:"
       SkillLine:

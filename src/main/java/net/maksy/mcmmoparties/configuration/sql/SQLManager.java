@@ -7,6 +7,7 @@ import net.maksy.mcmmoparties.configuration.enums.PartyBuffType;
 import net.maksy.mcmmoparties.configuration.enums.PartyState;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.configuration.models.PartySettings;
+import net.maksy.mcmmoparties.configuration.models.PartyInvitation;
 import net.maksy.mcmmoparties.configuration.models.PartyWaypoint;
 import net.maksy.mcmmoparties.configuration.models.SkillRequirement;
 import net.maksy.mcmmoparties.configuration.sql.tables.*;
@@ -49,6 +50,7 @@ public class SQLManager {
     private final PartyBuffSkillPointsTableSQL buffSkillPointsTable;
     private final PartyBuffSuggestionTableSQL buffSuggestionTable;
     private final PartyWaypointTableSQL waypointTable;
+    private final PartyInvitationTableSQL invitationTable;
 
     public SQLManager() {
         try {
@@ -61,6 +63,7 @@ public class SQLManager {
             buffSkillPointsTable = new PartyBuffSkillPointsTableSQL();
             buffSuggestionTable = new PartyBuffSuggestionTableSQL();
             waypointTable = new PartyWaypointTableSQL();
+            invitationTable = new PartyInvitationTableSQL();
 
             try (Connection connection = connection()) {
                 skillTable.migrateSkillColumnsIfPresent(connection);
@@ -625,25 +628,174 @@ public class SQLManager {
     }
 
     public boolean sendRequest(UUID uuid, String partyID) {
-        String normalizedPartyID = normalizePartyID(partyID);
+        return sendPartyInvite(uuid, partyID, null);
+    }
 
+    public boolean sendPartyInvite(UUID uuid, String partyID, UUID requestedBy) {
+        String normalizedPartyID = normalizePartyID(partyID);
         try (Connection connection = connection()) {
-            if (playerTable.isPending(connection, uuid)) {
-                Player player = Bukkit.getPlayer(uuid);
-                if (player != null) {
-                    player.sendMessage(LanguageConfig.get().getMessage(ALREADY_REQUESTING));
-                }
+            invitationTable.deleteExpired(connection, System.currentTimeMillis());
+            if (!canJoin(connection, uuid, normalizedPartyID)
+                    || invitationTable.get(connection, uuid, normalizedPartyID, PartyInvitation.Type.PARTY_INVITE) != null) {
                 return false;
             }
-
-            if (!playerTable.removeIfNone(connection, uuid, normalizedPartyID)) {
-                playerTable.upsertPlayer(connection, uuid, normalizedPartyID, PartyState.PENDING);
-            }
+            long now = System.currentTimeMillis();
+            invitationTable.upsert(connection, new PartyInvitation(uuid, normalizedPartyID,
+                    PartyInvitation.Type.PARTY_INVITE, requestedBy, now, invitationExpiry(now)));
             return true;
         } catch (SQLException e) {
-            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not send request for " + uuid, e);
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not send party invitation for " + uuid, e);
         }
         return false;
+    }
+
+    public boolean sendJoinRequest(UUID uuid, String partyID) {
+        String normalizedPartyID = normalizePartyID(partyID);
+        try (Connection connection = connection()) {
+            invitationTable.deleteExpired(connection, System.currentTimeMillis());
+            if (!canJoin(connection, uuid, normalizedPartyID)
+                    || invitationTable.get(connection, uuid, normalizedPartyID, PartyInvitation.Type.JOIN_REQUEST) != null) {
+                return false;
+            }
+            long now = System.currentTimeMillis();
+            invitationTable.upsert(connection, new PartyInvitation(uuid, normalizedPartyID,
+                    PartyInvitation.Type.JOIN_REQUEST, uuid, now, invitationExpiry(now)));
+            return true;
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not send join request for " + uuid, e);
+            return false;
+        }
+    }
+
+    public boolean hasActivePartyInvite(UUID uuid, String partyID) {
+        try (Connection connection = connection()) {
+            invitationTable.deleteExpired(connection, System.currentTimeMillis());
+            return invitationTable.get(connection, uuid, normalizePartyID(partyID), PartyInvitation.Type.PARTY_INVITE) != null;
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not check party invitation for " + uuid, e);
+            return false;
+        }
+    }
+
+    public List<PartyInvitation> getOutgoingJoinRequests(UUID uuid) {
+        try (Connection connection = connection()) {
+            invitationTable.deleteExpired(connection, System.currentTimeMillis());
+            return invitationTable.getByPlayer(connection, uuid, PartyInvitation.Type.JOIN_REQUEST);
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not load outgoing join requests for " + uuid, e);
+            return List.of();
+        }
+    }
+
+    public List<PartyInvitation> getIncomingJoinRequests(Collection<String> managedPartyIds) {
+        try (Connection connection = connection()) {
+            invitationTable.deleteExpired(connection, System.currentTimeMillis());
+            return invitationTable.getByParties(connection, managedPartyIds, PartyInvitation.Type.JOIN_REQUEST);
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not load incoming join requests", e);
+            return List.of();
+        }
+    }
+
+    public boolean cancelInvitation(UUID playerUuid, String partyID, PartyInvitation.Type type) {
+        try (Connection connection = connection()) {
+            PartyInvitation invitation = invitationTable.get(connection, playerUuid, normalizePartyID(partyID), type);
+            if (invitation == null) {
+                return false;
+            }
+            invitationTable.delete(connection, playerUuid, partyID, type);
+            return true;
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not cancel invitation for " + playerUuid, e);
+            return false;
+        }
+    }
+
+    public boolean acceptJoinRequest(UUID managerUuid, UUID requesterUuid, String partyID) {
+        String normalizedPartyID = normalizePartyID(partyID);
+        try (Connection connection = connection()) {
+            connection.setAutoCommit(false);
+            try {
+                invitationTable.deleteExpired(connection, System.currentTimeMillis());
+                PartyInvitation request = invitationTable.get(connection, requesterUuid, normalizedPartyID, PartyInvitation.Type.JOIN_REQUEST);
+                PartyState managerState = playerTable.getPartyState(connection, managerUuid, normalizedPartyID);
+                if (request == null || managerState == null || !managerState.canManageParty()
+                        || !canJoin(connection, requesterUuid, normalizedPartyID)) {
+                    connection.rollback();
+                    return false;
+                }
+                playerTable.upsertPlayer(connection, requesterUuid, normalizedPartyID, PartyState.MEMBER);
+                invitationTable.delete(connection, requesterUuid, normalizedPartyID, PartyInvitation.Type.JOIN_REQUEST);
+                invitationTable.delete(connection, requesterUuid, normalizedPartyID, PartyInvitation.Type.PARTY_INVITE);
+                connection.commit();
+                return true;
+            } catch (SQLException e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not accept join request for " + requesterUuid, e);
+            return false;
+        }
+    }
+
+    public boolean joinParty(UUID playerUuid, String partyID) {
+        String normalizedPartyID = normalizePartyID(partyID);
+        try (Connection connection = connection()) {
+            connection.setAutoCommit(false);
+            try {
+                if (!canJoin(connection, playerUuid, normalizedPartyID)) {
+                    connection.rollback();
+                    return false;
+                }
+                playerTable.upsertPlayer(connection, playerUuid, normalizedPartyID, PartyState.MEMBER);
+                invitationTable.delete(connection, playerUuid, normalizedPartyID, PartyInvitation.Type.JOIN_REQUEST);
+                invitationTable.delete(connection, playerUuid, normalizedPartyID, PartyInvitation.Type.PARTY_INVITE);
+                connection.commit();
+                return true;
+            } catch (SQLException e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not join party for " + playerUuid, e);
+            return false;
+        }
+    }
+
+    public int getPartyCount(UUID uuid) {
+        try (Connection connection = connection()) {
+            return playerTable.countActiveMemberships(connection, uuid);
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not count party memberships for " + uuid, e);
+            return 0;
+        }
+    }
+
+    private boolean canJoin(Connection connection, UUID uuid, String partyID) throws SQLException {
+        if (!partyTable.exists(connection, partyID)) {
+            return false;
+        }
+        PartyState current = playerTable.getPartyState(connection, uuid, partyID);
+        if (current != null && current.isActiveMember()) {
+            return false;
+        }
+        int maxParties = McMMOParties.getConfigManager().getMaxPartiesPerPlayer();
+        if (maxParties >= 0 && playerTable.countActiveMemberships(connection, uuid) >= maxParties) {
+            return false;
+        }
+        McMMOParty loaded = McMMOParties.getPartyLoader() == null ? null : McMMOParties.getPartyLoader().getParty(partyID);
+        int currentMembers = (int) playerTable.getPlayers(connection, partyID).stream().filter(row -> row.state().isActiveMember()).count();
+        int maxMembers = loaded == null ? McMMOParties.getConfigManager().getBaseMemberSlots() : loaded.getMaxMembers();
+        return currentMembers < maxMembers;
+    }
+
+    private long invitationExpiry(long createdAt) {
+        return createdAt + (McMMOParties.getConfigManager().getInvitationExpirationHours() * 60L * 60L * 1000L);
     }
 
     public PartyState getPartyState(UUID uuid, String partyID) {
@@ -740,6 +892,7 @@ public class SQLManager {
 
                 buffSkillPointsTable.deleteByParty(connection, normalizedPartyID);
                 buffSuggestionTable.deleteByParty(connection, normalizedPartyID);
+                invitationTable.deleteByParty(connection, normalizedPartyID);
                 waypointTable.deleteByParty(connection, normalizedPartyID);
                 partyShareTable.deleteByParty(connection, normalizedPartyID);
                 skillTable.deleteByParty(connection, normalizedPartyID);

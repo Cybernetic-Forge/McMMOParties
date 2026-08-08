@@ -524,6 +524,100 @@
         - "&7Modus: &fSkillpunkte"
         - "&7Gesamt: &f%skillpoints_total%"
         - "&7Frei: &f%skillpoints_available%"
+    PartyHub:
+      Title: "&6Finde eine Party"
+      InvSize: 45
+      Browse:
+        Slot: 20
+        Material: BOOK
+        Display: "&6Partys durchsuchen"
+        Lore:
+          - "&7Entdecke %party_count% verfügbare Partys"
+          - "&eLinksklick: Party ansehen"
+          - "&eRechtsklick: Beitritt anfragen"
+      Create:
+        Slot: 22
+        Material: OAK_SIGN
+        Display: "&aParty erstellen"
+        Lore:
+          - "&7Wähle zuerst eine ID/einen Namen"
+          - "&7Deine Partys: &f%membership_count%&7/&f%max_parties%"
+      Invitations:
+        Slot: 24
+        Material: ENCHANTED_BOOK
+        Display: "&dEinladungen & Anfragen"
+        Lore:
+          - "&7Eingehende Beitrittsanfragen verwalten"
+          - "&7Gesendete Anfragen ansehen oder abbrechen"
+          - "&7Anfragen verfallen nach &f%expiration_hours% Stunden"
+      CreateDialog:
+        Title: "&aParty erstellen"
+        Prompt: "Gib eine eindeutige ID/einen Namen für deine Party ein."
+        Input: "Party-ID/Name"
+        Submit: "Weiter"
+    PartyInvitations:
+      Title: "&6Partyanfragen &7| &fSeite %page%/%max_page%"
+      IncomingSlots: [10, 11, 12, 19, 20, 21, 28, 29, 30, 37, 38, 39]
+      OutgoingSlots: [14, 15, 16, 23, 24, 25, 32, 33, 34, 41, 42, 43]
+      IncomingHeader:
+        Slot: 1
+        Material: CHEST
+        Display: "&aEingehende Anfragen &7(%count%)"
+        Lore:
+          - "&7Anfragen für Partys, die du verwaltest"
+          - "&7Linksklick: &aannehmen"
+          - "&7Rechtsklick: &cablehnen"
+          - "&7Ablaufzeit: &f%expiration_hours% Stunden"
+      OutgoingHeader:
+        Slot: 7
+        Material: ENDER_CHEST
+        Display: "&eGesendete Anfragen &7(%count%)"
+        Lore:
+          - "&7Deine Anfragen an andere Partys"
+          - "&7Klick auf einen Eintrag zum Abbrechen"
+          - "&7Ablaufzeit: &f%expiration_hours% Stunden"
+      IncomingEntry:
+        Material: PLAYER_HEAD
+        Display: "&a%player% &7→ &f%party%"
+        Lore:
+          - "&7Verfällt in: &f%expires_in%"
+          - "&7Verfällt am: &f%expires_at%"
+          - ""
+          - "&aLinksklick zum Annehmen"
+          - "&cRechtsklick zum Ablehnen"
+      OutgoingEntry:
+        Material: PAPER
+        Display: "&e%party%"
+        Lore:
+          - "&7Angefragt von: &f%player%"
+          - "&7Verfällt in: &f%expires_in%"
+          - "&7Verfällt am: &f%expires_at%"
+          - ""
+          - "&cKlick zum Abbrechen"
+      NoIncoming:
+        Slot: 20
+        Material: GRAY_DYE
+        Display: "&7Keine eingehenden Anfragen"
+      NoOutgoing:
+        Slot: 24
+        Material: GRAY_DYE
+        Display: "&7Keine gesendeten Anfragen"
+      PreviousPage:
+        Slot: 45
+        Material: ARROW
+        Display: "&aVorherige Seite"
+      Back:
+        Slot: 48
+        Material: BARRIER
+        Display: "&cZurück"
+      PageInfo:
+        Slot: 49
+        Material: BOOK
+        Display: "&eSeite %page%/%max_page%"
+      NextPage:
+        Slot: 53
+        Material: ARROW
+        Display: "&aNächste Seite"
     PartyList:
       DefaultSort: RANKING
       Header:
@@ -596,7 +690,8 @@
           - "&7Kontostand: &a%party_balance%"
           - "&7Zugang: %party_access%"
           - "&7Passwort: &f%party_password_required%"
-          - "&7Klick zum Prüfen"
+          - "&eLinksklick: Party ansehen"
+          - "&eRechtsklick: Beitritt anfragen"
       EntryOwn:
         Slot: 44
         Material: PLAYER_HEAD
@@ -611,7 +706,8 @@
           - "&7Kontostand: &a%party_balance%"
           - "&7Zugang: %party_access%"
           - "&7Passwort: &f%party_password_required%"
-          - "&7Klick zum Prüfen"
+          - "&eLinksklick: Party ansehen"
+          - "&eRechtsklick: Beitritt anfragen"
       SkillHeader:
         - "&7Gesamte Skillwerte:"
       SkillLine:
@@ -829,5 +925,4 @@ PartyEditor:
         Display: "&9Verwertung"
         Lore:
           - "&7Benötigt: &a%level%"
-
 

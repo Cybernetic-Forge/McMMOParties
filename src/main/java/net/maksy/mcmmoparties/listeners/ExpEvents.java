@@ -15,9 +15,15 @@ public class ExpEvents implements Listener {
     @EventHandler
     public void onMcMMOGain(McMMOPlayerXpGainEvent event) {
         Player player = event.getPlayer();
-        McMMOParty party = McMMOParties.getPartyLoader().getPartyOfPlayer(player.getUniqueId());
-        if (party == null)
+        List<McMMOParty> parties = McMMOParties.getPartyLoader().getPartiesOfPlayer(player.getUniqueId());
+        if (parties.isEmpty())
             return;
+        for (McMMOParty party : parties) {
+            awardPartyExperience(player, party, event);
+        }
+    }
+
+    private void awardPartyExperience(Player player, McMMOParty party, McMMOPlayerXpGainEvent event) {
         McMMOParties.getPartyEventHandler().callPartyExpChangedEvent(player, party, event);
 
         if(party.getPartySettings().isExpShare()) {

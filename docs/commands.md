@@ -16,6 +16,7 @@ Primary command aliases:
 
 | Command | Description | Permission |
 | --- | --- | --- |
+| `/party` | Opens the party hub for browsing parties, creating a party, and managing join requests. | None |
 | `/party accept <player>` | Accepts a pending join request from a player into your party. | None |
 | `/party chat <message...>` | Sends a message to party chat. | None |
 | `/party create <name>` | Opens the party creation flow for a new party name. | None |
@@ -54,6 +55,8 @@ Primary command aliases:
 
 ## Notes
 
+- In the party browser, left-click opens the selected party overview and right-click sends a join request.
+- A player can belong to multiple parties up to `Party.MaxPartiesPerPlayer`; earned party experience and party buffs are processed for each membership.
 - Most player-facing `/party` subcommands do not have dedicated permission checks in code.
 - `/party reload` is handled through the user command root, but it is an admin-only command.
 - Admin subcommands accept either the specific child permission listed above or the umbrella permission `mcmmoparties.admin`.

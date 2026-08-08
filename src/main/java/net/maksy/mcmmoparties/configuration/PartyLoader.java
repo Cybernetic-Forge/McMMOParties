@@ -40,11 +40,18 @@ public class PartyLoader {
     }
 
     public McMMOParty getPartyOfPlayer(UUID uuid) {
-        for (McMMOParty party : getParties()) {
-            if (party.getMembers().contains(uuid))
-                return party;
+        List<McMMOParty> parties = getPartiesOfPlayer(uuid);
+        return parties.isEmpty() ? null : parties.get(0);
+    }
+
+    public List<McMMOParty> getPartiesOfPlayer(UUID uuid) {
+        if (uuid == null) {
+            return List.of();
         }
-        return null;
+        return getParties().stream()
+                .filter(party -> party.getMembers().contains(uuid))
+                .sorted(Comparator.comparing(McMMOParty::getPartyID, String.CASE_INSENSITIVE_ORDER))
+                .toList();
     }
 
     public void update(McMMOParty party) {

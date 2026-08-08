@@ -184,6 +184,13 @@ public class PartyEditor implements Listener {
                     McMMOParties.getSQL().updateParty(updatedParty);
                 } else {
                     // Create new party
+                    int maxParties = McMMOParties.getConfigManager().getMaxPartiesPerPlayer();
+                    if (maxParties >= 0 && McMMOParties.getPartyLoader().getPartiesOfPlayer(player.getUniqueId()).size() >= maxParties) {
+                        player.sendMessage(LanguageConfig.get().getMessage("party_limit_reached",
+                                "&cYou have reached the limit of &f%max_parties% &cparties.",
+                                new Replaceable("%max_parties%", String.valueOf(maxParties))));
+                        return;
+                    }
                     McMMOParties.getSQL().createParty(player, partyID, display, skillRequirements, locked, password);
                 }
                 McMMOParties.getPartyLoader().reload();

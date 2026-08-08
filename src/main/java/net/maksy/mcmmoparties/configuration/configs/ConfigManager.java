@@ -52,6 +52,8 @@ public class ConfigManager {
         config.addMissing("Hooks.ChestShop.Enabled", true);
         config.addMissing("DungeonInstance.DefaultSlots", 2);
         config.addMissing("Party.DefaultTresorSize", 50000);
+        config.addMissing("Party.MaxPartiesPerPlayer", 3);
+        config.addMissing("Invitations.ExpirationHours", 24);
 
         for (PrimarySkillType skill : PrimarySkillType.values()) {
             config.addMissing("Experience.Scaling." + skill.name(), getDefaultScaling(skill));
@@ -90,6 +92,15 @@ public class ConfigManager {
     public int getDefaultTresorSize() {
         int configured = config.getInt("Party.DefaultTresorSize", 50000);
         return configured < 0 ? -1 : Math.max(0, configured);
+    }
+
+    public int getMaxPartiesPerPlayer() {
+        int configured = config.getInt("Party.MaxPartiesPerPlayer", 3);
+        return configured < 0 ? -1 : Math.max(1, configured);
+    }
+
+    public int getInvitationExpirationHours() {
+        return Math.max(1, config.getInt("Invitations.ExpirationHours", 24));
     }
 
     public String getBuffDisplayName(String key, String fallback) {

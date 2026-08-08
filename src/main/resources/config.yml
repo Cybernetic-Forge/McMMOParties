@@ -32,8 +32,12 @@ DungeonInstance:
 
 Party:
   BaseMemberSlots: 10
+  MaxPartiesPerPlayer: 3 # Set to -1 for unlimited simultaneous party memberships.
   PartyLevelCap: 100 # Set to -1 for unlimited party levels.
   DefaultTresorSize: 50000
+
+Invitations:
+  ExpirationHours: 24
 
 Buffs:
   Handler: SKILLPOINTS

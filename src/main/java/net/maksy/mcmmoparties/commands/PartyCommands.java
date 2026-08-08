@@ -4,6 +4,7 @@ import net.maksy.mcmmoparties.McMMOParties;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.utils.PartyCommandUtils;
 import net.maksy.mcmmoparties.utils.PartyListSortMode;
+import net.maksy.mcmmoparties.gui.PartyHubGUI;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -31,7 +32,7 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
 
         switch(args.length) {
             case 0:
-                PartyCommandUtils.infoPartyCommand(player, null);
+                new PartyHubGUI(player).open();
                 break;
             case 1:
                 switch(args[0]) {

@@ -3,6 +3,7 @@ package net.maksy.mcmmoparties.gui;
 import net.kyori.adventure.text.Component;
 import net.maksy.mcmmoparties.McMMOParties;
 import net.maksy.mcmmoparties.utils.*;
+import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -126,8 +127,8 @@ public class PartyListGUI implements Listener {
 	}
 
 	private boolean isOwnParty(String partyId) {
-		var viewerParty = McMMOParties.getPartyLoader().getPartyOfPlayer(player.getUniqueId());
-		return viewerParty != null && viewerParty.getPartyID().equalsIgnoreCase(partyId);
+		return McMMOParties.getPartyLoader().getPartiesOfPlayer(player.getUniqueId()).stream()
+				.anyMatch(party -> party.getPartyID().equalsIgnoreCase(partyId));
 	}
 
 	private int getMaxPage() {
@@ -218,7 +219,7 @@ public class PartyListGUI implements Listener {
 			return;
 		}
 		if (slot == back.getKey()) {
-			player.closeInventory();
+			new PartyHubGUI(player).open();
 			return;
 		}
 		if (slot == header.getKey()) {
@@ -239,10 +240,21 @@ public class PartyListGUI implements Listener {
 
 		var party = McMMOParties.getPartyLoader().getParty(partyId);
 		if (party != null) {
-			player.closeInventory();
-			new PartyOverview(player.getUniqueId(), party).open();
+			if (event.getClick().isRightClick()) {
+				player.closeInventory();
+				Bukkit.getScheduler().runTaskAsynchronously(McMMOParties.getInstance(), () -> {
+					boolean sent = McMMOParties.getSQL().sendJoinRequest(player.getUniqueId(), party.getPartyID());
+					Bukkit.getScheduler().runTask(McMMOParties.getInstance(), () -> player.sendMessage(
+							sent
+									? LanguageConfig.get().getMessage("join_request_sent", "&aYour request to join &f%party%&a was sent.", new Replaceable("%party%", party.getPartyID()))
+									: LanguageConfig.get().getMessage("join_request_not_sent", "&cYou already belong to this party or have an active request.")
+					));
+				});
+			} else {
+				player.closeInventory();
+				new PartyOverview(player.getUniqueId(), party).open();
+			}
 		}
 	}
 }
-
 
