@@ -213,7 +213,8 @@ public class SQLManager {
                     settingsRow.partyChat()
             );
 
-            return new McMMOParty(partyRow.partyID(), partyRow.display(), partyRow.experience(), partyRow.level(), owner, members, memberStates, partySettings);
+            return new McMMOParty(partyRow.partyID(), partyRow.display(), partyRow.experience(), partyRow.level(), owner, members,
+                    memberStates, partySettings, partyRow.balance());
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "[SQL] Could not load party " + partyID, e);
         }
@@ -295,6 +296,7 @@ public class SQLManager {
                 partyShareTable.upsertShare(connection, normalizedPartyID, playerUuid, currentShare + amount);
 
                 connection.commit();
+                updateLoadedBalance(normalizedPartyID, newBalance);
                 return true;
             } catch (SQLException e) {
                 connection.rollback();
@@ -347,6 +349,7 @@ public class SQLManager {
                 partyShareTable.upsertShare(connection, normalizedPartyID, playerUuid, newShare);
 
                 connection.commit();
+                updateLoadedBalance(normalizedPartyID, newBalance);
                 return true;
             } catch (SQLException e) {
                 connection.rollback();
@@ -431,6 +434,7 @@ public class SQLManager {
                 }
                 partyTable.updateBalance(connection, normalizedPartyID, newBalance);
                 connection.commit();
+                updateLoadedBalance(normalizedPartyID, newBalance);
                 return true;
             } catch (SQLException e) {
                 connection.rollback();
@@ -472,8 +476,10 @@ public class SQLManager {
                     return false;
                 }
 
-                partyTable.updateBalance(connection, normalizedPartyID, currentBalance - amount);
+                double newBalance = currentBalance - amount;
+                partyTable.updateBalance(connection, normalizedPartyID, newBalance);
                 connection.commit();
+                updateLoadedBalance(normalizedPartyID, newBalance);
                 return true;
             } catch (SQLException e) {
                 connection.rollback();
@@ -508,8 +514,10 @@ public class SQLManager {
 
     public void setPartyBalance(String partyID, double balance) {
         String normalizedPartyID = normalizePartyID(partyID);
+        double normalizedBalance = Math.max(0.0D, balance);
         try (Connection connection = connection()) {
-            partyTable.updateBalance(connection, normalizedPartyID, Math.max(0.0D, balance));
+            partyTable.updateBalance(connection, normalizedPartyID, normalizedBalance);
+            updateLoadedBalance(normalizedPartyID, normalizedBalance);
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "[SQL] Could not update party balance for " + partyID, e);
         }
@@ -604,18 +612,23 @@ public class SQLManager {
                     return false;
                 }
 
+                Double resultingBalance = null;
                 if (treasuryCost > 0.0) {
                     double currentBalance = partyTable.getBalance(connection, normalizedPartyID);
                     if (currentBalance < treasuryCost) {
                         connection.rollback();
                         return false;
                     }
-                    partyTable.updateBalance(connection, normalizedPartyID, currentBalance - treasuryCost);
+                    resultingBalance = currentBalance - treasuryCost;
+                    partyTable.updateBalance(connection, normalizedPartyID, resultingBalance);
                 }
 
                 buffSkillPointsTable.upsertSpentPoints(connection, normalizedPartyID, type.name(), ability, current + 1);
                 buffSuggestionTable.deleteByParty(connection, normalizedPartyID);
                 connection.commit();
+                if (resultingBalance != null) {
+                    updateLoadedBalance(normalizedPartyID, resultingBalance);
+                }
                 return true;
             } catch (SQLException e) {
                 connection.rollback();
@@ -923,6 +936,16 @@ public class SQLManager {
 
     private String normalizePartyID(String partyID) {
         return partyID == null ? null : partyID.toLowerCase(Locale.ROOT);
+    }
+
+    private void updateLoadedBalance(String partyID, double balance) {
+        if (McMMOParties.getPartyLoader() == null) {
+            return;
+        }
+        McMMOParty loaded = McMMOParties.getPartyLoader().getParty(partyID);
+        if (loaded != null) {
+            loaded.setBalance(balance);
+        }
     }
 
     public Map<UUID, String> getActivePartySelections() {

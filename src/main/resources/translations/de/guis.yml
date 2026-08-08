@@ -543,6 +543,7 @@
           - "&aLinksklick: &7neue Party erstellen"
           - "&eRechtsklick: &7deine Partys ansehen"
           - "&7Deine Partys: &f%membership_count%&7/&f%max_parties%"
+          - "&7Aktiv: &f%active_party_display% &8(&7%active_party_id%&8)"
       Invitations:
         Slot: 24
         Material: ENCHANTED_BOOK
@@ -550,6 +551,7 @@
         Lore:
           - "&7Eingehende Beitrittsanfragen verwalten"
           - "&7Gesendete Anfragen ansehen oder abbrechen"
+          - "&aEingehend: &f%incoming_count% &8| &eAusgehend: &f%outgoing_count%"
           - "&7Anfragen verfallen nach &f%expiration_hours% Stunden"
       CreateDialog:
         Title: "&aParty erstellen"

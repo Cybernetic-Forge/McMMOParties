@@ -19,7 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class PartyListGUI implements Listener {
+public class PartyListGUI {
 
 	private static final List<Integer> DEFAULT_ENTRY_SLOTS = List.of(10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43);
 
@@ -46,11 +46,11 @@ public class PartyListGUI implements Listener {
 			this.entrySlots.addAll(DEFAULT_ENTRY_SLOTS);
 		}
 		this.entrySlots.removeIf(slot -> slot == ownEntrySlot);
-		McMMOParties.getInstance().getServer().getPluginManager().registerEvents(this, McMMOParties.getInstance());
 		render();
 	}
 
 	public void open() {
+		GuiSessionRegistry.register(inventory, this::onInventoryClick);
 		player.openInventory(inventory);
 	}
 
@@ -124,6 +124,7 @@ public class PartyListGUI implements Listener {
 		inventory.setItem(pageInfo.getKey(), pageInfo.getValue());
 		inventory.setItem(sort.getKey(), sort.getValue());
 		inventory.setItem(back.getKey(), back.getValue());
+		GuiSessionRegistry.register(inventory, this::onInventoryClick);
 	}
 
 	private boolean isOwnParty(String partyId) {
@@ -188,7 +189,6 @@ public class PartyListGUI implements Listener {
 		return parsed == null ? PartyListSortMode.RANKING : parsed;
 	}
 
-	@EventHandler
 	public void onInventoryClick(InventoryClickEvent event) {
 		if (event.getInventory() != inventory) {
 			return;
@@ -252,9 +252,11 @@ public class PartyListGUI implements Listener {
 				});
 			} else {
 				player.closeInventory();
-				new PartyOverview(player.getUniqueId(), party).open();
+				int sourcePage = page;
+				PartyListSortMode sourceSort = sortMode;
+				new PartyOverview(player.getUniqueId(), party,
+						() -> new PartyListGUI(player, sourcePage, sourceSort).open()).open();
 			}
 		}
 	}
 }
-

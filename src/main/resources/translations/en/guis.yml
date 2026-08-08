@@ -543,6 +543,7 @@ PartyOverview:
           - "&aLeft-click: &7create a new party"
           - "&eRight-click: &7view your parties"
           - "&7Your parties: &f%membership_count%&7/&f%max_parties%"
+          - "&7Active: &f%active_party_display% &8(&7%active_party_id%&8)"
       Invitations:
         Slot: 24
         Material: ENCHANTED_BOOK
@@ -550,6 +551,7 @@ PartyOverview:
         Lore:
           - "&7Review incoming join requests"
           - "&7Track or cancel your sent requests"
+          - "&aIncoming: &f%incoming_count% &8| &eOutgoing: &f%outgoing_count%"
           - "&7Requests expire after &f%expiration_hours% hours"
       CreateDialog:
         Title: "&aCreate Party"

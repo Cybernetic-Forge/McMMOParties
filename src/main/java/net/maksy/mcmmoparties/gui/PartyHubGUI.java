@@ -12,6 +12,7 @@ import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickCallback;
 import net.maksy.mcmmoparties.McMMOParties;
+import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
 import net.maksy.mcmmoparties.utils.ChatUT;
 import net.maksy.mcmmoparties.utils.ItemUT;
 import net.maksy.mcmmoparties.utils.PartyCommandUtils;
@@ -19,28 +20,35 @@ import net.maksy.mcmmoparties.utils.Replaceable;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.List;
 
-public class PartyHubGUI implements Listener {
+public class PartyHubGUI {
     private final Player player;
     private final Inventory inventory;
+    private int incomingInvitations = -1;
+    private int outgoingInvitations = -1;
 
     public PartyHubGUI(Player player) {
         this.player = player;
         String title = McMMOParties.getPartyOverviewCfg().getFormattedString("Icons.PartyHub.Title", "&6Get a Team");
         int size = McMMOParties.getPartyOverviewCfg().getInt("Icons.PartyHub.InvSize", 45);
         this.inventory = Bukkit.createInventory(player, normalizeSize(size), ChatUT.hexComp(title));
-        McMMOParties.getInstance().getServer().getPluginManager().registerEvents(this, McMMOParties.getInstance());
         render();
     }
 
     public void open() {
+        GuiSessionRegistry.register(inventory, this::onInventoryClick);
         player.openInventory(inventory);
+        loadInvitationCounts();
     }
 
     private void render() {
@@ -48,19 +56,31 @@ public class PartyHubGUI implements Listener {
         int memberships = McMMOParties.getPartyLoader().getPartiesOfPlayer(player.getUniqueId()).size();
         int maxParties = McMMOParties.getConfigManager().getMaxPartiesPerPlayer();
         String maxDisplay = maxParties < 0 ? "unlimited" : String.valueOf(maxParties);
+        var activeParty = McMMOParties.getPartyLoader().getPartyOfPlayer(player.getUniqueId());
+        String activeId = activeParty == null ? "-" : activeParty.getPartyID();
+        String activeDisplay = activeParty == null
+                ? LanguageConfig.get().getMessage("no_active_party", "None")
+                : activeParty.getDisplay();
         var browse = McMMOParties.getPartyOverviewCfg().getIcon("PartyHub.Browse",
                 new Replaceable("%party_count%", String.valueOf(McMMOParties.getPartyLoader().getParties().size())));
         var create = McMMOParties.getPartyOverviewCfg().getIcon("PartyHub.Create",
                 new Replaceable("%membership_count%", String.valueOf(memberships)),
-                new Replaceable("%max_parties%", maxDisplay));
+                new Replaceable("%max_parties%", maxDisplay),
+                new Replaceable("%active_party_id%", activeId),
+                new Replaceable("%active_party_display%", activeDisplay));
         var invitations = McMMOParties.getPartyOverviewCfg().getIcon("PartyHub.Invitations",
-                new Replaceable("%expiration_hours%", String.valueOf(McMMOParties.getConfigManager().getInvitationExpirationHours())));
+                new Replaceable("%expiration_hours%", String.valueOf(McMMOParties.getConfigManager().getInvitationExpirationHours())),
+                new Replaceable("%incoming_count%", displayCount(incomingInvitations)),
+                new Replaceable("%outgoing_count%", displayCount(outgoingInvitations)),
+                new Replaceable("%invitation_count%", displayCount(Math.max(0, incomingInvitations) + Math.max(0, outgoingInvitations))));
+        if (incomingInvitations > 0) {
+            applyGlow(invitations.getValue());
+        }
         setIfValid(browse.getKey(), browse.getValue());
         setIfValid(create.getKey(), create.getValue());
         setIfValid(invitations.getKey(), invitations.getValue());
     }
 
-    @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (event.getInventory() != inventory) {
             return;
@@ -114,7 +134,35 @@ public class PartyHubGUI implements Listener {
             return;
         }
         respondingPlayer.closeDialog();
-        PartyCommandUtils.createPartyCommand(respondingPlayer, new String[]{"create", partyId.trim()});
+        PartyCommandUtils.createPartyCommand(respondingPlayer, new String[]{"create", partyId.trim()},
+                () -> new PartyHubGUI(respondingPlayer).open());
+    }
+
+    private void loadInvitationCounts() {
+        List<String> managedPartyIds = McMMOParties.getPartyLoader().getPartiesOfPlayer(player.getUniqueId()).stream()
+                .filter(party -> party.canManageParty(player.getUniqueId()))
+                .map(party -> party.getPartyID())
+                .toList();
+        Bukkit.getScheduler().runTaskAsynchronously(McMMOParties.getInstance(), () -> {
+            int incoming = McMMOParties.getSQL().getIncomingJoinRequests(managedPartyIds).size();
+            int outgoing = McMMOParties.getSQL().getOutgoingJoinRequests(player.getUniqueId()).size();
+            Bukkit.getScheduler().runTask(McMMOParties.getInstance(), () -> {
+                incomingInvitations = incoming;
+                outgoingInvitations = outgoing;
+                render();
+            });
+        });
+    }
+
+    private String displayCount(int count) {
+        return count < 0 ? "..." : String.valueOf(count);
+    }
+
+    private void applyGlow(ItemStack item) {
+        ItemMeta meta = item.getItemMeta();
+        meta.addEnchant(Enchantment.UNBREAKING, 1, false);
+        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        item.setItemMeta(meta);
     }
 
     private void setIfValid(int slot, org.bukkit.inventory.ItemStack item) {

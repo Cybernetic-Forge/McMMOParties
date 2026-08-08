@@ -45,12 +45,13 @@ import java.util.stream.IntStream;
 
 import static net.maksy.mcmmoparties.configuration.enums.Lang.*;
 
-public class PartyOverview implements Listener {
+public class PartyOverview {
 
     @Getter
     private final UUID playerUuid;
     @Getter
     private final McMMOParty party;
+    private final Runnable backAction;
     private final Inventory inventory;
     private int currentView = 0; // 0 = Overview, 1 = Members, 2 = Skills, 3 = Buffs, 4 = Role selector, 5 = Dungeon instances, 6 = Level path
     private int memberSortFilter = 0; // 0 = All, 1 = Online, 2 = Offline#
@@ -99,14 +100,18 @@ public class PartyOverview implements Listener {
     private record BuffDisplayEntry(ItemStack item, BuffKey key) {
     }
     public PartyOverview(UUID playerUuid, McMMOParty party) {
+        this(playerUuid, party, null);
+    }
+
+    public PartyOverview(UUID playerUuid, McMMOParty party, Runnable backAction) {
         this.playerUuid = playerUuid;
         this.party = party;
+        this.backAction = backAction;
         this.inventory = Bukkit.createInventory(
                 Bukkit.getPlayer(playerUuid),
                 McMMOParties.getPartyOverviewCfg().getInvSize(),
                 McMMOParties.getPartyOverviewCfg().getPartyOverviewTitle()
         );
-        McMMOParties.getInstance().getServer().getPluginManager().registerEvents(this, McMMOParties.getInstance());
         initInventory();
     }
 
@@ -1488,11 +1493,11 @@ public class PartyOverview implements Listener {
     public void open() {
         Player player = Bukkit.getPlayer(playerUuid);
         if (player != null) {
+            GuiSessionRegistry.register(inventory, this::onInventoryClick);
             player.openInventory(inventory);
         }
     }
 
-    @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (event.getInventory() != inventory) {
             return;
@@ -1547,7 +1552,7 @@ public class PartyOverview implements Listener {
                     if (party.isOwner(playerUuid)) {
                         player.closeInventory();
                         PartyEditor editor = EditorRegistry.getPartyEditor(player);
-                        editor.open(party.getPartyID());
+                        editor.open(party.getPartyID(), this::open);
                     }
                 }
                 case TRESOR -> {
@@ -1626,7 +1631,11 @@ public class PartyOverview implements Listener {
         }
 
         if (slot == McMMOParties.getPartyOverviewCfg().getIcon("Back").getKey()) {
-            player.closeInventory();
+            if (backAction != null) {
+                backAction.run();
+            } else {
+                player.closeInventory();
+            }
         }
     }
 

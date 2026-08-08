@@ -41,8 +41,16 @@ public class McMMOParty {
     private final PartySettings partySettings;
     @Getter
     private final PartyBuffHandler buffHandler;
+    @Getter
+    @Setter
+    private double balance;
 
     public McMMOParty(String partyID, String display, float experience, long level, UUID owner, List<UUID> members, Map<UUID, PartyState> memberStates, PartySettings partySettings) {
+        this(partyID, display, experience, level, owner, members, memberStates, partySettings, 0.0D);
+    }
+
+    public McMMOParty(String partyID, String display, float experience, long level, UUID owner, List<UUID> members,
+                      Map<UUID, PartyState> memberStates, PartySettings partySettings, double balance) {
         this.partyID = partyID;
         this.display = display;
         this.experience = experience;
@@ -58,12 +66,9 @@ public class McMMOParty {
             this.memberStates.put(owner, PartyState.OWNER);
         }
         this.partySettings = partySettings;
+        this.balance = balance;
         this.buffHandler = new PartyBuffHandler(this);
         refreshBuffs();
-    }
-
-    public double getBalance() {
-        return McMMOParties.getSQL().getPartyBalance(partyID);
     }
 
     public void setExperience(float experience) {

@@ -15,6 +15,9 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -24,7 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class PartyInvitationsGUI implements Listener {
+public class PartyInvitationsGUI {
     private static final List<Integer> DEFAULT_INCOMING_SLOTS = List.of(10, 11, 12, 19, 20, 21, 28, 29, 30, 37, 38, 39);
     private static final List<Integer> DEFAULT_OUTGOING_SLOTS = List.of(14, 15, 16, 23, 24, 25, 32, 33, 34, 41, 42, 43);
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault());
@@ -36,10 +39,10 @@ public class PartyInvitationsGUI implements Listener {
     private List<PartyInvitation> incoming = List.of();
     private List<PartyInvitation> outgoing = List.of();
     private int page = 1;
+    private BukkitTask refreshTask;
 
     public PartyInvitationsGUI(Player player) {
         this.player = player;
-        McMMOParties.getInstance().getServer().getPluginManager().registerEvents(this, McMMOParties.getInstance());
     }
 
     public void open() {
@@ -53,20 +56,26 @@ public class PartyInvitationsGUI implements Listener {
             Bukkit.getScheduler().runTask(McMMOParties.getInstance(), () -> {
                 incoming = loadedIncoming;
                 outgoing = loadedOutgoing;
-                render();
+                render(true);
+                GuiSessionRegistry.register(inventory, this::onInventoryClick);
                 player.openInventory(inventory);
+                startRefreshTask();
             });
         });
     }
 
-    private void render() {
+    private void render(boolean recreateInventory) {
         List<Integer> incomingSlots = configuredSlots("PartyInvitations.IncomingSlots", DEFAULT_INCOMING_SLOTS);
         List<Integer> outgoingSlots = configuredSlots("PartyInvitations.OutgoingSlots", DEFAULT_OUTGOING_SLOTS);
         int maxPage = maxPage(incomingSlots.size(), outgoingSlots.size());
         page = Math.max(1, Math.min(page, maxPage));
         String title = McMMOParties.getPartyOverviewCfg().getFormattedString("Icons.PartyInvitations.Title", "&6Party Invitations &7| &f%page%/%max_page%",
                 new Replaceable("%page%", String.valueOf(page)), new Replaceable("%max_page%", String.valueOf(maxPage)));
-        inventory = Bukkit.createInventory(player, 54, ChatUT.hexComp(title));
+        if (recreateInventory || inventory == null) {
+            inventory = Bukkit.createInventory(player, 54, ChatUT.hexComp(title));
+        } else {
+            inventory.clear();
+        }
         ItemUT.setFillerItem(inventory, Material.GRAY_STAINED_GLASS_PANE);
         incomingBySlot.clear();
         outgoingBySlot.clear();
@@ -109,16 +118,20 @@ public class PartyInvitationsGUI implements Listener {
             OfflinePlayer requester = Bukkit.getOfflinePlayer(invitation.playerUuid());
             String playerName = requester.getName() == null ? invitation.playerUuid().toString() : requester.getName();
             String path = incomingEntries ? "PartyInvitations.IncomingEntry" : "PartyInvitations.OutgoingEntry";
-            inventory.setItem(slot, McMMOParties.getPartyOverviewCfg().getItem(path,
+            ItemStack item = McMMOParties.getPartyOverviewCfg().getItem(path,
                     new Replaceable("%player%", playerName),
                     new Replaceable("%party%", invitation.partyId()),
                     new Replaceable("%expires_in%", formatRemaining(invitation.remainingMillis())),
-                    new Replaceable("%expires_at%", DATE_FORMAT.format(Instant.ofEpochMilli(invitation.expiresAt())))));
+                    new Replaceable("%expires_at%", DATE_FORMAT.format(Instant.ofEpochMilli(invitation.expiresAt()))));
+            if (incomingEntries && item.getItemMeta() instanceof SkullMeta skullMeta) {
+                skullMeta.setOwningPlayer(requester);
+                item.setItemMeta(skullMeta);
+            }
+            inventory.setItem(slot, item);
             (incomingEntries ? incomingBySlot : outgoingBySlot).put(slot, invitation);
         }
     }
 
-    @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (event.getInventory() != inventory) {
             return;
@@ -156,11 +169,13 @@ public class PartyInvitationsGUI implements Listener {
                 configuredSlots("PartyInvitations.OutgoingSlots", DEFAULT_OUTGOING_SLOTS).size());
         if (slot == McMMOParties.getPartyOverviewCfg().getIcon("PartyInvitations.PreviousPage").getKey() && page > 1) {
             page--;
-            render();
+            render(true);
+            GuiSessionRegistry.register(inventory, this::onInventoryClick);
             player.openInventory(inventory);
         } else if (slot == McMMOParties.getPartyOverviewCfg().getIcon("PartyInvitations.NextPage").getKey() && page < maxPage) {
             page++;
-            render();
+            render(true);
+            GuiSessionRegistry.register(inventory, this::onInventoryClick);
             player.openInventory(inventory);
         } else if (slot == McMMOParties.getPartyOverviewCfg().getIcon("PartyInvitations.Back").getKey()) {
             new PartyHubGUI(player).open();
@@ -168,6 +183,7 @@ public class PartyInvitationsGUI implements Listener {
     }
 
     private void process(java.util.function.BooleanSupplier action, Runnable successAction) {
+        stopRefreshTask();
         player.closeInventory();
         Bukkit.getScheduler().runTaskAsynchronously(McMMOParties.getInstance(), () -> {
             boolean success = action.getAsBoolean();
@@ -184,6 +200,28 @@ public class PartyInvitationsGUI implements Listener {
                 open();
             });
         });
+    }
+
+    private void startRefreshTask() {
+        stopRefreshTask();
+        refreshTask = Bukkit.getScheduler().runTaskTimer(McMMOParties.getInstance(), () -> {
+            if (!player.isOnline() || inventory == null
+                    || player.getOpenInventory().getTopInventory() != inventory) {
+                stopRefreshTask();
+                return;
+            }
+            long now = System.currentTimeMillis();
+            incoming = incoming.stream().filter(invitation -> invitation.expiresAt() > now).toList();
+            outgoing = outgoing.stream().filter(invitation -> invitation.expiresAt() > now).toList();
+            render(false);
+        }, 600L, 600L);
+    }
+
+    private void stopRefreshTask() {
+        if (refreshTask != null) {
+            refreshTask.cancel();
+            refreshTask = null;
+        }
     }
 
     private List<Integer> configuredSlots(String path, List<Integer> defaults) {

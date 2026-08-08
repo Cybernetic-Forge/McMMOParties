@@ -24,7 +24,7 @@ import java.util.Map;
 
 import static net.maksy.mcmmoparties.configuration.enums.Lang.*;
 
-public class PartyEditor implements Listener {
+public class PartyEditor {
 
     private final Player player;
 
@@ -37,11 +37,11 @@ public class PartyEditor implements Listener {
     private boolean locked;
     private String password = "";
     private boolean editingExisting;
+    private Runnable cancelAction;
 
     public PartyEditor(Player player) {
         this.player = player;
         this.locked = false;
-        McMMOParties.getInstance().getServer().getPluginManager().registerEvents(this, McMMOParties.getInstance());
         inventory = Bukkit.createInventory(player, McMMOParties.getPartyEditorCfg().getInvSize(), McMMOParties.getPartyEditorCfg().getPartyEditorTitle());
         for (PrimarySkillType skill : PrimarySkillType.values()) {
             skillRequirements.add(new SkillRequirement(skill, 0));
@@ -124,7 +124,12 @@ public class PartyEditor implements Listener {
     }
 
     public void open(String partyID) {
+        open(partyID, null);
+    }
+
+    public void open(String partyID, Runnable cancelAction) {
         this.partyID = partyID;
+        this.cancelAction = cancelAction;
         McMMOParty existingParty = McMMOParties.getPartyLoader().getParty(partyID);
         if (existingParty != null && !existingParty.isOwner(player.getUniqueId())) {
             player.sendMessage(LanguageConfig.get().getMessage("party_edit_owner_only", "&cOnly the party leader can edit this party."));
@@ -133,6 +138,7 @@ public class PartyEditor implements Listener {
         this.editingExisting = existingParty != null;
         loadPartyData(existingParty);
         initInventory();
+        GuiSessionRegistry.register(inventory, this::onInventory);
         player.openInventory(inventory);
     }
 
@@ -149,16 +155,35 @@ public class PartyEditor implements Listener {
                 if(skillRequirementIcon.getKey() == -1) continue;
                 slots.put(skillRequirementIcon.getKey(), skill);
             }
+        } else {
+            this.display = "";
+            this.locked = false;
+            this.password = "";
+            this.skillRequirements.clear();
+            for (PrimarySkillType skill : PrimarySkillType.values()) {
+                this.skillRequirements.add(new SkillRequirement(skill, 0));
+            }
+            this.slots.clear();
         }
     }
 
     public void open() {
         initInventory();
+        GuiSessionRegistry.register(inventory, this::onInventory);
         player.openInventory(inventory);
     }
 
     void click(InventoryClickEvent event) {
         int slot = event.getSlot();
+
+        if (slot == getCancelSlot()) {
+            if (cancelAction != null) {
+                cancelAction.run();
+            } else {
+                player.closeInventory();
+            }
+            return;
+        }
 
         switch (slot) {
             case 48 -> ValueMessenger.get().open(player,48);
@@ -183,7 +208,8 @@ public class PartyEditor implements Listener {
                                     existingParty.getPartySettings().isItemShare(),
                                     existingParty.getPartySettings().isExpShare(),
                                     existingParty.getPartySettings().isPartyChat()
-                            )
+                            ),
+                            existingParty.getBalance()
                     );
                     McMMOParties.getSQL().updateParty(updatedParty);
                 } else {
@@ -208,6 +234,14 @@ public class PartyEditor implements Listener {
         }
     }
 
+    private int getCancelSlot() {
+        var cancelIcon = McMMOParties.getPartyEditorCfg().getIcon(editingExisting ? "CancelEdit" : "Cancel");
+        if (cancelIcon.getKey() <= 0) {
+            cancelIcon = McMMOParties.getPartyEditorCfg().getIcon("Cancel");
+        }
+        return cancelIcon.getKey();
+    }
+
     public void setValue(int slot, String value) {
         switch (slot) {
             case 47 -> {
@@ -227,7 +261,6 @@ public class PartyEditor implements Listener {
         }
     }
 
-    @EventHandler
     public void onInventory(InventoryClickEvent event) {
         if (event.getInventory() != inventory)
             return;

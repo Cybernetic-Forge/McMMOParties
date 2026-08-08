@@ -29,7 +29,22 @@ public class PartyCommandUtils {
     private static final String ADMIN_PERMISSION = "mcmmoparties.admin";
 
     public static void createPartyCommand(Player player, String[] args) {
-        String partyID = args[1].toLowerCase();
+        createPartyCommand(player, args, null);
+    }
+
+    public static void createPartyCommand(Player player, String[] args, Runnable cancelAction) {
+        String originalPartyID = args[1];
+        String partyID = normalizePartyId(originalPartyID);
+
+        if (partyID.isEmpty()) {
+            player.sendMessage(LanguageConfig.get().getMessage("party_id_invalid", "&cParty IDs must contain letters, numbers, '_' or '-'."));
+            return;
+        }
+
+        if (!partyID.equals(originalPartyID)) {
+            player.sendMessage(LanguageConfig.get().getMessage("party_id_normalized", "&eParty ID adjusted to &f%party%&e.",
+                    new Replaceable("%party%", partyID)));
+        }
 
         if (partyLoader.getParty(partyID) != null) {
             player.sendMessage(LanguageConfig.get().getMessage(PARTY_ALREADY_EXISTS));
@@ -46,7 +61,18 @@ public class PartyCommandUtils {
             return;
         }
 
-        EditorRegistry.getPartyEditor(player).open(partyID);
+        EditorRegistry.getPartyEditor(player).open(partyID, cancelAction);
+    }
+
+    public static String normalizePartyId(String input) {
+        if (input == null) {
+            return "";
+        }
+        return input.trim()
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("\\s+", "_")
+                .replaceAll("[^a-z0-9_-]", "")
+                .replaceAll("_+", "_");
     }
 
     public static void joinPartyCommand(Player player, String[] args) {

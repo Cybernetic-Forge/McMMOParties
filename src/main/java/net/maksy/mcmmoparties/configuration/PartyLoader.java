@@ -2,15 +2,17 @@ package net.maksy.mcmmoparties.configuration;
 
 import net.maksy.mcmmoparties.McMMOParties;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
+import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
 import net.maksy.mcmmoparties.configuration.sql.SQLAsyncManager;
+import net.maksy.mcmmoparties.utils.Replaceable;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.*;
 
 public class PartyLoader {
-    private final HashMap<String, McMMOParty> partyMap = new HashMap<>();
-    private final Map<UUID, String> activePartyByPlayer = new HashMap<>();
+    private final Map<String, McMMOParty> partyMap = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<UUID, String> activePartyByPlayer = new java.util.concurrent.ConcurrentHashMap<>();
     private final Map<String, BukkitTask> pendingSaveTasks = new HashMap<>();
 
     public PartyLoader() {
@@ -18,13 +20,27 @@ public class PartyLoader {
     }
 
     public void reload() {
+        Map<UUID, String> previousSelections = new HashMap<>(activePartyByPlayer);
         SQLAsyncManager.getMcMMOParties(parties -> {
-            partyMap.clear();
-            for (McMMOParty party : parties) {
-                partyMap.put(party.getPartyID(), party);
-            }
-            activePartyByPlayer.clear();
-            activePartyByPlayer.putAll(McMMOParties.getSQL().getActivePartySelections());
+            Map<UUID, String> storedSelections = McMMOParties.getSQL().getActivePartySelections();
+            Bukkit.getScheduler().runTask(McMMOParties.getInstance(), () -> {
+                partyMap.clear();
+                for (McMMOParty party : parties) {
+                    partyMap.put(party.getPartyID(), party);
+                }
+                activePartyByPlayer.clear();
+                activePartyByPlayer.putAll(storedSelections);
+
+                for (Map.Entry<UUID, String> previous : previousSelections.entrySet()) {
+                    List<McMMOParty> memberships = getPartiesOfPlayer(previous.getKey());
+                    boolean previousStillAvailable = memberships.stream()
+                            .anyMatch(party -> party.getPartyID().equalsIgnoreCase(previous.getValue()));
+                    if (!previousStillAvailable && !memberships.isEmpty()) {
+                        activePartyByPlayer.put(previous.getKey(), previous.getValue());
+                        getPartyOfPlayer(previous.getKey());
+                    }
+                }
+            });
         });
     }
 
@@ -45,6 +61,7 @@ public class PartyLoader {
     public McMMOParty getPartyOfPlayer(UUID uuid) {
         List<McMMOParty> parties = getPartiesOfPlayer(uuid);
         if (parties.isEmpty()) {
+            activePartyByPlayer.remove(uuid);
             return null;
         }
         String activePartyId = activePartyByPlayer.get(uuid);
@@ -55,7 +72,20 @@ public class PartyLoader {
                 }
             }
         }
-        return parties.get(0);
+        McMMOParty fallback = parties.get(0);
+        boolean replacedMissingSelection = activePartyId != null;
+        activePartyByPlayer.put(uuid, fallback.getPartyID());
+        SQLAsyncManager.setActiveParty(uuid, fallback.getPartyID(), success -> {
+            if (success && replacedMissingSelection) {
+                var player = Bukkit.getPlayer(uuid);
+                if (player != null) {
+                    player.sendMessage(LanguageConfig.get().getMessage("active_party_fallback",
+                            "&eYour previous active party is unavailable. &f%party% &eis now active.",
+                            new Replaceable("%party%", fallback.getPartyID())));
+                }
+            }
+        });
+        return fallback;
     }
 
     public List<McMMOParty> getPartiesOfPlayer(UUID uuid) {
@@ -130,12 +160,17 @@ public class PartyLoader {
     }
 
     public void reload(String partyID) {
+        McMMOParty previousParty = getParty(partyID);
+        Set<UUID> affectedPlayers = previousParty == null ? Set.of() : Set.copyOf(previousParty.getMembers());
         SQLAsyncManager.getMcMMOParty(partyID, party -> {
-            if (party == null) {
-                partyMap.remove(partyID);
-                return;
-            }
-            partyMap.put(partyID, party);
+            Bukkit.getScheduler().runTask(McMMOParties.getInstance(), () -> {
+                if (party == null) {
+                    partyMap.remove(partyID);
+                } else {
+                    partyMap.put(partyID, party);
+                }
+                affectedPlayers.forEach(this::getPartyOfPlayer);
+            });
         });
     }
 
