@@ -1,5 +1,5 @@
 name: McMMOParties
-version: 0.1.1
+version: 0.1.2
 main: net.maksy.mcmmoparties.McMMOParties
 api-version: 1.21
 authors: [ MaksyKun ]
