@@ -10,6 +10,7 @@ import net.maksy.mcmmoparties.configuration.configs.ConfigManager;
 import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
 import net.maksy.mcmmoparties.configuration.enums.HookType;
 import net.maksy.mcmmoparties.configuration.configs.PartyEditorCfg;
+import net.maksy.mcmmoparties.gui.GuiSessionRegistry;
 import net.maksy.mcmmoparties.configuration.configs.PartyOverviewCfg;
 import net.maksy.mcmmoparties.configuration.sql.SQLManager;
 import net.maksy.mcmmoparties.hooks.EconomyHook;
@@ -124,6 +125,7 @@ public final class McMMOParties extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new ExpEvents(), this);
         getServer().getPluginManager().registerEvents(new AbilityBuffListener(), this);
+        getServer().getPluginManager().registerEvents(GuiSessionRegistry.listener(), this);
         if(hookManager.isHooked(HookType.MythicDungeons)) {
             registerMythicDungeonsIntegration();
         }

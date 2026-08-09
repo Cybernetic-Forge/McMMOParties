@@ -524,6 +524,141 @@
         - "&7Modus: &fSkillpunkte"
         - "&7Gesamt: &f%skillpoints_total%"
         - "&7Frei: &f%skillpoints_available%"
+    PartyHub:
+      Title: "&8Finde eine Party"
+      InvSize: 45
+      Browse:
+        Slot: 20
+        Material: BOOK
+        Display: "&6Partys durchsuchen"
+        Lore:
+          - "&7Entdecke %party_count% verfügbare Partys"
+          - "&eLinksklick: Party ansehen"
+          - "&eRechtsklick: Beitritt anfragen"
+      Create:
+        Slot: 22
+        Material: OAK_SIGN
+        Display: "&aParty erstellen"
+        Lore:
+          - "&aLinksklick: &7neue Party erstellen"
+          - "&eRechtsklick: &7deine Partys ansehen"
+          - "&7Deine Partys: &f%membership_count%&7/&f%max_parties%"
+          - "&7Aktiv: &f%active_party_display% &8(&7%active_party_id%&8)"
+      Invitations:
+        Slot: 24
+        Material: ENCHANTED_BOOK
+        Display: "&dEinladungen & Anfragen"
+        Lore:
+          - "&7Eingehende Beitrittsanfragen verwalten"
+          - "&7Gesendete Anfragen ansehen oder abbrechen"
+          - "&aEingehend: &f%incoming_count% &8| &eAusgehend: &f%outgoing_count%"
+          - "&7Anfragen verfallen nach &f%expiration_hours% Stunden"
+      CreateDialog:
+        Title: "&aParty erstellen"
+        Prompt: "Gib eine eindeutige ID/einen Namen für deine Party ein."
+        Input: "Party-ID/Name"
+        Submit: "Weiter"
+    MyParties:
+      Title: "&6Meine Partys &7| &fSeite %page%/%max_page%"
+      EntrySlots: [10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43]
+      Entry:
+        Material: BOOK
+        Display: "&f%party_display% &8(&7%party_id%&8)"
+        Lore:
+          - "&7Leiter: &f%owner_name%"
+          - "&7Deine Rolle: %role%"
+          - "&7Level: &f%party_level%"
+          - "&7Mitglieder: &f%member_count%&7/&f%max_members%"
+          - "&7Kontostand: &a%party_balance%"
+          - "&7Zugang: %party_access%"
+          - "&7Auswahl: %active_status%"
+          - ""
+          - "&aLinksklick zum Ansehen"
+          - "%edit_status%"
+          - "&bShift-Linksklick zum Aktivieren"
+      Empty:
+        Slot: 22
+        Material: BARRIER
+        Display: "&cDu bist in keiner Party"
+      PreviousPage:
+        Slot: 45
+        Material: ARROW
+        Display: "&aVorherige Seite"
+      Back:
+        Slot: 48
+        Material: BARRIER
+        Display: "&cZurück"
+      PageInfo:
+        Slot: 49
+        Material: BOOK
+        Display: "&eSeite %page%/%max_page%"
+      NextPage:
+        Slot: 53
+        Material: ARROW
+        Display: "&aNächste Seite"
+    PartyInvitations:
+      Title: "&6Partyanfragen &7| &fSeite %page%/%max_page%"
+      IncomingSlots: [10, 11, 12, 19, 20, 21, 28, 29, 30, 37, 38, 39]
+      OutgoingSlots: [14, 15, 16, 23, 24, 25, 32, 33, 34, 41, 42, 43]
+      IncomingHeader:
+        Slot: 1
+        Material: CHEST
+        Display: "&aEingehende Anfragen &7(%count%)"
+        Lore:
+          - "&7Anfragen für Partys, die du verwaltest"
+          - "&7Linksklick: &aannehmen"
+          - "&7Rechtsklick: &cablehnen"
+          - "&7Ablaufzeit: &f%expiration_hours% Stunden"
+      OutgoingHeader:
+        Slot: 7
+        Material: ENDER_CHEST
+        Display: "&eGesendete Anfragen &7(%count%)"
+        Lore:
+          - "&7Deine Anfragen an andere Partys"
+          - "&7Klick auf einen Eintrag zum Abbrechen"
+          - "&7Ablaufzeit: &f%expiration_hours% Stunden"
+      IncomingEntry:
+        Material: PLAYER_HEAD
+        Display: "&a%player% &7→ &f%party%"
+        Lore:
+          - "&7Verfällt in: &f%expires_in%"
+          - "&7Verfällt am: &f%expires_at%"
+          - ""
+          - "&aLinksklick zum Annehmen"
+          - "&cRechtsklick zum Ablehnen"
+      OutgoingEntry:
+        Material: PAPER
+        Display: "&e%party%"
+        Lore:
+          - "&7Angefragt von: &f%player%"
+          - "&7Verfällt in: &f%expires_in%"
+          - "&7Verfällt am: &f%expires_at%"
+          - ""
+          - "&cKlick zum Abbrechen"
+      NoIncoming:
+        Slot: 20
+        Material: GRAY_DYE
+        Display: "&7Keine eingehenden Anfragen"
+      NoOutgoing:
+        Slot: 24
+        Material: GRAY_DYE
+        Display: "&7Keine gesendeten Anfragen"
+      PreviousPage:
+        Slot: 45
+        Material: ARROW
+        Display: "&aVorherige Seite"
+      Back:
+        Slot: 48
+        Material: BARRIER
+        Display: "&cZurück"
+      PageInfo:
+        Slot: 49
+        Material: BOOK
+        Display: "&eSeite %page%/%max_page%"
+      NextPage:
+        Slot: 53
+        Material: ARROW
+        Display: "&aNächste Seite"
     PartyList:
       DefaultSort: RANKING
       Header:
@@ -596,7 +731,6 @@
           - "&7Kontostand: &a%party_balance%"
           - "&7Zugang: %party_access%"
           - "&7Passwort: &f%party_password_required%"
-          - "&7Klick zum Prüfen"
       EntryOwn:
         Slot: 44
         Material: PLAYER_HEAD
@@ -611,11 +745,14 @@
           - "&7Kontostand: &a%party_balance%"
           - "&7Zugang: %party_access%"
           - "&7Passwort: &f%party_password_required%"
-          - "&7Klick zum Prüfen"
       SkillHeader:
         - "&7Gesamte Skillwerte:"
       SkillLine:
         - "&7- &f%skill_name%: &a%skill_level%"
+      InteractionLore:
+        - ""
+        - "&aLinksklick zum Ansehen"
+        - "&eRechtsklick, um Beitritt anzufragen"
       PageTitle: "&6Partyliste &7| &f%sort_mode% &7| &fSeite %page%/%max_page%"
       PrevPage:
         Slot: 45
@@ -829,5 +966,3 @@ PartyEditor:
         Display: "&9Verwertung"
         Lore:
           - "&7Benötigt: &a%level%"
-
-

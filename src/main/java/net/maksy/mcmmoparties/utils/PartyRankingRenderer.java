@@ -45,6 +45,12 @@ public final class PartyRankingRenderer {
 			}
 		}
 
+		lore.addAll(McMMOParties.getPartyOverviewCfg().getFormattedStringList(
+				"Icons.PartyList.InteractionLore",
+				List.of(),
+				placeholders
+		));
+
 		ItemStack item = ItemUT.getItem(
 				McMMOParties.getPartyOverviewCfg().getMaterial(templatePath, Material.STONE),
 				McMMOParties.getPartyOverviewCfg().getFormattedString(

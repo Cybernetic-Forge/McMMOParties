@@ -4,6 +4,7 @@ import net.maksy.mcmmoparties.McMMOParties;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.utils.PartyCommandUtils;
 import net.maksy.mcmmoparties.utils.PartyListSortMode;
+import net.maksy.mcmmoparties.gui.PartyHubGUI;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -15,6 +16,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class PartyCommands implements CommandExecutor, TabCompleter {
 
@@ -29,46 +31,36 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
         if(!(sender instanceof Player player))
             return true;
 
-        switch(args.length) {
-            case 0:
-                PartyCommandUtils.infoPartyCommand(player, null);
-                break;
-            case 1:
-                switch(args[0]) {
-                    case "leave" -> PartyCommandUtils.leavePartyCommand(player);
-                    case "disband" -> PartyCommandUtils.disbandPartyCommand(player);
-                    case "chat" -> PartyCommandUtils.chatPartyCommand(player, args);
-                    case "info" -> PartyCommandUtils.infoPartyCommand(player, args);
-                    case "list" -> PartyCommandUtils.listPartyCommand(player, args);
-                }
-                break;
-            case 2:
-                switch(args[0]) {
-                    case "create" -> PartyCommandUtils.createPartyCommand(player, args);
-                    case "chat" -> PartyCommandUtils.chatPartyCommand(player, args);
-                    case "info" -> PartyCommandUtils.infoPartyCommand(player, args);
-                    case "join" -> PartyCommandUtils.joinPartyCommand(player, args);
-                    case "accept" -> PartyCommandUtils.acceptPartyCommand(player, args);
-                    case "invite" -> PartyCommandUtils.invitePartyCommand(player, args);
-                    case "kick" -> PartyCommandUtils.kickPartyCommand(player, args);
-                    case "newleader" -> PartyCommandUtils.setOwnerPartyCommand(player, args);
-                    case "list" -> PartyCommandUtils.listPartyCommand(player, args);
-                }
-                break;
-            case 3:
-                switch(args[0]) {
-                    case "chat" -> PartyCommandUtils.chatPartyCommand(player, args);
-                    case "join" -> PartyCommandUtils.joinPartyCommand(player, args);
-                    case "list" -> PartyCommandUtils.listPartyCommand(player, args);
-                }
-                break;
-            default:
-                if ("chat".equalsIgnoreCase(args[0])) {
-                    PartyCommandUtils.chatPartyCommand(player, args);
-                } else if ("list".equalsIgnoreCase(args[0])) {
-                    PartyCommandUtils.listPartyCommand(player, args);
-                }
-                break;
+        if (args.length == 0) {
+            new PartyHubGUI(player).open();
+            return true;
+        }
+
+        String subcommand = args[0].toLowerCase(Locale.ROOT);
+        switch (subcommand) {
+            case "leave" -> PartyCommandUtils.leavePartyCommand(player, args);
+            case "disband" -> PartyCommandUtils.disbandPartyCommand(player, args);
+            case "chat" -> PartyCommandUtils.chatPartyCommand(player, args);
+            case "info" -> PartyCommandUtils.infoPartyCommand(player, args);
+            case "list", "top" -> PartyCommandUtils.listPartyCommand(player, args);
+            case "create" -> {
+                if (args.length >= 2) PartyCommandUtils.createPartyCommand(player, args);
+            }
+            case "join" -> {
+                if (args.length >= 2) PartyCommandUtils.joinPartyCommand(player, args);
+            }
+            case "accept" -> {
+                if (args.length >= 2) PartyCommandUtils.acceptPartyCommand(player, args);
+            }
+            case "invite" -> {
+                if (args.length >= 2) PartyCommandUtils.invitePartyCommand(player, args);
+            }
+            case "kick" -> {
+                if (args.length >= 2) PartyCommandUtils.kickPartyCommand(player, args);
+            }
+            case "newleader" -> {
+                if (args.length >= 2) PartyCommandUtils.setOwnerPartyCommand(player, args);
+            }
         }
         return true;
     }
@@ -81,9 +73,9 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
 
         if(args.length == 1) {
             List<String> first = new ArrayList<>();
-            McMMOParty party = McMMOParties.getPartyLoader().getPartyOfPlayer(player.getUniqueId());
-            boolean canManage = party != null && party.canManageParty(player.getUniqueId());
-            boolean canDisband = party != null && party.canDisband(player.getUniqueId());
+            List<McMMOParty> parties = McMMOParties.getPartyLoader().getPartiesOfPlayer(player.getUniqueId());
+            boolean canManage = parties.stream().anyMatch(party -> party.canManageParty(player.getUniqueId()));
+            boolean canDisband = parties.stream().anyMatch(party -> party.canDisband(player.getUniqueId()));
             if("create".startsWith(args[0])) first.add("create");
             if("info".startsWith(args[0])) first.add("info");
             if("join".startsWith(args[0])) first.add("join");
@@ -102,11 +94,16 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
         }
         if(args.length == 2) {
             McMMOParty party = McMMOParties.getPartyLoader().getPartyOfPlayer(player.getUniqueId());
+            List<McMMOParty> parties = McMMOParties.getPartyLoader().getPartiesOfPlayer(player.getUniqueId());
             List<String> second = new ArrayList<>();
             if("join".startsWith(args[0])) second.addAll(McMMOParties.getPartyLoader().getPartyNames());
             if("info".startsWith(args[0])) second.addAll(McMMOParties.getPartyLoader().getPartyNames());
-            if("invite".startsWith(args[0])) second.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList());
-            if("newleader".startsWith(args[0])) second.addAll(party != null ? party.getMemberNames() : List.of(""));
+            if("leave".startsWith(args[0]) || "chat".startsWith(args[0])) second.addAll(parties.stream().map(McMMOParty::getPartyID).toList());
+            if("disband".startsWith(args[0])) second.addAll(parties.stream().filter(p -> p.canDisband(player.getUniqueId())).map(McMMOParty::getPartyID).toList());
+            if("invite".startsWith(args[0]) || "accept".startsWith(args[0]) || "kick".startsWith(args[0])) {
+                second.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList());
+            }
+            if("newleader".startsWith(args[0])) second.addAll(party != null ? party.getMemberNames() : List.of());
             if ("list".startsWith(args[0])) {
                 second.add("1");
                 for (PartyListSortMode mode : PartyListSortMode.values()) {
@@ -122,6 +119,12 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
                 third.add(mode.getKey());
             }
             return third;
+        }
+        if (args.length == 3 && List.of("invite", "accept", "kick", "newleader").contains(args[0].toLowerCase(Locale.ROOT))) {
+            return McMMOParties.getPartyLoader().getPartiesOfPlayer(player.getUniqueId()).stream()
+                    .filter(party -> party.canManageParty(player.getUniqueId()))
+                    .map(McMMOParty::getPartyID)
+                    .toList();
         }
         return null;
     }

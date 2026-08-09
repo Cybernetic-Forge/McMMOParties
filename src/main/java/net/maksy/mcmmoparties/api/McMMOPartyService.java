@@ -43,6 +43,10 @@ public class McMMOPartyService {
         return getPartyLoader().getPartyOfPlayer(playerId);
     }
 
+    public List<McMMOParty> getPartiesOfPlayer(UUID playerId) {
+        return getPartyLoader().getPartiesOfPlayer(playerId);
+    }
+
     public Collection<String> getPartyNames() {
         return new ArrayList<>(getPartyLoader().getPartyNames());
     }

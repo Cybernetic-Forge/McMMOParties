@@ -18,8 +18,8 @@ public class AbilityBuffListener implements Listener {
     @EventHandler
     public void onAbilityActivate(SkillActivationPerkEvent event) {
         Player player = event.getPlayer();
-        McMMOParty party = McMMOParties.getPartyLoader().getPartyOfPlayer(player.getUniqueId());
-        if (party == null) {
+        var parties = McMMOParties.getPartyLoader().getPartiesOfPlayer(player.getUniqueId());
+        if (parties.isEmpty()) {
             return;
         }
 
@@ -27,7 +27,7 @@ public class AbilityBuffListener implements Listener {
         if(mcMMOPlayer == null) {
             return;
         }
-        int bonusSeconds = party.getBuffHandler().getAbilityDurationBonus();
+        int bonusSeconds = parties.stream().mapToInt(party -> party.getBuffHandler().getAbilityDurationBonus()).sum();
         if (bonusSeconds <= 0) {
             return;
         }
@@ -38,8 +38,8 @@ public class AbilityBuffListener implements Listener {
     @EventHandler
     public void onAbilityDeactivate(McMMOPlayerAbilityDeactivateEvent event) {
         Player player = event.getPlayer();
-        McMMOParty party = McMMOParties.getPartyLoader().getPartyOfPlayer(player.getUniqueId());
-        if (party == null) {
+        var parties = McMMOParties.getPartyLoader().getPartiesOfPlayer(player.getUniqueId());
+        if (parties.isEmpty()) {
             return;
         }
 
@@ -49,7 +49,9 @@ public class AbilityBuffListener implements Listener {
         }
 
         SuperAbilityType ability = event.getAbility();
-        int reductionSeconds = party.getBuffHandler().getAbilityCooldownReductionBonus(ability.name());
+        int reductionSeconds = parties.stream()
+                .mapToInt(party -> party.getBuffHandler().getAbilityCooldownReductionBonus(ability.name()))
+                .sum();
         if (reductionSeconds <= 0) {
             return;
         }

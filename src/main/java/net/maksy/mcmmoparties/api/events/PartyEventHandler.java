@@ -27,7 +27,7 @@ import static net.maksy.mcmmoparties.configuration.enums.Lang.*;
 
 public class PartyEventHandler {
     HashMap<String, BossBar> barMap = new HashMap<>();
-    HashSet<Player> playerSet = new HashSet<>();
+    HashSet<String> playerBarSet = new HashSet<>();
 
     private final PartyLoader partyLoader = McMMOParties.getPartyLoader();
 
@@ -67,13 +67,14 @@ public class PartyEventHandler {
             bar.setProgress(Math.max(0.0, Math.min(1.0, progress)));
             bar.setTitle(McMMOParties.getConfigManager().getBossBarTitle(party));
 
-            if (!playerSet.contains(player)) {
+            String playerBarKey = party.getPartyID() + ":" + player.getUniqueId();
+            if (!playerBarSet.contains(playerBarKey)) {
                 bar.addPlayer(player);
-                playerSet.add(player);
+                playerBarSet.add(playerBarKey);
 
                 Bukkit.getScheduler().runTaskLater(McMMOParties.getInstance(), () -> {
                     bar.removePlayer(player);
-                    playerSet.remove(player);
+                    playerBarSet.remove(playerBarKey);
                 }, 100L);
             }
         }

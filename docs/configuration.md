@@ -45,8 +45,12 @@ DungeonInstance:
 
 Party:
   BaseMemberSlots: 10
+  MaxPartiesPerPlayer: 3
   PartyLevelCap: 100
   DefaultTresorSize: 50000
+
+Invitations:
+  ExpirationHours: 24
 
 Buffs:
   Handler: SKILLPOINTS
@@ -98,8 +102,10 @@ Experience:
 | `Hooks.ChestShop.Enabled` | boolean | `true` | Enables or disables the ChestShop integration layer. |
 | `DungeonInstance.DefaultSlots` | integer | `2` | Base number of dungeon instance slots before party buff bonuses are added. |
 | `Party.BaseMemberSlots` | integer | `10` | Base party member capacity before `MEMBER_SLOTS` buff bonuses are added. |
+| `Party.MaxPartiesPerPlayer` | integer | `3` | Maximum number of parties one player may join simultaneously. Set to `-1` for unlimited memberships. |
 | `Party.PartyLevelCap` | integer | `100` | Maximum party level. Set to `-1` for no level cap. |
 | `Party.DefaultTresorSize` | integer | `50000` | Base party treasury limit before `TRESOR_SIZE` buff bonuses are added. Set to `-1` for unlimited base treasury size. |
+| `Invitations.ExpirationHours` | integer | `24` | Lifetime of party invitations and join requests. The remaining duration and exact expiry are shown in the requests GUI. |
 | `Buffs.Handler` | string | `SKILLPOINTS` | Buff mode. Valid values are `LEVEL` and `SKILLPOINTS`. |
 | `Buffs.SkillPointsPerLevel` | integer | `1` | Number of party skill points granted per party level in `SKILLPOINTS` mode. |
 | `Experience.LevelCurve` | string | `"(x * (20 + (2.5 * x))) * 25"` | Expression used to calculate required exp for level `x`. |

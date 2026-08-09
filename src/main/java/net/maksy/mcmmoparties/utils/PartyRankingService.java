@@ -13,6 +13,9 @@ import org.bukkit.OfflinePlayer;
 import java.util.*;
 
 public final class PartyRankingService {
+    private static final long CACHE_MILLIS = 5_000L;
+    private static volatile List<PartyRankingEntry> cachedRankings = List.of();
+    private static volatile long cacheCreatedAt;
 
     private PartyRankingService() {
     }
@@ -44,6 +47,10 @@ public final class PartyRankingService {
     }
 
     public static List<PartyRankingEntry> getRankedParties() {
+        long now = System.currentTimeMillis();
+        if (now - cacheCreatedAt < CACHE_MILLIS) {
+            return cachedRankings;
+        }
         List<PartyRankingSnapshot> snapshots = new ArrayList<>();
         for (McMMOParty party : McMMOParties.getPartyLoader().getParties()) {
             snapshots.add(snapshot(party));
@@ -69,7 +76,9 @@ public final class PartyRankingService {
                     snapshot.skillTotals()
             ));
         }
-        return ranked;
+        cachedRankings = List.copyOf(ranked);
+        cacheCreatedAt = now;
+        return cachedRankings;
     }
 
     public static PartyRankingEntry getPartyEntry(String partyId) {
@@ -103,13 +112,13 @@ public final class PartyRankingService {
         int onlineMembers = 0;
 
         for (java.util.UUID memberUuid : party.getMembers()) {
-            OfflinePlayer member = Bukkit.getOfflinePlayer(memberUuid);
-            if (!member.isOnline() || member.getPlayer() == null) {
+            org.bukkit.entity.Player member = Bukkit.getPlayer(memberUuid);
+            if (member == null) {
                 continue;
             }
 
             onlineMembers++;
-            McMMOPlayer mcMMOPlayer = UserManager.getPlayer(member.getPlayer());
+            McMMOPlayer mcMMOPlayer = UserManager.getPlayer(member);
             if (mcMMOPlayer == null) {
                 continue;
             }

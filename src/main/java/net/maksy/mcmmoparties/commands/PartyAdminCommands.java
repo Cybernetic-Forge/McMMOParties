@@ -1,5 +1,6 @@
 package net.maksy.mcmmoparties.commands;
 
+import net.maksy.mcmmoparties.McMMOParties;
 import net.maksy.mcmmoparties.api.McMMOPartyAPI;
 import net.maksy.mcmmoparties.api.McMMOPartyService;
 import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
@@ -140,8 +141,16 @@ public class PartyAdminCommands implements CommandExecutor, TabCompleter {
             return;
         }
 
-        if (party.getMembers().contains(player.getUniqueId()) || service.getPartyOfPlayer(player.getUniqueId()) != null) {
+        if (party.getMembers().contains(player.getUniqueId())) {
             sender.sendMessage(LanguageConfig.get().getMessage(Lang.ALREADY_IN_PARTY));
+            return;
+        }
+
+        int maxParties = McMMOParties.getConfigManager().getMaxPartiesPerPlayer();
+        if (maxParties >= 0 && service.getPartiesOfPlayer(player.getUniqueId()).size() >= maxParties) {
+            sender.sendMessage(LanguageConfig.get().getMessage("party_limit_reached",
+                    "&cThis player has reached the limit of &f%max_parties% &cparties.",
+                    new Replaceable("%max_parties%", String.valueOf(maxParties))));
             return;
         }
 
