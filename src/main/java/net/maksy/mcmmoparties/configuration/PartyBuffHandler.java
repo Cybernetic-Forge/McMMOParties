@@ -33,6 +33,8 @@ public class PartyBuffHandler {
     @Getter
     private int dungeonInstanceSlotBonus;
     @Getter
+    private int territoryClaimSlotBonus;
+    @Getter
     private boolean dungeonInstanceSlotsInfinite;
     @Getter
     private int tresorSizeBonus;
@@ -51,6 +53,7 @@ public class PartyBuffHandler {
     private final Map<Integer, Integer> expSharingRadiusByLevel = new TreeMap<>();
     private final Map<Integer, Integer> memberSlotsByLevel = new TreeMap<>();
     private final Map<Integer, Integer> dungeonInstanceSlotsByLevel = new TreeMap<>();
+    private final Map<Integer, Integer> territoryClaimSlotsByLevel = new TreeMap<>();
     private final Map<Integer, Integer> tresorSizeByLevel = new TreeMap<>();
     private final Map<Integer, Integer> accessPartyWaypointByLevel = new TreeMap<>();
     private final Map<Integer, Integer> accessPartyTresorByLevel = new TreeMap<>();
@@ -79,6 +82,7 @@ public class PartyBuffHandler {
         expSharingRadius = 0;
         memberSlotBonus = 0;
         dungeonInstanceSlotBonus = 0;
+        territoryClaimSlotBonus = 0;
         dungeonInstanceSlotsInfinite = false;
         tresorSizeBonus = 0;
         tresorSizeInfinite = false;
@@ -91,6 +95,7 @@ public class PartyBuffHandler {
         expSharingRadiusByLevel.clear();
         memberSlotsByLevel.clear();
         dungeonInstanceSlotsByLevel.clear();
+        territoryClaimSlotsByLevel.clear();
         tresorSizeByLevel.clear();
         accessPartyWaypointByLevel.clear();
         accessPartyTresorByLevel.clear();
@@ -176,6 +181,12 @@ public class PartyBuffHandler {
             loadSkillPointUpgradeConfig(dungeonSlotsSection, buildSkillPointKey(PartyBuffType.DUNGEON_INSTANCE_SLOTS, null));
         }
 
+        ConfigurationSection territorySlotsSection = skillpoints.getConfigurationSection(PartyBuffType.TERRITORY_CLAIM_SLOTS.name());
+        if (territorySlotsSection != null) {
+            loadIntLevels(territorySlotsSection, territoryClaimSlotsByLevel);
+            loadSkillPointUpgradeConfig(territorySlotsSection, buildSkillPointKey(PartyBuffType.TERRITORY_CLAIM_SLOTS, null));
+        }
+
         ConfigurationSection tresorSizeSection = skillpoints.getConfigurationSection(PartyBuffType.TRESOR_SIZE.name());
         if (tresorSizeSection != null) {
             loadTresorSizeLevels(tresorSizeSection, tresorSizeByLevel);
@@ -214,6 +225,7 @@ public class PartyBuffHandler {
         int dungeonSlotsValue = getValueForPointsInt(dungeonInstanceSlotsByLevel, getSpentPoints(PartyBuffType.DUNGEON_INSTANCE_SLOTS));
         dungeonInstanceSlotsInfinite = dungeonSlotsValue == Integer.MAX_VALUE;
         dungeonInstanceSlotBonus = dungeonInstanceSlotsInfinite ? 0 : dungeonSlotsValue;
+        territoryClaimSlotBonus = getValueForPointsInt(territoryClaimSlotsByLevel, getSpentPoints(PartyBuffType.TERRITORY_CLAIM_SLOTS));
         int tresorSizeValue = getValueForPointsInt(tresorSizeByLevel, getSpentPoints(PartyBuffType.TRESOR_SIZE));
         tresorSizeInfinite = tresorSizeValue == Integer.MAX_VALUE;
         tresorSizeBonus = tresorSizeInfinite ? 0 : tresorSizeValue;
@@ -543,6 +555,7 @@ public class PartyBuffHandler {
                 case EXP_SHARING_RADIUS -> parseExpSharingRadius(level, entry, parts[1]);
                 case MEMBER_SLOTS -> parseMemberSlots(level, entry, parts[1]);
                 case DUNGEON_INSTANCE_SLOTS -> parseDungeonInstanceSlots(level, entry, parts[1]);
+                case TERRITORY_CLAIM_SLOTS -> parseTerritoryClaimSlots(level, entry, parts[1]);
                 case TRESOR_SIZE -> parseTresorSize(level, entry, parts[1]);
                 case ACCESS_PARTY_WAYPOINT -> parseAccessUnlock(level, entry, parts[1], PartyBuffType.ACCESS_PARTY_WAYPOINT);
                 case ACCESS_PARTY_TRESOR -> parseAccessUnlock(level, entry, parts[1], PartyBuffType.ACCESS_PARTY_TRESOR);
@@ -565,6 +578,9 @@ public class PartyBuffHandler {
         }
         if (section.contains(PartyBuffType.DUNGEON_INSTANCE_SLOTS.name())) {
             parseDungeonInstanceSlots(level, PartyBuffType.DUNGEON_INSTANCE_SLOTS.name(), section.getString(PartyBuffType.DUNGEON_INSTANCE_SLOTS.name()));
+        }
+        if (section.contains(PartyBuffType.TERRITORY_CLAIM_SLOTS.name())) {
+            parseTerritoryClaimSlots(level, PartyBuffType.TERRITORY_CLAIM_SLOTS.name(), section.getString(PartyBuffType.TERRITORY_CLAIM_SLOTS.name()));
         }
         if (section.contains(PartyBuffType.TRESOR_SIZE.name())) {
             parseTresorSize(level, PartyBuffType.TRESOR_SIZE.name(), section.getString(PartyBuffType.TRESOR_SIZE.name()));
@@ -664,6 +680,21 @@ public class PartyBuffHandler {
             dungeonInstanceSlotBonus = 0;
         } else if (!dungeonInstanceSlotsInfinite) {
             dungeonInstanceSlotBonus += parsed;
+        }
+    }
+
+    private void parseTerritoryClaimSlots(int level, String entry, String value) {
+        if (value == null) {
+            logger.warning("Invalid TERRITORY_CLAIM_SLOTS entry at level " + level + ": " + entry);
+            return;
+        }
+
+        try {
+            int slots = Integer.parseInt(value.trim());
+            territoryClaimSlotsByLevel.merge(level, slots, Integer::sum);
+            territoryClaimSlotBonus += slots;
+        } catch (NumberFormatException exception) {
+            logger.warning("Invalid TERRITORY_CLAIM_SLOTS value at level " + level + ": " + entry);
         }
     }
 
@@ -852,6 +883,10 @@ public class PartyBuffHandler {
         return Collections.unmodifiableMap(dungeonInstanceSlotsByLevel);
     }
 
+    public Map<Integer, Integer> getTerritoryClaimSlotsByLevel() {
+        return Collections.unmodifiableMap(territoryClaimSlotsByLevel);
+    }
+
     public Map<Integer, Integer> getTresorSizeByLevel() {
         return Collections.unmodifiableMap(tresorSizeByLevel);
     }
@@ -917,6 +952,7 @@ public class PartyBuffHandler {
             case EXP_SHARING_RADIUS -> getMaxPointKey(expSharingRadiusByLevel);
             case MEMBER_SLOTS -> getMaxPointKey(memberSlotsByLevel);
             case DUNGEON_INSTANCE_SLOTS -> getMaxPointKey(dungeonInstanceSlotsByLevel);
+            case TERRITORY_CLAIM_SLOTS -> getMaxPointKey(territoryClaimSlotsByLevel);
             case TRESOR_SIZE -> getMaxPointKey(tresorSizeByLevel);
             case ACCESS_PARTY_WAYPOINT -> getMaxPointKey(accessPartyWaypointByLevel);
             case ACCESS_PARTY_TRESOR -> getMaxPointKey(accessPartyTresorByLevel);

@@ -525,6 +525,8 @@ BuffMeta:
     IconMaterial: PLAYER_HEAD
   DUNGEON_INSTANCE_SLOTS:
     IconMaterial: TRIAL_KEY
+  TERRITORY_CLAIM_SLOTS:
+    IconMaterial: FILLED_MAP
   TRESOR_SIZE:
     IconMaterial: BUNDLE
   ACCESS_PARTY_WAYPOINT:

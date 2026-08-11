@@ -24,6 +24,7 @@ It exposes:
 - `McMMOPartyAPI.getPartyLoader()`
 - `McMMOPartyAPI.getPartyService()`
 - `McMMOPartyAPI.getPartyEventHandler()`
+- `McMMOPartyAPI.getTerritoryService()`
 
 Example:
 
@@ -93,6 +94,11 @@ Economy helpers:
 - `setPartyBalance(McMMOParty party, double balance)`
 - `isBalanceWithinLimit(McMMOParty party, double balance)`
 
+Territory helpers on `McMMOParty`:
+
+- `canManageTerritory(UUID uuid)`
+- `getMaxTerritoryClaims()`
+
 Notes:
 
 - These service methods are the safest way to perform admin-style changes because they refresh derived state like buffs, level progress, and loader cache.
@@ -130,6 +136,25 @@ Common dispatcher methods include:
 - `callPartyBuffHighlightEvent(...)`
 - `callPartyBuffUpgradeEvent(...)`
 - `callPartyDisbandEvent(...)`
+- `callPartyTerritoryClaimEvent(...)`
+- `callPartyTerritoryUnclaimEvent(...)`
+- `callPartyTerritoryPermissionCheckEvent(...)`
+
+### `TerritoryService`
+
+`TerritoryService` owns McMMOParties' logical chunk claims. Claims belong to a party ID, so protection messages and GUI ownership use the party display name rather than a player name.
+
+Main capabilities:
+
+- `claim(Player player, McMMOParty party)` and `unclaim(Player player)`
+- `startPreview(Player player, McMMOParty party)`, `getPreview(UUID playerId)`, `confirmPreview(Player player)`, and `cancelPreview(UUID playerId)`
+- `getClaim(Location location)` and `getClaim(Chunk chunk)`
+- `getClaims(String partyId)` and `getClaimCount(String partyId)`
+- `checkPermission(...)`
+- `setPermissionOverride(...)`, `resetPermissionOverride(...)`, and `getPermissionOverride(...)`
+- `registerClaimBlockProvider(ClaimBlockProvider provider)` and `unregisterClaimBlockProvider(String name)`
+
+The public `ClaimBlockProvider` SPI allows integrations to supply claim-block balances, withdrawals/refunds, and external-overlap checks. `NONE` and a reflection-based `GRIEFPREVENTION` bridge are included. Register a custom provider during plugin enable, then use its name in `Territory.ClaimCost.ClaimBlockProvider`.
 
 ## `McMMOParty` Model
 
@@ -252,6 +277,9 @@ Shared behavior:
 | `PartyChatWriteEvent` | Fired before party chat is sent. | `message`, recipient list | Filter chat or retarget recipients. |
 | `PartyBuffHighlightEvent` | Fired when a player highlights a preferred buff. | `buffType`, `ability` | Remap highlight target. |
 | `PartyBuffUpgradeEvent` | Fired before a buff upgrade is purchased. | `treasuryCost` | Raise, lower, or block upgrade cost. |
+| `PartyTerritoryClaimEvent` | Fired before a chunk claim is persisted and charged. | `moneyCost`, `claimBlockCost` | Change costs or block the claim. |
+| `PartyTerritoryUnclaimEvent` | Fired before a party chunk is removed. | None beyond cancellation | Block an unclaim. |
+| `PartyTerritoryPermissionCheckEvent` | Fired for a protected player action in party territory. | `allowed`, `denialMessage` | Grant or deny contextual access and customize the displayed denial. |
 
 ### Event Details
 

@@ -13,7 +13,9 @@
         - "&eMitglieder: &a%member_count%"
         - "&eLevel: &a%current_level% &7/ &a%max_level%"
         - "&eExp: &a%current_exp% &7/ &a%next_level_exp%"
+        - "%territory_summary%"
         - "&7Klick für Levelpfad"
+      TerritoryLine: "&eTerritorium: &a%claimed_chunks% &7/ &a%max_claims% Chunks"
     PlayersMember:
       Slot: 20
       Material: PLAYER_HEAD
@@ -27,7 +29,11 @@
       Lore:
         - "&eStatus: %member_status%"
         - "%member_role_display%"
+        - "%territory_permissions%"
         - "&eTresor-Anteil: &a%member_share%"
+      TerritoryLine: "&eTerritorium: &f%permissions%"
+      TerritoryManagerAccess: "Alle (Verwalter)"
+      TerritoryNoAccess: "Keine"
     MemberSort:
       Slot: 49
       Material: HOPPER
@@ -73,6 +79,46 @@
       Lore:
         - "&eInstanzgruppe verwalten"
         - "&7Klick für Details"
+    PartyTerritory:
+      Slot: 40
+      Material: FILLED_MAP
+      Display: "&6Party-Territorium"
+      Lore:
+        - "&eBeanspruchte Chunks: &a%claimed_chunks% &7/ &a%max_claims%"
+        - "&eDein Rang: %territory_role%"
+        - "&7Klicke, um das Territorium anzusehen"
+    Territory:
+      Header:
+        Slot: 4
+        Material: FILLED_MAP
+        Display: "&6Territorium von %party_display%"
+        Lore:
+          - "&eBeanspruchte Chunks: &a%claimed_chunks% &7/ &a%max_claims%"
+          - "&eBesitzer des aktuellen Chunks: &f%current_owner%"
+          - "&7Seite: &f%page%&7/&f%max_page%"
+          - "%action_hint%"
+      ClaimHint: "&aKlicke, um den aktuellen Chunk zu beanspruchen"
+      ConfirmHint: "&aKlicke, um diesen Chunk zu bestätigen"
+      UnclaimHint: "&cKlicke, um den aktuellen Chunk freizugeben"
+      Layout:
+        Slots: [10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43]
+      ClaimEntry:
+        Material: MAP
+        Display: "&e%world% &8(&7%x%&8, &7%z%&8)"
+        Lore:
+          - "&7Beansprucht von: &f%claimed_by%"
+      PreviousPage:
+        Slot: 45
+        Material: ARROW
+        Display: "&7Vorherige Territoriumsseite"
+        Lore:
+          - "&7Seite: &f%page%&7/&f%max_page%"
+      NextPage:
+        Slot: 53
+        Material: ARROW
+        Display: "&7Nächste Territoriumsseite"
+        Lore:
+          - "&7Seite: &f%page%&7/&f%max_page%"
     LevelPath:
       Layout:
         Slots:
@@ -319,6 +365,20 @@
         Slot: 32
         Title: "Abenteuer"
         Description: "Verwaltet Mitglieder der Dungeon-Instanz."
+        SelectedMaterial: LIME_WOOL
+        UnselectedMaterial: LIGHT_GRAY_WOOL
+        SelectedDisplay: "&a%role_title%"
+        UnselectedDisplay: "&7%role_title%"
+        SelectedLore:
+          - "&7%role_description%"
+          - "&aAusgewählt"
+        UnselectedLore:
+          - "&7%role_description%"
+          - "&eKlick zum Zuweisen"
+      TERRITORY_MANAGER:
+        Slot: 34
+        Title: "Territoriumsverwalter"
+        Description: "Kann Chunks beanspruchen, freigeben und Mitgliederrechte verwalten."
         SelectedMaterial: LIME_WOOL
         UnselectedMaterial: LIGHT_GRAY_WOOL
         SelectedDisplay: "&a%role_title%"

@@ -40,6 +40,32 @@ Hooks:
   ChestShop:
     Enabled: true
 
+Territory:
+  Enabled: false
+  AllowedWorlds: ["*"]
+  BaseClaims: 4
+  RequireAdjacentClaims: true
+  ClaimCost:
+    PartyMoney: 0.0
+    ClaimBlocks: 0
+    ClaimBlockProvider: NONE
+  UnclaimRefund:
+    PartyMoneyPercent: 0.0
+    ClaimBlocksPercent: 0.0
+  RespectExternalClaims: true
+  Protection:
+    Enabled: true
+    ProtectExplosions: true
+    ProtectPistons: true
+    MessageCooldownMillis: 1000
+  DefaultMemberPermissions:
+    - BUILD
+    - BREAK
+    - INTERACT
+    - CONTAINER
+    - ENTITY
+    - REDSTONE
+
 DungeonInstance:
   DefaultSlots: 2
 
@@ -100,6 +126,27 @@ Experience:
 | `Commands.OverrideMcMMOPartyCommand` | boolean | `true` | Present in the file, but currently not read by the runtime code. Treat as unused for now. |
 | `Commands.OverrideMythicDungeonsCommand` | boolean | `true` | Present in the file, but currently not read by the runtime code. Treat as unused for now. |
 | `Hooks.ChestShop.Enabled` | boolean | `true` | Enables or disables the ChestShop integration layer. |
+| `Territory.Enabled` | boolean | `false` | Master switch for party territory commands, GUI elements, claims, and protection. It is deliberately disabled for existing installations until an administrator opts in. |
+| `Territory.AllowedWorlds` | string list | `["*"]` | Worlds where party chunks may be claimed. `*` allows every world. |
+| `Territory.BaseClaims` | integer | `4` | Base chunk allowance for each party before `TERRITORY_CLAIM_SLOTS` bonuses. Set to `-1` for unlimited claims. |
+| `Territory.RequireAdjacentClaims` | boolean | `true` | Requires each additional claim in a world to share an edge with that party's existing territory. |
+| `Territory.ClaimCost.PartyMoney` | decimal | `0.0` | Amount deducted from the party treasury for each claim. |
+| `Territory.ClaimCost.ClaimBlocks` | integer | `0` | Claim blocks deducted from the claiming player through the configured provider. |
+| `Territory.ClaimCost.ClaimBlockProvider` | string | `NONE` | Claim-block provider. Built-in values are `NONE` and `GRIEFPREVENTION`; API integrations may register another provider. |
+| `Territory.UnclaimRefund.PartyMoneyPercent` | decimal | `0.0` | Percentage of the claim's originally paid party-money cost refunded when it is unclaimed. Clamped to `0`-`100`. |
+| `Territory.UnclaimRefund.ClaimBlocksPercent` | decimal | `0.0` | Percentage of the claim's originally paid claim blocks refunded to the original claiming player. Clamped to `0`-`100`. |
+| `Territory.RespectExternalClaims` | boolean | `true` | Prevents party territory from overlapping claims reported by available external providers, including GriefPrevention. |
+| `Territory.Protection.Enabled` | boolean | `true` | Protects enabled party territory from unauthorized player actions and cross-border environmental changes. This only takes effect while `Territory.Enabled` is also `true`. |
+| `Territory.Protection.ProtectExplosions` | boolean | `true` | Removes claimed blocks from entity and block explosion damage lists. |
+| `Territory.Protection.ProtectPistons` | boolean | `true` | Blocks piston movement across wilderness or another party's territory boundary. |
+| `Territory.Protection.MessageCooldownMillis` | integer | `1000` | Per-player cooldown for territory denial messages. |
+| `Territory.Preview.Enabled` | boolean | `true` | Enables territory previews, including the persistent `/party territory preview` overview. If disabled, `/party territory claim` claims immediately. |
+| `Territory.Preview.DurationSeconds` | integer | `30` | How long a claim preview remains active before expiring. |
+| `Territory.Preview.RefreshTicks` | integer | `10` | Map marker refresh interval in server ticks. |
+| `Territory.Preview.CornerHeight` | integer | `4` | Height of the temporary marker pillars at each chunk corner, clamped to `1`-`8`. |
+| `Territory.Preview.ShowBorder` | boolean | `true` | Adds a sparse marker border between the four corner markers. |
+| `Territory.Preview.RadiusChunks` | integer | `5` | Number of chunks shown outward from the player's current chunk, clamped to `1`-`16`. |
+| `Territory.DefaultMemberPermissions` | enum list | all six permissions | Default access for ordinary party members. Valid values are `BUILD`, `BREAK`, `INTERACT`, `CONTAINER`, `ENTITY`, and `REDSTONE`; per-member overrides take precedence. |
 | `DungeonInstance.DefaultSlots` | integer | `2` | Base number of dungeon instance slots before party buff bonuses are added. |
 | `Party.BaseMemberSlots` | integer | `10` | Base party member capacity before `MEMBER_SLOTS` buff bonuses are added. |
 | `Party.MaxPartiesPerPlayer` | integer | `3` | Maximum number of parties one player may join simultaneously. Set to `-1` for unlimited memberships. |
@@ -162,6 +209,7 @@ The plugin currently supports these buff keys:
 - `ACCESS_PARTY_CHAT`
 - `ABILITY_DURATION`
 - `ABILITY_COOLDOWN_REDUCTION`
+- `TERRITORY_CLAIM_SLOTS`
 
 ### `LEVEL` mode
 

@@ -24,9 +24,11 @@ import net.maksy.mcmmoparties.listeners.hooks.ChestShopListener;
 import net.maksy.mcmmoparties.listeners.hooks.ChestShopProtectionListener;
 import net.maksy.mcmmoparties.listeners.hooks.DungeonInstanceListener;
 import net.maksy.mcmmoparties.listeners.ExpEvents;
+import net.maksy.mcmmoparties.listeners.TerritoryProtectionListener;
 import net.maksy.mcmmoparties.proxy.ProxyPartyChatListener;
 import net.maksy.mcmmoparties.proxy.ProxyTeleportListener;
 import net.maksy.mcmmoparties.utils.ChatUT;
+import net.maksy.mcmmoparties.territory.TerritoryService;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.Command;
@@ -55,6 +57,8 @@ public final class McMMOParties extends JavaPlugin {
     private static PartyLoader partyLoader;
     @Getter
     private static PartyEventHandler partyEventHandler;
+    @Getter
+    private static TerritoryService territoryService;
     @Getter
     private static DungeonInstanceManager dungeonInstanceManager;
 
@@ -104,6 +108,7 @@ public final class McMMOParties extends JavaPlugin {
         getCommand("pa-admin").setTabCompleter(partyAdminCommands);
 
         partyEventHandler = new PartyEventHandler();
+        territoryService = new TerritoryService();
 
         NamespacedKey teleportChannel = NamespacedKey.fromString(configManager.getTeleportChannel());
         if (teleportChannel != null) {
@@ -125,6 +130,7 @@ public final class McMMOParties extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new ExpEvents(), this);
         getServer().getPluginManager().registerEvents(new AbilityBuffListener(), this);
+        getServer().getPluginManager().registerEvents(new TerritoryProtectionListener(), this);
         getServer().getPluginManager().registerEvents(GuiSessionRegistry.listener(), this);
         if(hookManager.isHooked(HookType.MythicDungeons)) {
             registerMythicDungeonsIntegration();
@@ -136,6 +142,9 @@ public final class McMMOParties extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (territoryService != null) {
+            territoryService.shutdown();
+        }
         NamespacedKey teleportChannel = configManager != null ? NamespacedKey.fromString(configManager.getTeleportChannel()) : null;
         if (teleportChannel != null && proxyTeleportListener != null) {
             getServer().getMessenger().unregisterIncomingPluginChannel(this, teleportChannel.toString(), proxyTeleportListener);

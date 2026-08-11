@@ -7,6 +7,9 @@ import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
 import net.maksy.mcmmoparties.configuration.enums.Lang;
 import net.maksy.mcmmoparties.configuration.enums.PartyBuffType;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
+import net.maksy.mcmmoparties.territory.TerritoryClaim;
+import net.maksy.mcmmoparties.territory.TerritoryClaimResult;
+import net.maksy.mcmmoparties.territory.TerritoryUnclaimResult;
 import net.maksy.mcmmoparties.utils.Replaceable;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -14,6 +17,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -26,7 +30,7 @@ import java.util.UUID;
 
 public class PartyAdminCommands implements CommandExecutor, TabCompleter {
     private static final String BASE_PERMISSION = "mcmmoparties.admin";
-    private static final List<String> ROOT_SUBCOMMANDS = List.of("disband", "kick", "invite", "exp", "level", "skillpoints", "buff", "balance");
+    private static final List<String> ROOT_SUBCOMMANDS = List.of("disband", "kick", "invite", "exp", "level", "skillpoints", "buff", "balance", "territory");
 
     private final McMMOPartyService service = McMMOPartyAPI.getPartyService();
 
@@ -52,9 +56,83 @@ public class PartyAdminCommands implements CommandExecutor, TabCompleter {
             case "skillpoints" -> handleSkillPoints(sender, args);
             case "buff" -> handleBuff(sender, args);
             case "balance" -> handleBalance(sender, args);
+            case "territory" -> handleTerritory(sender, args);
             default -> sendUsage(sender);
         }
         return true;
+    }
+
+    private void handleTerritory(CommandSender sender, String[] args) {
+        if (!McMMOParties.getConfigManager().isTerritoryEnabled()) {
+            sender.sendMessage(LanguageConfig.get().getMessage(Lang.TERRITORY_DISABLED));
+            return;
+        }
+        if (args.length < 2) {
+            sendUsage(sender);
+            return;
+        }
+
+        String action = args[1].toLowerCase(Locale.ROOT);
+        if ("claim".equals(action)) {
+            if (!(sender instanceof Player player) || args.length != 3) {
+                sendUsage(sender);
+                return;
+            }
+            McMMOParty party = resolveParty(sender, args[2]);
+            if (party == null) {
+                return;
+            }
+            TerritoryClaimResult result = McMMOParties.getTerritoryService().claimAdministrative(player, party);
+            sender.sendMessage(LanguageConfig.get().getMessage(
+                    result == TerritoryClaimResult.SUCCESS ? "pa_admin_territory_claimed" : "pa_admin_territory_failed",
+                    result == TerritoryClaimResult.SUCCESS
+                            ? "&aClaimed the current chunk for &f%party%&a."
+                            : "&cTerritory operation failed: &f%result%&c.",
+                    new Replaceable("%party%", party.getDisplay()),
+                    new Replaceable("%result%", result.name())
+            ));
+            return;
+        }
+
+        if ("unclaim".equals(action)) {
+            if (!(sender instanceof Player player) || args.length != 2) {
+                sendUsage(sender);
+                return;
+            }
+            TerritoryUnclaimResult result = McMMOParties.getTerritoryService().unclaimAdministrative(player);
+            sender.sendMessage(LanguageConfig.get().getMessage(
+                    result == TerritoryUnclaimResult.SUCCESS ? "pa_admin_territory_unclaimed" : "pa_admin_territory_failed",
+                    result == TerritoryUnclaimResult.SUCCESS
+                            ? "&aReleased the current party territory chunk."
+                            : "&cTerritory operation failed: &f%result%&c.",
+                    new Replaceable("%result%", result.name())
+            ));
+            return;
+        }
+
+        if ("list".equals(action) && args.length == 3) {
+            McMMOParty party = resolveParty(sender, args[2]);
+            if (party == null) {
+                return;
+            }
+            List<TerritoryClaim> claims = McMMOParties.getTerritoryService().getClaims(party.getPartyID());
+            sender.sendMessage(LanguageConfig.get().getMessage(
+                    "territory_list_header", "&eTerritory chunks for &f%party% &7(%count%):",
+                    new Replaceable("%party%", party.getDisplay()),
+                    new Replaceable("%count%", String.valueOf(claims.size()))
+            ));
+            for (TerritoryClaim claim : claims) {
+                sender.sendMessage(LanguageConfig.get().getMessage(
+                        "territory_list_entry", "&7- &f%world% &8(&7%x%&8, &7%z%&8)",
+                        new Replaceable("%world%", claim.worldName()),
+                        new Replaceable("%x%", String.valueOf(claim.chunkX())),
+                        new Replaceable("%z%", String.valueOf(claim.chunkZ()))
+                ));
+            }
+            return;
+        }
+
+        sendUsage(sender);
     }
 
     private void handleDisband(CommandSender sender, String[] args) {
@@ -512,6 +590,9 @@ public class PartyAdminCommands implements CommandExecutor, TabCompleter {
     private void sendUsage(CommandSender sender) {
         sender.sendMessage(LanguageConfig.get().getMessage("pa_admin_usage_header", "&ePa-Admin usage:"));
         for (String usageLine : service.getAdminUsageLines()) {
+            if (!McMMOParties.getConfigManager().isTerritoryEnabled() && usageLine.contains(" territory ")) {
+                continue;
+            }
             sender.sendMessage(LanguageConfig.get().getMessage("pa_admin_usage_line", "&7- &f%usage%", new Replaceable("%usage%", usageLine)));
         }
     }
@@ -596,7 +677,10 @@ public class PartyAdminCommands implements CommandExecutor, TabCompleter {
     @Override
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         if (args.length == 1) {
-            return filterByInput(ROOT_SUBCOMMANDS, args[0]);
+            List<String> available = McMMOParties.getConfigManager().isTerritoryEnabled()
+                    ? ROOT_SUBCOMMANDS
+                    : ROOT_SUBCOMMANDS.stream().filter(value -> !"territory".equals(value)).toList();
+            return filterByInput(available, args[0]);
         }
 
         String subcommand = args[0].toLowerCase(Locale.ROOT);
@@ -605,6 +689,9 @@ public class PartyAdminCommands implements CommandExecutor, TabCompleter {
         }
 
         if (args.length == 2) {
+            if ("territory".equals(subcommand)) {
+                return filterByInput(List.of("claim", "unclaim", "list"), args[1]);
+            }
             if ("disband".equals(subcommand) || "kick".equals(subcommand) || "invite".equals(subcommand)) {
                 return filterByInput(service.getPartyNames(), args[1]);
             }
@@ -619,6 +706,8 @@ public class PartyAdminCommands implements CommandExecutor, TabCompleter {
                 }
                 case "invite" -> filterByInput(service.getOnlinePlayerNames(), args[2]);
                 case "exp", "level", "skillpoints", "buff", "balance" -> filterByInput(service.getPartyNames(), args[2]);
+                case "territory" -> ("claim".equalsIgnoreCase(args[1]) || "list".equalsIgnoreCase(args[1]))
+                        ? filterByInput(service.getPartyNames(), args[2]) : List.of();
                 default -> List.of();
             };
         }

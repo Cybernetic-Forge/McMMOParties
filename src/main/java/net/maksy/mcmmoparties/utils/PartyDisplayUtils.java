@@ -38,6 +38,7 @@ public final class PartyDisplayUtils {
             case CO_OWNER -> LanguageConfig.get().getMessage(Lang.MEMBER_ROLE_CO_OWNER);
             case SHOP_MANAGER -> LanguageConfig.get().getMessage(Lang.MEMBER_ROLE_SHOP_MANAGER);
             case BUFF_MANAGER -> LanguageConfig.get().getMessage(Lang.MEMBER_ROLE_BUFF_MANAGER);
+            case TERRITORY_MANAGER -> LanguageConfig.get().getMessage(Lang.MEMBER_ROLE_TERRITORY_MANAGER);
             case ADVENTURER -> LanguageConfig.get().getMessage(Lang.MEMBER_ROLE_ADVENTURER);
             case PENDING -> LanguageConfig.get().getMessage(Lang.MEMBER_ROLE_PENDING);
             case NONE -> LanguageConfig.get().getMessage(Lang.MEMBER_ROLE_NONE);

@@ -22,6 +22,10 @@ import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.configuration.models.PartyWaypoint;
 import net.maksy.mcmmoparties.hooks.EconomyHook;
 import net.maksy.mcmmoparties.proxy.ProxyTeleportService;
+import net.maksy.mcmmoparties.territory.TerritoryClaim;
+import net.maksy.mcmmoparties.territory.TerritoryPreview;
+import net.maksy.mcmmoparties.territory.TerritoryKey;
+import net.maksy.mcmmoparties.commands.TerritoryCommands;
 import net.maksy.mcmmoparties.utils.*;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
@@ -53,7 +57,7 @@ public class PartyOverview {
     private final McMMOParty party;
     private final Runnable backAction;
     private final Inventory inventory;
-    private int currentView = 0; // 0 = Overview, 1 = Members, 2 = Skills, 3 = Buffs, 4 = Role selector, 5 = Dungeon instances, 6 = Level path
+    private int currentView = 0; // 0 = Overview, 1 = Members, 2 = Skills, 3 = Buffs, 4 = Role selector, 5 = Dungeon instances, 6 = Level path, 7 = Territory
     private int memberSortFilter = 0; // 0 = All, 1 = Online, 2 = Offline#
     private final Map<Integer, PartyFeature> mainSlots = new HashMap<>();
     private final Map<Integer, BuffKey> buffSlots = new HashMap<>();
@@ -66,6 +70,7 @@ public class PartyOverview {
     private int instanceMemberPage = 0;
     private int buffPage = 0;
     private int levelPathPage = 0;
+    private int territoryPage = 0;
 
     private static final List<Integer> DEFAULT_INSTANCE_AVAILABLE_LAYOUT = List.of(10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25);
     private static final List<Integer> DEFAULT_INSTANCE_MEMBER_LAYOUT = List.of(28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43);
@@ -80,19 +85,24 @@ public class PartyOverview {
     private static final List<Integer> DEFAULT_LEVEL_PATH_LAYOUT = List.of(10, 11, 12, 13, 14, 15, 16, 25, 24, 23, 22, 21, 20, 19, 28, 29, 30, 31, 32, 33, 34, 43, 42, 41, 40, 39, 38, 37);
     private static final int DEFAULT_LEVEL_PATH_PREVIOUS_SLOT = 45;
     private static final int DEFAULT_LEVEL_PATH_NEXT_SLOT = 53;
+    private static final List<Integer> DEFAULT_TERRITORY_LAYOUT = List.of(10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34, 37, 38, 39, 40, 41, 42, 43);
+    private static final int DEFAULT_TERRITORY_PREVIOUS_SLOT = 45;
+    private static final int DEFAULT_TERRITORY_NEXT_SLOT = 53;
     private static final Map<PartyState, Integer> DEFAULT_ROLE_SELECTOR_SLOTS = Map.of(
             PartyState.MEMBER, 19,
             PartyState.CO_OWNER, 21,
             PartyState.SHOP_MANAGER, 23,
             PartyState.BUFF_MANAGER, 29,
-            PartyState.ADVENTURER, 31
+            PartyState.ADVENTURER, 31,
+            PartyState.TERRITORY_MANAGER, 33
     );
     private static final List<PartyState> MANAGEABLE_MEMBER_ROLES = List.of(
             PartyState.MEMBER,
             PartyState.CO_OWNER,
             PartyState.SHOP_MANAGER,
             PartyState.BUFF_MANAGER,
-            PartyState.ADVENTURER
+            PartyState.ADVENTURER,
+            PartyState.TERRITORY_MANAGER
     );
 
     private record BuffKey(PartyBuffType type, String ability) {
@@ -135,12 +145,24 @@ public class PartyOverview {
             displayDungeonInstances();
         } else if (currentView == 6) {
             displayLevelPath();
+        } else if (currentView == 7) {
+            displayTerritory();
         }
     }
 
     private void displayOverview() {
         mainSlots.clear();
         OfflinePlayer owner = Bukkit.getOfflinePlayer(party.getOwner());
+        int territoryClaimCount = McMMOParties.getTerritoryService() == null
+                ? 0 : McMMOParties.getTerritoryService().getClaimCount(party.getPartyID());
+        String territorySummary = McMMOParties.getConfigManager().isTerritoryEnabled()
+                ? McMMOParties.getPartyOverviewCfg().getFormattedString(
+                        "Icons.PartyInfo.TerritoryLine",
+                        "&eTerritory: &a%claimed_chunks% &7/ &a%max_claims% chunks",
+                        new Replaceable("%claimed_chunks%", String.valueOf(territoryClaimCount)),
+                        new Replaceable("%max_claims%", party.getMaxTerritoryClaims() < 0 ? "∞" : String.valueOf(party.getMaxTerritoryClaims()))
+                )
+                : "";
 
         var partyInfoIcon = McMMOParties.getPartyOverviewCfg().getIcon("PartyInfo",
                 new Replaceable("%party_id%", party.getPartyID()),
@@ -150,7 +172,8 @@ public class PartyOverview {
                 new Replaceable("%current_level%", String.valueOf(party.getLevel())),
                 new Replaceable("%max_level%", getPartyLevelCapDisplay()),
                 new Replaceable("%current_exp%", String.format("%.0f", party.getCurrentExperience())),
-                new Replaceable("%next_level_exp%", String.format("%.0f", party.getNeededExperience()))
+                new Replaceable("%next_level_exp%", String.format("%.0f", party.getNeededExperience())),
+                new Replaceable("%territory_summary%", territorySummary)
         );
 
         double cumulativePower = PartyDisplayUtils.calculateCumulativePower(party);
@@ -177,6 +200,13 @@ public class PartyOverview {
                         ? ""
                         : LanguageConfig.get().getMessage(PARTY_TRESOR_LOCKED))
         );
+        int claimedChunks = territoryClaimCount;
+        String maxClaims = party.getMaxTerritoryClaims() < 0 ? "∞" : String.valueOf(party.getMaxTerritoryClaims());
+        var territoryIcon = McMMOParties.getPartyOverviewCfg().getIcon("PartyTerritory",
+                new Replaceable("%claimed_chunks%", String.valueOf(claimedChunks)),
+                new Replaceable("%max_claims%", maxClaims),
+                new Replaceable("%territory_role%", PartyDisplayUtils.getRoleDisplayName(party.getPartyState(playerUuid)))
+        );
         var backIcon = McMMOParties.getPartyOverviewCfg().getIcon("Back");
 
         inventory.setItem(partyInfoIcon.getKey(), partyInfoIcon.getValue());
@@ -197,6 +227,10 @@ public class PartyOverview {
         mainSlots.put(waypointIcon.getKey(), PartyFeature.WARP);
         inventory.setItem(tresorIcon.getKey(), tresorIcon.getValue());
         mainSlots.put(tresorIcon.getKey(), PartyFeature.TRESOR);
+        if (McMMOParties.getConfigManager().isTerritoryEnabled()) {
+            inventory.setItem(territoryIcon.getKey(), territoryIcon.getValue());
+            mainSlots.put(territoryIcon.getKey(), PartyFeature.TERRITORY);
+        }
 
         inventory.setItem(backIcon.getKey(), backIcon.getValue());
 
@@ -229,7 +263,8 @@ public class PartyOverview {
                     new Replaceable("%member_status%", statusDisplay),
                     new Replaceable("%member_share%", String.format(Locale.US, "%.2f", shareAmount)),
                     new Replaceable("%member_role%", PartyDisplayUtils.getRoleDisplayName(party.getPartyState(memberUuid))),
-                    new Replaceable("%member_role_display%", roleDisplay)
+                    new Replaceable("%member_role_display%", roleDisplay),
+                    new Replaceable("%territory_permissions%", getTerritoryPermissionsLine(memberUuid))
             );
 
             var skullItem = memberIcon.getValue();
@@ -257,6 +292,114 @@ public class PartyOverview {
         );
         inventory.setItem(sortIcon.getKey(), sortIcon.getValue());
 
+        var backIcon = McMMOParties.getPartyOverviewCfg().getIcon("Back");
+        inventory.setItem(backIcon.getKey(), backIcon.getValue());
+    }
+
+    private String getTerritoryPermissionsLine(UUID memberUuid) {
+        if (!McMMOParties.getConfigManager().isTerritoryEnabled()) {
+            return "";
+        }
+        String permissions;
+        if (party.canManageTerritory(memberUuid)) {
+            permissions = McMMOParties.getPartyOverviewCfg().getFormattedString(
+                    "Icons.MemberEntry.TerritoryManagerAccess", "All (manager)"
+            );
+        } else {
+            List<String> allowed = Arrays.stream(TerritoryPermission.values())
+                    .filter(permission -> McMMOParties.getTerritoryService()
+                            .getPermissionOverride(party.getPartyID(), memberUuid, permission)
+                            .orElse(McMMOParties.getConfigManager().getDefaultTerritoryMemberPermissions().contains(permission)))
+                    .map(Enum::name)
+                    .toList();
+            permissions = allowed.isEmpty()
+                    ? McMMOParties.getPartyOverviewCfg().getFormattedString("Icons.MemberEntry.TerritoryNoAccess", "None")
+                    : String.join(", ", allowed);
+        }
+        return McMMOParties.getPartyOverviewCfg().getFormattedString(
+                "Icons.MemberEntry.TerritoryLine", "&eTerritory: &f%permissions%",
+                new Replaceable("%permissions%", permissions)
+        );
+    }
+
+    private void displayTerritory() {
+        if (!McMMOParties.getConfigManager().isTerritoryEnabled()) {
+            currentView = 0;
+            displayOverview();
+            return;
+        }
+
+        List<TerritoryClaim> claims = McMMOParties.getTerritoryService().getClaims(party.getPartyID());
+        List<Integer> layout = McMMOParties.getPartyOverviewCfg().getIntegerList(
+                "Icons.Territory.Layout.Slots", DEFAULT_TERRITORY_LAYOUT
+        );
+        int pageSize = Math.max(1, layout.size());
+        territoryPage = clampPage(territoryPage, claims.size(), pageSize);
+        int pageCount = getPageCount(claims.size(), pageSize);
+
+        Player viewer = Bukkit.getPlayer(playerUuid);
+        TerritoryClaim current = viewer == null ? null : McMMOParties.getTerritoryService().getClaim(viewer.getLocation());
+        McMMOParty currentOwner = current == null ? null : McMMOParties.getPartyLoader().getParty(current.partyId());
+        String currentOwnerDisplay = current == null
+                ? LanguageConfig.get().getMessage("territory_info_wilderness", "&7Wilderness")
+                : currentOwner == null ? current.partyId() : currentOwner.getDisplay();
+        boolean manageable = isPartyMember(playerUuid) && party.canManageTerritory(playerUuid);
+        TerritoryPreview preview = McMMOParties.getTerritoryService().getPreview(playerUuid);
+        boolean previewMatches = viewer != null && preview != null
+                && preview.partyId().equalsIgnoreCase(party.getPartyID())
+                && current == null
+                && preview.key().equals(TerritoryKey.from(
+                viewer.getLocation(), McMMOParties.getConfigManager().getServerName()
+        ));
+        String actionHint = "";
+        if (manageable && current == null) {
+            actionHint = McMMOParties.getPartyOverviewCfg().getFormattedString(
+                    previewMatches && preview.isClaimable()
+                            ? "Icons.Territory.ConfirmHint" : "Icons.Territory.ClaimHint",
+                    previewMatches && preview.isClaimable()
+                            ? "&aClick to confirm this chunk" : "&aClick to preview your current chunk"
+            );
+        } else if (manageable && current.partyId().equalsIgnoreCase(party.getPartyID())) {
+            actionHint = McMMOParties.getPartyOverviewCfg().getFormattedString(
+                    "Icons.Territory.UnclaimHint", "&cClick to unclaim your current chunk"
+            );
+        }
+
+        var header = McMMOParties.getPartyOverviewCfg().getIcon("Territory.Header",
+                new Replaceable("%party_display%", party.getDisplay()),
+                new Replaceable("%claimed_chunks%", String.valueOf(claims.size())),
+                new Replaceable("%max_claims%", party.getMaxTerritoryClaims() < 0 ? "∞" : String.valueOf(party.getMaxTerritoryClaims())),
+                new Replaceable("%current_owner%", currentOwnerDisplay),
+                new Replaceable("%action_hint%", actionHint),
+                new Replaceable("%page%", String.valueOf(territoryPage + 1)),
+                new Replaceable("%max_page%", String.valueOf(pageCount))
+        );
+        inventory.setItem(header.getKey(), header.getValue());
+
+        int start = territoryPage * pageSize;
+        for (int index = 0; index < pageSize && start + index < claims.size(); index++) {
+            TerritoryClaim claim = claims.get(start + index);
+            ItemStack item = McMMOParties.getPartyOverviewCfg().getItem("Territory.ClaimEntry",
+                    new Replaceable("%world%", claim.worldName()),
+                    new Replaceable("%x%", String.valueOf(claim.chunkX())),
+                    new Replaceable("%z%", String.valueOf(claim.chunkZ())),
+                    new Replaceable("%claimed_by%", PartyDisplayUtils.getPlayerName(Bukkit.getOfflinePlayer(claim.claimedBy())))
+            );
+            inventory.setItem(layout.get(index), item);
+        }
+
+        if (pageCount > 1) {
+            var previous = McMMOParties.getPartyOverviewCfg().getIcon("Territory.PreviousPage",
+                    new Replaceable("%page%", String.valueOf(territoryPage + 1)),
+                    new Replaceable("%max_page%", String.valueOf(pageCount))
+            );
+            var next = McMMOParties.getPartyOverviewCfg().getIcon("Territory.NextPage",
+                    new Replaceable("%page%", String.valueOf(territoryPage + 1)),
+                    new Replaceable("%max_page%", String.valueOf(pageCount))
+            );
+            inventory.setItem(previous.getKey(), previous.getValue());
+            inventory.setItem(next.getKey(), next.getValue());
+        }
         var backIcon = McMMOParties.getPartyOverviewCfg().getIcon("Back");
         inventory.setItem(backIcon.getKey(), backIcon.getValue());
     }
@@ -944,6 +1087,36 @@ public class PartyOverview {
             );
         }
 
+        // Territory claim slots are only relevant while the optional territory feature is enabled.
+        if (McMMOParties.getConfigManager().isTerritoryEnabled()
+                && !handler.getTerritoryClaimSlotsByLevel().isEmpty()) {
+            int spentPoints = handler.getSpentPoints(PartyBuffType.TERRITORY_CLAIM_SLOTS);
+            int maxPoints = handler.getMaxPoints(PartyBuffType.TERRITORY_CLAIM_SLOTS);
+            int totalSlots = handler.getTerritoryClaimSlotBonus();
+            int nextSlots = skillPointsMode
+                    ? getSkillPointIntValue(handler.getTerritoryClaimSlotsByLevel(), spentPoints + 1, totalSlots)
+                    : getNextLevelIntValue(handler.getTerritoryClaimSlotsByLevel(), party.getLevel(), totalSlots);
+            String name = McMMOParties.getConfigManager().getBuffDisplayName(
+                    "TERRITORY_CLAIM_SLOTS", "Territory Claim Slots"
+            );
+            BuffKey buffKey = new BuffKey(PartyBuffType.TERRITORY_CLAIM_SLOTS, null);
+            addBuffEntry(entries,
+                    getBuffItem(
+                            skillPointsMode,
+                            buffKey,
+                            name,
+                            PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SLOTS, totalSlots),
+                            PartyDisplayUtils.formatAmount(BUFF_AMOUNT_SLOTS, nextSlots),
+                            spentPoints,
+                            maxPoints,
+                            suggestionCounts,
+                            preferredBuff,
+                            playerSuggestionKey
+                    ),
+                    skillPointsMode ? buffKey : null
+            );
+        }
+
         if (!handler.getTresorSizeByLevel().isEmpty()) {
             int spentPoints = handler.getSpentPoints(PartyBuffType.TRESOR_SIZE);
             int maxPoints = handler.getMaxPoints(PartyBuffType.TRESOR_SIZE);
@@ -1416,6 +1589,8 @@ public class PartyOverview {
         if (!handler.getExpSharingRadiusByLevel().isEmpty()) count++;
         if (!handler.getMemberSlotsByLevel().isEmpty()) count++;
         if (!handler.getDungeonInstanceSlotsByLevel().isEmpty()) count++;
+        if (McMMOParties.getConfigManager().isTerritoryEnabled()
+                && !handler.getTerritoryClaimSlotsByLevel().isEmpty()) count++;
         if (!handler.getTresorSizeByLevel().isEmpty()) count++;
         if (!handler.getAccessPartyWaypointByLevel().isEmpty()) count++;
         if (!handler.getAccessPartyTresorByLevel().isEmpty()) count++;
@@ -1538,6 +1713,14 @@ public class PartyOverview {
                 case BUFFS -> {
                     currentView = 3;
                     buffPage = 0;
+                    refreshInventory();
+                }
+                case TERRITORY -> {
+                    if (!McMMOParties.getConfigManager().isTerritoryEnabled()) {
+                        return;
+                    }
+                    currentView = 7;
+                    territoryPage = 0;
                     refreshInventory();
                 }
                 case DUNGEON_INSTANCES -> {
@@ -1811,6 +1994,9 @@ public class PartyOverview {
                 }
             }
             return;
+        } else if (currentView == 7) {
+            handleTerritoryClick(player, slot);
+            return;
         } else if (currentView == 3) {
             var handler = party.getBuffHandler();
             int buffPageCount = getPageCount(getBuffEntryCount(handler), Math.max(1, getBuffLayoutSlots().size()));
@@ -2060,6 +2246,57 @@ public class PartyOverview {
                 new Replaceable("%player%", targetName)
         ));
         refreshInventory();
+    }
+
+    private void handleTerritoryClick(Player player, int slot) {
+        if (!McMMOParties.getConfigManager().isTerritoryEnabled()) {
+            currentView = 0;
+            refreshInventory();
+            return;
+        }
+
+        int headerSlot = McMMOParties.getPartyOverviewCfg().getInt("Icons.Territory.Header.Slot", 4);
+        if (slot == headerSlot && isPartyMember(playerUuid) && party.canManageTerritory(playerUuid)) {
+            TerritoryClaim current = McMMOParties.getTerritoryService().getClaim(player.getLocation());
+            if (current == null) {
+                TerritoryPreview preview = McMMOParties.getTerritoryService().getPreview(playerUuid);
+                TerritoryKey currentKey = TerritoryKey.from(
+                        player.getLocation(), McMMOParties.getConfigManager().getServerName()
+                );
+                if (preview != null && preview.isClaimable()
+                        && preview.partyId().equalsIgnoreCase(party.getPartyID())
+                        && preview.key().equals(currentKey)) {
+                    TerritoryCommands.execute(player, new String[]{"territory", "confirm"});
+                } else {
+                    TerritoryCommands.execute(player, new String[]{"territory", "claim", party.getPartyID()});
+                }
+            } else if (current.partyId().equalsIgnoreCase(party.getPartyID())) {
+                TerritoryCommands.execute(player, new String[]{"territory", "unclaim"});
+            } else {
+                player.sendMessage(LanguageConfig.get().getMessage(TERRITORY_NO_PERMISSION));
+            }
+            refreshInventory();
+            return;
+        }
+
+        List<TerritoryClaim> claims = McMMOParties.getTerritoryService().getClaims(party.getPartyID());
+        int pageSize = Math.max(1, McMMOParties.getPartyOverviewCfg().getIntegerList(
+                "Icons.Territory.Layout.Slots", DEFAULT_TERRITORY_LAYOUT
+        ).size());
+        int pageCount = getPageCount(claims.size(), pageSize);
+        int previousSlot = McMMOParties.getPartyOverviewCfg().getInt(
+                "Icons.Territory.PreviousPage.Slot", DEFAULT_TERRITORY_PREVIOUS_SLOT
+        );
+        int nextSlot = McMMOParties.getPartyOverviewCfg().getInt(
+                "Icons.Territory.NextPage.Slot", DEFAULT_TERRITORY_NEXT_SLOT
+        );
+        if (slot == previousSlot && territoryPage > 0) {
+            territoryPage--;
+            refreshInventory();
+        } else if (slot == nextSlot && territoryPage + 1 < pageCount) {
+            territoryPage++;
+            refreshInventory();
+        }
     }
 
     private void refreshInventory() {

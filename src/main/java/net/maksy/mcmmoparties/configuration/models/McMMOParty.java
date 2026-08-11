@@ -168,6 +168,10 @@ public class McMMOParty {
         return getPartyState(uuid).canManageDungeonInstances();
     }
 
+    public boolean canManageTerritory(UUID uuid) {
+        return getPartyState(uuid).canManageTerritory();
+    }
+
     public void announceToMembers(String message) {
         for(UUID uuid : getMembers()) {
             OfflinePlayer member = Bukkit.getOfflinePlayer(uuid);
@@ -192,6 +196,14 @@ public class McMMOParty {
             return -1;
         }
         return defaultSize + Math.max(0, buffHandler.getTresorSizeBonus());
+    }
+
+    public int getMaxTerritoryClaims() {
+        int baseClaims = McMMOParties.getConfigManager().getTerritoryBaseClaims();
+        if (baseClaims < 0) {
+            return -1;
+        }
+        return baseClaims + Math.max(0, buffHandler.getTerritoryClaimSlotBonus());
     }
 
     public boolean canAccessWaypoint(UUID uuid) {

@@ -1,0 +1,18 @@
+package net.maksy.mcmmoparties.territory;
+
+public enum TerritoryClaimResult {
+    SUCCESS,
+    DISABLED,
+    NO_PARTY,
+    NO_PERMISSION,
+    WORLD_NOT_ALLOWED,
+    ALREADY_CLAIMED,
+    LIMIT_REACHED,
+    NOT_ADJACENT,
+    EXTERNAL_CONFLICT,
+    PROVIDER_UNAVAILABLE,
+    INSUFFICIENT_CLAIM_BLOCKS,
+    INSUFFICIENT_MONEY,
+    CANCELLED,
+    STORAGE_ERROR
+}

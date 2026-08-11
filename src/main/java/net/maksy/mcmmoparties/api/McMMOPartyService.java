@@ -21,7 +21,8 @@ public class McMMOPartyService {
             "/pa-admin level <set|add|remove|show> <party> [amount]",
             "/pa-admin skillpoints <set|add|remove|show> <party> [amount]",
             "/pa-admin buff <set|add|remove|show> <party> <buff_type> [ability] [amount]",
-            "/pa-admin balance <set|add|remove|show> <party> [amount]"
+            "/pa-admin balance <set|add|remove|show> <party> [amount]",
+            "/pa-admin territory <claim <party>|unclaim|list <party>>"
     );
 
     public PartyLoader getPartyLoader() {

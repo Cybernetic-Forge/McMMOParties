@@ -524,6 +524,10 @@ public class PartyCommandUtils {
         net.maksy.mcmmoparties.configuration.YamlParser.reloadAll(true);
         McMMOParties.getPartyLoader().flushPendingSaves();
         McMMOParties.getPartyLoader().reload();
+        if (McMMOParties.getTerritoryService() != null) {
+            McMMOParties.getTerritoryService().reloadProviders();
+            McMMOParties.getTerritoryService().reload();
+        }
         for (McMMOParty party : McMMOParties.getPartyLoader().getParties()) {
             party.refreshBuffs();
         }

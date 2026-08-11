@@ -5,6 +5,7 @@ public enum PartyState {
     CO_OWNER,
     SHOP_MANAGER,
     BUFF_MANAGER,
+    TERRITORY_MANAGER,
     ADVENTURER,
     MEMBER,
     PENDING,
@@ -36,5 +37,9 @@ public enum PartyState {
 
     public boolean canManageDungeonInstances() {
         return this == OWNER || this == CO_OWNER || this == ADVENTURER;
+    }
+
+    public boolean canManageTerritory() {
+        return this == OWNER || this == CO_OWNER || this == TERRITORY_MANAGER;
     }
 }

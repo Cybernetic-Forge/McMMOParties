@@ -3,7 +3,7 @@ version: 0.1.2
 main: net.maksy.mcmmoparties.McMMOParties
 api-version: 1.21
 authors: [ MaksyKun ]
-softdepend: [Vault, mcMMO, ChestShop, MythicDungeons]
+softdepend: [Vault, mcMMO, ChestShop, MythicDungeons, GriefPrevention]
 commands:
   party:
     description: Party command
@@ -27,6 +27,8 @@ permissions:
       mcmmoparties.admin.skillpoints: true
       mcmmoparties.admin.buff: true
       mcmmoparties.admin.balance: true
+      mcmmoparties.admin.territory: true
+      mcmmoparties.admin.territory.bypass: true
   mcmmoparties.admin.reload:
     description: Allows reloading McMMOParties
     default: op
@@ -53,4 +55,10 @@ permissions:
     default: op
   mcmmoparties.admin.balance:
     description: Allows editing party balances
+    default: op
+  mcmmoparties.admin.territory:
+    description: Allows administrative party territory management
+    default: op
+  mcmmoparties.admin.territory.bypass:
+    description: Bypasses party territory protection checks
     default: op

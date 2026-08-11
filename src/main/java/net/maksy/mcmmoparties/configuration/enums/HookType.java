@@ -3,7 +3,8 @@ package net.maksy.mcmmoparties.configuration.enums;
 public enum HookType {
     Divinity("Divinity"),
     MythicDungeons("MythicDungeons"),
-    ChestShop("ChestShop");
+    ChestShop("ChestShop"),
+    GriefPrevention("GriefPrevention");
 
     private final String pluginName;
 

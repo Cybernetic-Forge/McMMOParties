@@ -13,6 +13,8 @@ public final class SQLTables {
     public static final String BUFF_SKILLPOINTS_TABLE = "mcMMOParty_buff_skillpoints";
     public static final String BUFF_SUGGESTIONS_TABLE = "mcMMOParty_buff_suggestions";
     public static final String PARTY_WAYPOINTS_TABLE = "mcMMOParty_waypoints";
+    public static final String TERRITORY_CLAIMS_TABLE = "mcMMOParty_territory_claims";
+    public static final String TERRITORY_PERMISSIONS_TABLE = "mcMMOParty_territory_permissions";
 
     private SQLTables() {
     }

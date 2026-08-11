@@ -27,6 +27,41 @@ Hooks:
   ChestShop:
     Enabled: true
 
+# Optional party territory system. Kept disabled by default so updating the
+# plugin never starts claiming or protecting chunks without administrator opt-in.
+Territory:
+  Enabled: false
+  AllowedWorlds: ["*"]
+  BaseClaims: 4 # Set to -1 for unlimited claims.
+  RequireAdjacentClaims: true
+  ClaimCost:
+    PartyMoney: 0.0
+    ClaimBlocks: 0
+    ClaimBlockProvider: NONE # NONE or GRIEFPREVENTION
+  UnclaimRefund:
+    PartyMoneyPercent: 0.0
+    ClaimBlocksPercent: 0.0
+  RespectExternalClaims: true
+  Protection:
+    Enabled: true
+    ProtectExplosions: true
+    ProtectPistons: true
+    MessageCooldownMillis: 1000
+  Preview:
+    Enabled: true
+    DurationSeconds: 30
+    RefreshTicks: 10
+    CornerHeight: 4
+    ShowBorder: true
+    RadiusChunks: 5
+  DefaultMemberPermissions:
+    - BUILD
+    - BREAK
+    - INTERACT
+    - CONTAINER
+    - ENTITY
+    - REDSTONE
+
 DungeonInstance:
   DefaultSlots: 2
 

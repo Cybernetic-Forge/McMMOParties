@@ -8,6 +8,7 @@ import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
 import net.maksy.mcmmoparties.configuration.enums.Lang;
 import net.maksy.mcmmoparties.configuration.enums.PartyBuffType;
 import net.maksy.mcmmoparties.configuration.enums.PartyState;
+import net.maksy.mcmmoparties.configuration.enums.TerritoryPermission;
 import net.maksy.mcmmoparties.configuration.models.BuffUpgradeCondition;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.configuration.models.PartyWaypoint;
@@ -20,6 +21,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
 
 import java.util.*;
 
@@ -125,6 +127,9 @@ public class PartyEventHandler {
 
             UUID finalNewOwner = newOwner;
             SQLAsyncManager.updateParty(party, () -> SQLAsyncManager.setPartyState(leaver.getUniqueId(), party.getPartyID(), PartyState.NONE, () -> {
+                    if (McMMOParties.getTerritoryService() != null) {
+                        McMMOParties.getTerritoryService().removeMemberPermissions(party.getPartyID(), leaver.getUniqueId());
+                    }
                     for (UUID uuid : party.getMembers()) {
                         OfflinePlayer member = Bukkit.getOfflinePlayer(uuid);
                         if (member.isOnline()) {
@@ -146,6 +151,9 @@ public class PartyEventHandler {
         Bukkit.getPluginManager().callEvent(event);
         if (!event.isCancelled()) {
             SQLAsyncManager.setPartyState(kickedPlayer.getUniqueId(), party.getPartyID(), PartyState.NONE, () -> {
+                if (McMMOParties.getTerritoryService() != null) {
+                    McMMOParties.getTerritoryService().removeMemberPermissions(party.getPartyID(), kickedPlayer.getUniqueId());
+                }
                 for (UUID uuid : party.getMembers()) {
                     OfflinePlayer member = Bukkit.getOfflinePlayer(uuid);
                     if (member.isOnline())
@@ -240,6 +248,31 @@ public class PartyEventHandler {
 
     public PartyDisbandEvent callPartyDisbandEvent(Player player, McMMOParty party) {
         PartyDisbandEvent event = new PartyDisbandEvent(party, player);
+        Bukkit.getPluginManager().callEvent(event);
+        return event;
+    }
+
+    public PartyTerritoryClaimEvent callPartyTerritoryClaimEvent(Player player, McMMOParty party,
+                                                                 net.maksy.mcmmoparties.territory.TerritoryClaim claim,
+                                                                 double moneyCost, int claimBlockCost) {
+        PartyTerritoryClaimEvent event = new PartyTerritoryClaimEvent(party, player, claim, moneyCost, claimBlockCost);
+        Bukkit.getPluginManager().callEvent(event);
+        return event;
+    }
+
+    public PartyTerritoryUnclaimEvent callPartyTerritoryUnclaimEvent(Player player, McMMOParty party,
+                                                                     net.maksy.mcmmoparties.territory.TerritoryClaim claim) {
+        PartyTerritoryUnclaimEvent event = new PartyTerritoryUnclaimEvent(party, player, claim);
+        Bukkit.getPluginManager().callEvent(event);
+        return event;
+    }
+
+    public PartyTerritoryPermissionCheckEvent callPartyTerritoryPermissionCheckEvent(
+            Player player, McMMOParty party, net.maksy.mcmmoparties.territory.TerritoryClaim claim,
+            TerritoryPermission permission, Event triggeringEvent, boolean allowed, String denialMessage) {
+        PartyTerritoryPermissionCheckEvent event = new PartyTerritoryPermissionCheckEvent(
+                party, player, claim, permission, triggeringEvent, allowed, denialMessage
+        );
         Bukkit.getPluginManager().callEvent(event);
         return event;
     }

@@ -4,6 +4,7 @@ import com.gmail.nossr50.datatypes.skills.PrimarySkillType;
 import net.maksy.mcmmoparties.McMMOParties;
 import net.maksy.mcmmoparties.configuration.YamlParser;
 import net.maksy.mcmmoparties.configuration.enums.BuffHandlerMode;
+import net.maksy.mcmmoparties.configuration.enums.TerritoryPermission;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.utils.Replaceable;
 import net.maksy.mcmmoparties.utils.Utils;
@@ -17,6 +18,7 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 import java.util.HashMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -54,6 +56,27 @@ public class ConfigManager {
         config.addMissing("Party.DefaultTresorSize", 50000);
         config.addMissing("Party.MaxPartiesPerPlayer", 3);
         config.addMissing("Invitations.ExpirationHours", 24);
+        config.addMissing("Territory.Enabled", false);
+        config.addMissing("Territory.AllowedWorlds", List.of("*"));
+        config.addMissing("Territory.BaseClaims", 4);
+        config.addMissing("Territory.RequireAdjacentClaims", true);
+        config.addMissing("Territory.ClaimCost.PartyMoney", 0.0D);
+        config.addMissing("Territory.ClaimCost.ClaimBlocks", 0);
+        config.addMissing("Territory.ClaimCost.ClaimBlockProvider", "NONE");
+        config.addMissing("Territory.UnclaimRefund.PartyMoneyPercent", 0.0D);
+        config.addMissing("Territory.UnclaimRefund.ClaimBlocksPercent", 0.0D);
+        config.addMissing("Territory.RespectExternalClaims", true);
+        config.addMissing("Territory.Protection.Enabled", true);
+        config.addMissing("Territory.Protection.ProtectExplosions", true);
+        config.addMissing("Territory.Protection.ProtectPistons", true);
+        config.addMissing("Territory.Protection.MessageCooldownMillis", 1000L);
+        config.addMissing("Territory.DefaultMemberPermissions", List.of("BUILD", "BREAK", "INTERACT", "CONTAINER", "ENTITY", "REDSTONE"));
+        config.addMissing("Territory.Preview.Enabled", true);
+        config.addMissing("Territory.Preview.DurationSeconds", 30);
+        config.addMissing("Territory.Preview.RefreshTicks", 10L);
+        config.addMissing("Territory.Preview.CornerHeight", 4);
+        config.addMissing("Territory.Preview.ShowBorder", true);
+        config.addMissing("Territory.Preview.RadiusChunks", 5);
 
         for (PrimarySkillType skill : PrimarySkillType.values()) {
             config.addMissing("Experience.Scaling." + skill.name(), getDefaultScaling(skill));
@@ -172,6 +195,107 @@ public class ConfigManager {
         return Math.max(1, config.getInt("DungeonInstance.DefaultSlots", 2));
     }
 
+    public boolean isTerritoryEnabled() {
+        return config.getBoolean("Territory.Enabled", false);
+    }
+
+    public boolean isTerritoryWorldAllowed(String worldName) {
+        if (worldName == null) {
+            return false;
+        }
+        List<String> worlds = config.getStringList("Territory.AllowedWorlds", List.of("*"));
+        return worlds.isEmpty() || worlds.stream().anyMatch(world -> "*".equals(world) || worldName.equalsIgnoreCase(world));
+    }
+
+    public int getTerritoryBaseClaims() {
+        int configured = config.getInt("Territory.BaseClaims", 4);
+        return configured < 0 ? -1 : configured;
+    }
+
+    public boolean isTerritoryAdjacencyRequired() {
+        return config.getBoolean("Territory.RequireAdjacentClaims", true);
+    }
+
+    public double getTerritoryClaimMoneyCost() {
+        return Math.max(0.0D, config.getDouble("Territory.ClaimCost.PartyMoney", 0.0D));
+    }
+
+    public int getTerritoryClaimBlockCost() {
+        return Math.max(0, config.getInt("Territory.ClaimCost.ClaimBlocks", 0));
+    }
+
+    public String getTerritoryClaimBlockProvider() {
+        String provider = config.getString("Territory.ClaimCost.ClaimBlockProvider", "NONE");
+        return provider == null ? "NONE" : provider.trim().toUpperCase(Locale.ROOT);
+    }
+
+    public double getTerritoryMoneyRefundPercent() {
+        return clampPercent(config.getDouble("Territory.UnclaimRefund.PartyMoneyPercent", 0.0D));
+    }
+
+    public double getTerritoryClaimBlockRefundPercent() {
+        return clampPercent(config.getDouble("Territory.UnclaimRefund.ClaimBlocksPercent", 0.0D));
+    }
+
+    public boolean shouldRespectExternalClaims() {
+        return config.getBoolean("Territory.RespectExternalClaims", true);
+    }
+
+    public boolean isTerritoryProtectionEnabled() {
+        return isTerritoryEnabled() && config.getBoolean("Territory.Protection.Enabled", true);
+    }
+
+    public boolean shouldProtectTerritoryExplosions() {
+        return config.getBoolean("Territory.Protection.ProtectExplosions", true);
+    }
+
+    public boolean shouldProtectTerritoryPistons() {
+        return config.getBoolean("Territory.Protection.ProtectPistons", true);
+    }
+
+    public long getTerritoryMessageCooldownMillis() {
+        return Math.max(0L, config.getLong("Territory.Protection.MessageCooldownMillis", 1000L));
+    }
+
+    public EnumSet<TerritoryPermission> getDefaultTerritoryMemberPermissions() {
+        EnumSet<TerritoryPermission> permissions = EnumSet.noneOf(TerritoryPermission.class);
+        for (String value : config.getStringList("Territory.DefaultMemberPermissions", List.of())) {
+            TerritoryPermission permission = TerritoryPermission.fromString(value);
+            if (permission != null) {
+                permissions.add(permission);
+            }
+        }
+        return permissions;
+    }
+
+    public boolean isTerritoryPreviewEnabled() {
+        return isTerritoryEnabled() && config.getBoolean("Territory.Preview.Enabled", true);
+    }
+
+    public long getTerritoryPreviewDurationMillis() {
+        return Math.max(5L, config.getLong("Territory.Preview.DurationSeconds", 30L) * 1000L);
+    }
+
+    public long getTerritoryPreviewRefreshTicks() {
+        return Math.max(1L, config.getLong("Territory.Preview.RefreshTicks", 10L));
+    }
+
+    public int getTerritoryPreviewCornerHeight() {
+        return Math.max(1, Math.min(8, config.getInt("Territory.Preview.CornerHeight", 4)));
+    }
+
+    public boolean shouldShowTerritoryPreviewBorder() {
+        return config.getBoolean("Territory.Preview.ShowBorder", true);
+    }
+
+    public int getTerritoryPreviewRadiusChunks() {
+        return Math.max(1, Math.min(16, config.getInt("Territory.Preview.RadiusChunks", 5)));
+    }
+
+    private double clampPercent(double value) {
+        return Math.max(0.0D, Math.min(100.0D, value));
+    }
+
     public float getPastExp(long level) {
         if (level <= 0) {
             return getNeededExperience(0);
@@ -275,6 +399,7 @@ public class ConfigManager {
             case "ABILITY_DURATION" -> "&aAbility Duration";
             case "ABILITY_COOLDOWN_REDUCTION" -> "&aAbility Cooldown Reduction";
             case "DUNGEON_INSTANCE_SLOTS" -> "&aDungeon Instance Slots";
+            case "TERRITORY_CLAIM_SLOTS" -> "&aTerritory Claim Slots";
             default -> fallback;
         };
     }

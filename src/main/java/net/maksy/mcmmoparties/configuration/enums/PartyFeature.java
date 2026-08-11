@@ -6,6 +6,7 @@ public enum PartyFeature {
     STATS,
     BUFFS,
     DUNGEON_INSTANCES,
+    TERRITORY,
     WARP,
     EDIT_PARTY,
     TRESOR

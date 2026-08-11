@@ -61,6 +61,7 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
             case "newleader" -> {
                 if (args.length >= 2) PartyCommandUtils.setOwnerPartyCommand(player, args);
             }
+            case "territory" -> TerritoryCommands.execute(player, args);
         }
         return true;
     }
@@ -86,11 +87,15 @@ public class PartyCommands implements CommandExecutor, TabCompleter {
             if(canManage && "kick".startsWith(args[0])) first.add("kick");
             if(canManage && "newleader".startsWith(args[0])) first.add("newleader");
             if("list".startsWith(args[0])) first.add("list");
+            if (McMMOParties.getConfigManager().isTerritoryEnabled() && "territory".startsWith(args[0])) first.add("territory");
             if (canDisband && "disband".startsWith(args[0])) first.add("disband");
             if ((player.isOp() || player.hasPermission("mcmmoparties.admin")) && "reload".startsWith(args[0])) {
                 first.add("reload");
             }
             return first;
+        }
+        if (args.length >= 2 && "territory".equalsIgnoreCase(args[0])) {
+            return TerritoryCommands.tabComplete(player, args);
         }
         if(args.length == 2) {
             McMMOParty party = McMMOParties.getPartyLoader().getPartyOfPlayer(player.getUniqueId());

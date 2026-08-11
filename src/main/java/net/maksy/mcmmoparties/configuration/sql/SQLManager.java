@@ -11,6 +11,10 @@ import net.maksy.mcmmoparties.configuration.models.PartyInvitation;
 import net.maksy.mcmmoparties.configuration.models.PartyWaypoint;
 import net.maksy.mcmmoparties.configuration.models.SkillRequirement;
 import net.maksy.mcmmoparties.configuration.sql.tables.*;
+import net.maksy.mcmmoparties.territory.TerritoryClaim;
+import net.maksy.mcmmoparties.territory.TerritoryKey;
+import net.maksy.mcmmoparties.territory.TerritoryPermissionOverride;
+import net.maksy.mcmmoparties.territory.TerritoryStorageResult;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -52,6 +56,8 @@ public class SQLManager {
     private final PartyWaypointTableSQL waypointTable;
     private final PartyInvitationTableSQL invitationTable;
     private final PlayerPreferenceTableSQL playerPreferenceTable;
+    private final TerritoryClaimTableSQL territoryClaimTable;
+    private final TerritoryPermissionTableSQL territoryPermissionTable;
 
     public SQLManager() {
         try {
@@ -66,6 +72,8 @@ public class SQLManager {
             waypointTable = new PartyWaypointTableSQL();
             invitationTable = new PartyInvitationTableSQL();
             playerPreferenceTable = new PlayerPreferenceTableSQL();
+            territoryClaimTable = new TerritoryClaimTableSQL();
+            territoryPermissionTable = new TerritoryPermissionTableSQL();
 
             try (Connection connection = connection()) {
                 skillTable.migrateSkillColumnsIfPresent(connection);
@@ -913,6 +921,8 @@ public class SQLManager {
                 invitationTable.deleteByParty(connection, normalizedPartyID);
                 playerPreferenceTable.clearByParty(connection, normalizedPartyID);
                 waypointTable.deleteByParty(connection, normalizedPartyID);
+                territoryPermissionTable.deleteByParty(connection, normalizedPartyID);
+                territoryClaimTable.deleteByParty(connection, normalizedPartyID);
                 partyShareTable.deleteByParty(connection, normalizedPartyID);
                 skillTable.deleteByParty(connection, normalizedPartyID);
                 settingsTable.deleteByParty(connection, normalizedPartyID);
@@ -920,6 +930,9 @@ public class SQLManager {
                 partyTable.deleteParty(connection, normalizedPartyID);
 
                 connection.commit();
+                if (McMMOParties.getTerritoryService() != null) {
+                    McMMOParties.getTerritoryService().removePartyFromCache(normalizedPartyID);
+                }
                 return true;
             } catch (SQLException e) {
                 connection.rollback();
@@ -931,6 +944,127 @@ public class SQLManager {
             plugin.getLogger().log(Level.SEVERE, "[SQL] Could not disband party " + partyID, e);
         }
         return false;
+    }
+
+    public List<TerritoryClaim> getTerritoryClaims() {
+        try (Connection connection = connection()) {
+            return territoryClaimTable.getAll(connection);
+        } catch (SQLException exception) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not load territory claims", exception);
+            return List.of();
+        }
+    }
+
+    public List<TerritoryPermissionOverride> getTerritoryPermissionOverrides() {
+        try (Connection connection = connection()) {
+            return territoryPermissionTable.getAll(connection);
+        } catch (SQLException exception) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not load territory permission overrides", exception);
+            return List.of();
+        }
+    }
+
+    public TerritoryStorageResult createTerritoryClaim(TerritoryClaim claim) {
+        try (Connection connection = connection()) {
+            connection.setAutoCommit(false);
+            try {
+                if (territoryClaimTable.exists(connection, claim.key())) {
+                    connection.rollback();
+                    return TerritoryStorageResult.ALREADY_CLAIMED;
+                }
+                if (!partyTable.exists(connection, claim.partyId())) {
+                    connection.rollback();
+                    return TerritoryStorageResult.PARTY_NOT_FOUND;
+                }
+
+                double currentBalance = partyTable.getBalance(connection, claim.partyId());
+                if (currentBalance < claim.paidMoney()) {
+                    connection.rollback();
+                    return TerritoryStorageResult.INSUFFICIENT_MONEY;
+                }
+
+                territoryClaimTable.insert(connection, claim);
+                double resultingBalance = currentBalance - claim.paidMoney();
+                partyTable.updateBalance(connection, claim.partyId(), resultingBalance);
+                connection.commit();
+                updateLoadedBalance(claim.partyId(), resultingBalance);
+                return TerritoryStorageResult.SUCCESS;
+            } catch (SQLException exception) {
+                connection.rollback();
+                throw exception;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (SQLException exception) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not create territory claim for " + claim.partyId(), exception);
+            return TerritoryStorageResult.ERROR;
+        }
+    }
+
+    public boolean deleteTerritoryClaim(TerritoryKey key) {
+        try (Connection connection = connection()) {
+            return territoryClaimTable.delete(connection, key);
+        } catch (SQLException exception) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not delete territory claim at " + key, exception);
+            return false;
+        }
+    }
+
+    public boolean rollbackTerritoryClaim(TerritoryClaim claim) {
+        try (Connection connection = connection()) {
+            connection.setAutoCommit(false);
+            try {
+                if (!territoryClaimTable.delete(connection, claim.key())) {
+                    connection.rollback();
+                    return false;
+                }
+                double currentBalance = partyTable.getBalance(connection, claim.partyId());
+                double resultingBalance = currentBalance + claim.paidMoney();
+                partyTable.updateBalance(connection, claim.partyId(), resultingBalance);
+                connection.commit();
+                updateLoadedBalance(claim.partyId(), resultingBalance);
+                return true;
+            } catch (SQLException exception) {
+                connection.rollback();
+                throw exception;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (SQLException exception) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not roll back territory claim for " + claim.partyId(), exception);
+            return false;
+        }
+    }
+
+    public boolean setTerritoryPermissionOverride(TerritoryPermissionOverride override) {
+        try (Connection connection = connection()) {
+            territoryPermissionTable.set(connection, override);
+            return true;
+        } catch (SQLException exception) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not save territory permission override for " + override.partyId(), exception);
+            return false;
+        }
+    }
+
+    public boolean deleteTerritoryPermissionOverride(String partyId, UUID playerId,
+                                                     net.maksy.mcmmoparties.configuration.enums.TerritoryPermission permission) {
+        try (Connection connection = connection()) {
+            territoryPermissionTable.delete(connection, normalizePartyID(partyId), playerId, permission);
+            return true;
+        } catch (SQLException exception) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not delete territory permission override for " + partyId, exception);
+            return false;
+        }
+    }
+
+    public boolean deleteTerritoryPermissionOverrides(String partyId, UUID playerId) {
+        try (Connection connection = connection()) {
+            territoryPermissionTable.deleteByPlayer(connection, normalizePartyID(partyId), playerId);
+            return true;
+        } catch (SQLException exception) {
+            plugin.getLogger().log(Level.SEVERE, "[SQL] Could not delete territory permission overrides for " + playerId, exception);
+            return false;
+        }
     }
 
 
