@@ -7,6 +7,7 @@ import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.configuration.models.PartySettings;
 import net.maksy.mcmmoparties.configuration.models.SkillRequirement;
 import net.maksy.mcmmoparties.utils.ItemUT;
+import net.maksy.mcmmoparties.utils.PartyDisplayUtils;
 import net.maksy.mcmmoparties.utils.Replaceable;
 import net.maksy.mcmmoparties.utils.Utils;
 import org.bukkit.Bukkit;
@@ -144,7 +145,9 @@ public class PartyEditor implements Listener {
 
     private void loadPartyData(McMMOParty party) {
         if (party != null) {
-            this.display = party.getDisplay();
+            this.display = party.getDisplay() == null || party.getDisplay().isBlank()
+                    ? PartyDisplayUtils.formatPartyId(party.getPartyID())
+                    : party.getDisplay();
             this.locked = party.getPartySettings().isLocked();
             this.password = party.getPartySettings().getPassword();
             this.skillRequirements.clear();
@@ -156,7 +159,7 @@ public class PartyEditor implements Listener {
                 slots.put(skillRequirementIcon.getKey(), skill);
             }
         } else {
-            this.display = "";
+            this.display = PartyDisplayUtils.formatPartyId(partyID);
             this.locked = false;
             this.password = "";
             this.skillRequirements.clear();

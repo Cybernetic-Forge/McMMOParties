@@ -7,6 +7,7 @@ import net.maksy.mcmmoparties.configuration.enums.PartyBuffType;
 import net.maksy.mcmmoparties.configuration.enums.PartyState;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.configuration.models.PartySettings;
+import net.maksy.mcmmoparties.utils.PartyDisplayUtils;
 import net.maksy.mcmmoparties.configuration.models.PartyInvitation;
 import net.maksy.mcmmoparties.configuration.models.PartyWaypoint;
 import net.maksy.mcmmoparties.configuration.models.SkillRequirement;
@@ -145,7 +146,9 @@ public class SQLManager {
 
     public void createParty(Player player, String partyID, String display, List<SkillRequirement> skillRequirements, boolean locked, String password) {
         String normalizedPartyID = normalizePartyID(partyID);
-        String partyDisplay = display == null ? partyID : display;
+        String partyDisplay = display == null || display.isBlank()
+                ? PartyDisplayUtils.formatPartyId(normalizedPartyID)
+                : display;
         List<SkillRequirement> requirements = skillRequirements == null ? List.of() : skillRequirements;
 
         try (Connection connection = connection()) {
