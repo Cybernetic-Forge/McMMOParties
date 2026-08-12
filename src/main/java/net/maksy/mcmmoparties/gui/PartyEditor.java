@@ -24,7 +24,7 @@ import java.util.Map;
 
 import static net.maksy.mcmmoparties.configuration.enums.Lang.*;
 
-public class PartyEditor {
+public class PartyEditor implements Listener {
 
     private final Player player;
 
@@ -42,6 +42,7 @@ public class PartyEditor {
     public PartyEditor(Player player) {
         this.player = player;
         this.locked = false;
+        McMMOParties.getInstance().getServer().getPluginManager().registerEvents(this, McMMOParties.getInstance());
         inventory = Bukkit.createInventory(player, McMMOParties.getPartyEditorCfg().getInvSize(), McMMOParties.getPartyEditorCfg().getPartyEditorTitle());
         for (PrimarySkillType skill : PrimarySkillType.values()) {
             skillRequirements.add(new SkillRequirement(skill, 0));
@@ -138,7 +139,6 @@ public class PartyEditor {
         this.editingExisting = existingParty != null;
         loadPartyData(existingParty);
         initInventory();
-        GuiSessionRegistry.register(inventory, this::onInventory);
         player.openInventory(inventory);
     }
 
@@ -169,7 +169,6 @@ public class PartyEditor {
 
     public void open() {
         initInventory();
-        GuiSessionRegistry.register(inventory, this::onInventory);
         player.openInventory(inventory);
     }
 
@@ -192,7 +191,6 @@ public class PartyEditor {
             case 52 -> {
                 McMMOParty existingParty = McMMOParties.getPartyLoader().getParty(partyID);
                 if (existingParty != null) {
-                    // Update existing party
                     McMMOParty updatedParty = new McMMOParty(
                             partyID,
                             display,
@@ -213,7 +211,6 @@ public class PartyEditor {
                     );
                     McMMOParties.getSQL().updateParty(updatedParty);
                 } else {
-                    // Create new party
                     int maxParties = McMMOParties.getConfigManager().getMaxPartiesPerPlayer();
                     if (maxParties >= 0 && McMMOParties.getPartyLoader().getPartiesOfPlayer(player.getUniqueId()).size() >= maxParties) {
                         player.sendMessage(LanguageConfig.get().getMessage("party_limit_reached",
@@ -261,6 +258,7 @@ public class PartyEditor {
         }
     }
 
+    @EventHandler
     public void onInventory(InventoryClickEvent event) {
         if (event.getInventory() != inventory)
             return;

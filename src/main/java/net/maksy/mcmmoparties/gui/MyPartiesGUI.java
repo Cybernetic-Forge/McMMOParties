@@ -127,7 +127,12 @@ public class MyPartiesGUI {
                     player.sendMessage(LanguageConfig.get().getMessage("party_edit_owner_only", "&cOnly the party leader can edit this party."));
                     return;
                 }
-                EditorRegistry.getPartyEditor(player).open(party.getPartyID(), () -> new MyPartiesGUI(player, page).open());
+                player.closeInventory();
+                Bukkit.getScheduler().runTask(McMMOParties.getInstance(), () -> {
+                    if (player.isOnline()) {
+                        EditorRegistry.getPartyEditor(player).open(party.getPartyID(), () -> new MyPartiesGUI(player, page).open());
+                    }
+                });
             } else if (event.getClick().isLeftClick()) {
                 new PartyOverview(player.getUniqueId(), party, () -> new MyPartiesGUI(player, page).open()).open();
             }
