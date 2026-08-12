@@ -5,6 +5,7 @@ import net.maksy.mcmmoparties.McMMOParties;
 import net.maksy.mcmmoparties.configuration.YamlParser;
 import net.maksy.mcmmoparties.configuration.enums.BuffHandlerMode;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
+import net.maksy.mcmmoparties.utils.ArithmeticExpression;
 import net.maksy.mcmmoparties.utils.Replaceable;
 import net.maksy.mcmmoparties.utils.Utils;
 import org.bukkit.Bukkit;
@@ -13,9 +14,6 @@ import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
 
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -24,7 +22,6 @@ import java.util.Objects;
 
 public class ConfigManager {
 
-    private final ScriptEngine engine = new ScriptEngineManager().getEngineByName("JavaScript");
     private final Map<Long, Float> neededExperienceCache = new HashMap<>();
     private final Map<Long, Float> pastExperienceCache = new HashMap<>();
     private YamlParser config;
@@ -196,13 +193,14 @@ public class ConfigManager {
             return cached;
         }
 
-        String expression = levelCurveExpression.replace("x", String.valueOf(level));
         try {
-            float result = Float.parseFloat(engine.eval(expression).toString());
+            float result = (float) new ArithmeticExpression(levelCurveExpression, level).parse();
             neededExperienceCache.put(level, result);
             return result;
-        } catch (ScriptException e) {
-            e.printStackTrace();
+        } catch (IllegalArgumentException e) {
+            McMMOParties.getInstance().getLogger().warning(
+                    "Invalid Experience.LevelCurve expression: " + e.getMessage()
+            );
             return 0;
         }
     }

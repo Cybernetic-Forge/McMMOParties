@@ -28,6 +28,17 @@ public final class PartyDisplayUtils {
                 : LanguageConfig.get().getMessage(Lang.UNKNOWN_PLAYER_NAME);
     }
 
+    public static String formatPartyId(String partyId) {
+        if (partyId == null || partyId.isBlank()) {
+            return "";
+        }
+
+        String formatted = partyId.trim().replaceAll("[_-]+", " ").replaceAll("\\s+", " ");
+        return formatted.isEmpty()
+                ? ""
+                : Character.toUpperCase(formatted.charAt(0)) + formatted.substring(1);
+    }
+
     public static String getMemberStatusDisplay(OfflinePlayer player) {
         return LanguageConfig.get().getMessage(player != null && player.isOnline() ? Lang.MEMBER_STATUS_ONLINE : Lang.MEMBER_STATUS_OFFLINE);
     }

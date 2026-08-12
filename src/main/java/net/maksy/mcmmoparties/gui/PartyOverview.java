@@ -1551,8 +1551,13 @@ public class PartyOverview {
                 case EDIT_PARTY -> {
                     if (party.isOwner(playerUuid)) {
                         player.closeInventory();
-                        PartyEditor editor = EditorRegistry.getPartyEditor(player);
-                        editor.open(party.getPartyID(), this::open);
+                        Bukkit.getScheduler().runTask(McMMOParties.getInstance(), () -> {
+                            if (!player.isOnline()) {
+                                return;
+                            }
+                            PartyEditor editor = EditorRegistry.getPartyEditor(player);
+                            editor.open(party.getPartyID(), this::open);
+                        });
                     }
                 }
                 case TRESOR -> {

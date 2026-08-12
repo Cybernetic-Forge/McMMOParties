@@ -7,6 +7,7 @@ import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.configuration.models.PartySettings;
 import net.maksy.mcmmoparties.configuration.models.SkillRequirement;
 import net.maksy.mcmmoparties.utils.ItemUT;
+import net.maksy.mcmmoparties.utils.PartyDisplayUtils;
 import net.maksy.mcmmoparties.utils.Replaceable;
 import net.maksy.mcmmoparties.utils.Utils;
 import org.bukkit.Bukkit;
@@ -24,7 +25,7 @@ import java.util.Map;
 
 import static net.maksy.mcmmoparties.configuration.enums.Lang.*;
 
-public class PartyEditor {
+public class PartyEditor implements Listener {
 
     private final Player player;
 
@@ -42,6 +43,7 @@ public class PartyEditor {
     public PartyEditor(Player player) {
         this.player = player;
         this.locked = false;
+        McMMOParties.getInstance().getServer().getPluginManager().registerEvents(this, McMMOParties.getInstance());
         inventory = Bukkit.createInventory(player, McMMOParties.getPartyEditorCfg().getInvSize(), McMMOParties.getPartyEditorCfg().getPartyEditorTitle());
         for (PrimarySkillType skill : PrimarySkillType.values()) {
             skillRequirements.add(new SkillRequirement(skill, 0));
@@ -138,13 +140,14 @@ public class PartyEditor {
         this.editingExisting = existingParty != null;
         loadPartyData(existingParty);
         initInventory();
-        GuiSessionRegistry.register(inventory, this::onInventory);
         player.openInventory(inventory);
     }
 
     private void loadPartyData(McMMOParty party) {
         if (party != null) {
-            this.display = party.getDisplay();
+            this.display = party.getDisplay() == null || party.getDisplay().isBlank()
+                    ? PartyDisplayUtils.formatPartyId(party.getPartyID())
+                    : party.getDisplay();
             this.locked = party.getPartySettings().isLocked();
             this.password = party.getPartySettings().getPassword();
             this.skillRequirements.clear();
@@ -156,7 +159,7 @@ public class PartyEditor {
                 slots.put(skillRequirementIcon.getKey(), skill);
             }
         } else {
-            this.display = "";
+            this.display = PartyDisplayUtils.formatPartyId(partyID);
             this.locked = false;
             this.password = "";
             this.skillRequirements.clear();
@@ -169,7 +172,6 @@ public class PartyEditor {
 
     public void open() {
         initInventory();
-        GuiSessionRegistry.register(inventory, this::onInventory);
         player.openInventory(inventory);
     }
 
@@ -192,7 +194,6 @@ public class PartyEditor {
             case 52 -> {
                 McMMOParty existingParty = McMMOParties.getPartyLoader().getParty(partyID);
                 if (existingParty != null) {
-                    // Update existing party
                     McMMOParty updatedParty = new McMMOParty(
                             partyID,
                             display,
@@ -213,7 +214,6 @@ public class PartyEditor {
                     );
                     McMMOParties.getSQL().updateParty(updatedParty);
                 } else {
-                    // Create new party
                     int maxParties = McMMOParties.getConfigManager().getMaxPartiesPerPlayer();
                     if (maxParties >= 0 && McMMOParties.getPartyLoader().getPartiesOfPlayer(player.getUniqueId()).size() >= maxParties) {
                         player.sendMessage(LanguageConfig.get().getMessage("party_limit_reached",
@@ -261,6 +261,7 @@ public class PartyEditor {
         }
     }
 
+    @EventHandler
     public void onInventory(InventoryClickEvent event) {
         if (event.getInventory() != inventory)
             return;
