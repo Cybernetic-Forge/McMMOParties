@@ -7,7 +7,7 @@
     <parent>
         <groupId>net.maksy</groupId>
         <artifactId>McMMOParties-parent</artifactId>
-        <version>0.1.2</version>
+        <version>0.1.3</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
