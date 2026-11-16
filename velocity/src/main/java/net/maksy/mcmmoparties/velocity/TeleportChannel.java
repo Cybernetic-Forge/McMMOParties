@@ -17,11 +17,13 @@ public final class TeleportChannel {
     private final Object plugin;
     private final ProxyServer proxyServer;
     private final Logger logger;
+    private final VelocityMessaging messaging;
 
-    public TeleportChannel(Object plugin, ProxyServer proxyServer, Logger logger) {
+    public TeleportChannel(Object plugin, ProxyServer proxyServer, Logger logger, VelocityMessaging messaging) {
         this.plugin = plugin;
         this.proxyServer = proxyServer;
         this.logger = logger;
+        this.messaging = messaging;
     }
 
     @Subscribe
@@ -30,42 +32,28 @@ public final class TeleportChannel {
             return;
         }
 
-        event.setResult(PluginMessageEvent.ForwardResult.handled());
-        String payload = new String(event.getData(), StandardCharsets.UTF_8);
-        String[] message = payload.split(",");
-        if (message.length < 9 || !"tp".equalsIgnoreCase(message[0])) {
-            return;
-        }
-
-        UUID playerUUID = UUID.fromString(message[1]);
-        Optional<Player> optionalPlayer = proxyServer.getPlayer(playerUUID);
-        if (optionalPlayer.isEmpty()) {
-            logger.warn("Teleport message receiver is offline: {}", playerUUID);
-            return;
-        }
-
-        Player player = optionalPlayer.get();
-        String serverName = message[2];
-        Optional<RegisteredServer> targetServer = proxyServer.getServer(serverName);
-        if (targetServer.isEmpty()) {
-            logger.warn("The target server could not be found: {}", serverName);
-            return;
-        }
-
-        forwardTeleport(player, targetServer.get(), payload.getBytes(StandardCharsets.UTF_8));
+        String text = messaging.receive(event);
+        if (text == null) return;
+        var payload = net.maksy.mcmmoparties.messaging.Payload.teleport(text);
+        Player player = proxyServer.getPlayer(payload.player()).orElse(null);
+        RegisteredServer destination = proxyServer.getServer(payload.server()).orElse(null);
+        if (player == null || destination == null) return;
+        // Validate destination key/allowlist before connecting the player.
+        if (messaging.send(payload.server(), net.maksy.mcmmoparties.messaging.SecureMessaging.TELEPORT, text) == null) return;
+        forwardTeleport(player, destination, text, ((ServerConnection) event.getSource()).getServerInfo().getName());
     }
 
-    private void forwardTeleport(Player player, RegisteredServer targetServer, byte[] data) {
+    private void forwardTeleport(Player player, RegisteredServer targetServer, String text, String source) {
         proxyServer.getScheduler()
                 .buildTask(plugin, () -> {
                     Optional<ServerConnection> currentServer = player.getCurrentServer();
-                    if (currentServer.isEmpty()) {
+                    if (currentServer.isEmpty() || !player.isActive() || !currentServer.get().getServerInfo().getName().equals(source)) {
                         logger.warn("Player server could not be found: {}", player.getUsername());
                         return;
                     }
 
                     if (currentServer.get().getServer().getServerInfo().equals(targetServer.getServerInfo())) {
-                        targetServer.sendPluginMessage(McMMOPartiesVelocity.TELEPORT_CHANNEL, data);
+                        send(player, targetServer, text);
                         return;
                     }
 
@@ -76,7 +64,7 @@ public final class TeleportChannel {
                         }
 
                         proxyServer.getScheduler()
-                                .buildTask(plugin, () -> targetServer.sendPluginMessage(McMMOPartiesVelocity.TELEPORT_CHANNEL, data))
+                                .buildTask(plugin, () -> send(player, targetServer, text))
                                 .delay(2, TimeUnit.SECONDS)
                                 .schedule();
                     });
@@ -84,4 +72,10 @@ public final class TeleportChannel {
                 .delay(1, TimeUnit.SECONDS)
                 .schedule();
     }
+    private void send(Player player, RegisteredServer server, String text) {
+        if (!player.isActive() || !player.getCurrentServer().map(connection -> connection.getServer().equals(server)).orElse(false)) return;
+        byte[] packet = messaging.send(server.getServerInfo().getName(), net.maksy.mcmmoparties.messaging.SecureMessaging.TELEPORT, text);
+        if (packet != null) server.sendPluginMessage(McMMOPartiesVelocity.TELEPORT_CHANNEL, packet);
+    }
+
 }

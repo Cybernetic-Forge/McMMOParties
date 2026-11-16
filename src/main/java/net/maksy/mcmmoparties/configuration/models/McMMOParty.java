@@ -209,6 +209,8 @@ public class McMMOParty {
     public void refreshBuffs() {
         buffHandler.reload();
         partySettings.setExpSharing(new ExpSharing(buffHandler.getExpSharingRateBonus(), buffHandler.getExpSharingRadius()));
+        // Sharing is unlocked by buffs; legacy database defaults must not disable it.
+        partySettings.setExpShare(buffHandler.getExpSharingRateBonus() > 0 && buffHandler.getExpSharingRadius() > 0);
     }
 
     public void refreshLevelProgress() {

@@ -33,6 +33,7 @@ public class ConfigManager {
         config.mergeMissingFromResource("config.yml");
 
         config.addMissing("Party.BaseMemberSlots", 10);
+        config.addMissing("Party.FriendlyFire", false);
         config.addMissing("Party.PartyLevelCap", 100);
         config.addMissing("Buffs.Handler", "SKILLPOINTS");
         config.addMissing("Buffs.SkillPointsPerLevel", 1);
@@ -69,6 +70,10 @@ public class ConfigManager {
 
     public int getBaseMemberSlots() {
         return config.getInt("Party.BaseMemberSlots", 10);
+    }
+
+    public boolean isPartyFriendlyFireEnabled() {
+        return config.getBoolean("Party.FriendlyFire", false);
     }
 
     public int getPartyLevelCap() {

@@ -316,9 +316,15 @@ public class PartyCommandUtils {
     }
 
     public static void chatPartyCommand(Player player, String[] args) {
+        var chatMode = McMMOParties.getPartyChatModeService();
+        if (args.length == 1 && chatMode.getSelection(player.getUniqueId()) != null) {
+            chatMode.clear(player.getUniqueId());
+            player.sendMessage(LanguageConfig.get().getMessage("party_chat_disabled", "&eParty chat mode disabled."));
+            return;
+        }
         McMMOParty party = null;
         int messageStart = 1;
-        if (args.length >= 3) {
+        if (args.length >= 2) {
             McMMOParty requested = partyLoader.getParty(args[1].toLowerCase(Locale.ROOT));
             if (requested != null && requested.getMembers().contains(player.getUniqueId())) {
                 party = requested;
@@ -330,6 +336,11 @@ public class PartyCommandUtils {
         }
         if (party == null) {
             player.sendMessage(LanguageConfig.get().getMessage(NOT_IN_PARTY));
+            return;
+        }
+
+        if (args.length == 1 || (args.length == 2 && messageStart == 2)) {
+            chatMode.toggle(player, party);
             return;
         }
 

@@ -21,6 +21,7 @@ import net.maksy.mcmmoparties.configuration.models.BuffUpgradeCondition;
 import net.maksy.mcmmoparties.configuration.models.McMMOParty;
 import net.maksy.mcmmoparties.configuration.models.PartyWaypoint;
 import net.maksy.mcmmoparties.hooks.EconomyHook;
+import net.maksy.mcmmoparties.hooks.VaultPlayerAccount;
 import net.maksy.mcmmoparties.proxy.ProxyTeleportService;
 import net.maksy.mcmmoparties.utils.*;
 import net.milkbowl.vault.economy.Economy;
@@ -1694,13 +1695,23 @@ public class PartyOverview {
             return;
         }
 
-        if (amount <= 0.0) {
+        if (!Double.isFinite(amount) || amount <= 0.0) {
             player.sendMessage(LanguageConfig.get().getMessage(AMOUNT_MUST_BE_POSITIVE));
             return;
         }
 
         Economy economy = EconomyHook.getEconomy();
         if (economy == null) {
+            player.sendMessage(LanguageConfig.get().getMessage(ECONOMY_NOT_AVAILABLE));
+            return;
+        }
+
+        VaultPlayerAccount account;
+        try {
+            account = new VaultPlayerAccount(economy, player);
+        } catch (RuntimeException ex) {
+            McMMOParties.getInstance().getLogger().log(java.util.logging.Level.SEVERE,
+                    "Could not access the player's Vault economy account for a party transfer", ex);
             player.sendMessage(LanguageConfig.get().getMessage(ECONOMY_NOT_AVAILABLE));
             return;
         }
@@ -1712,7 +1723,7 @@ public class PartyOverview {
                 return;
             }
             amount = depositEvent.getAmount();
-            if (amount <= 0.0) {
+            if (!Double.isFinite(amount) || amount <= 0.0) {
                 player.sendMessage(LanguageConfig.get().getMessage(AMOUNT_MUST_BE_POSITIVE));
                 return;
             }
@@ -1722,11 +1733,11 @@ public class PartyOverview {
                 return;
             }
 
-            if (!economy.has(player, amount)) {
+            if (!account.has(amount)) {
                 player.sendMessage(LanguageConfig.get().getMessage(ECONOMY_NOT_ENOUGH_MONEY));
                 return;
             }
-            EconomyResponse withdrawResponse = economy.withdrawPlayer(player, amount);
+            EconomyResponse withdrawResponse = account.withdraw(amount);
             if (!withdrawResponse.transactionSuccess()) {
                 player.sendMessage(LanguageConfig.get().getMessage(ECONOMY_WITHDRAW_FAILED));
                 return;
@@ -1734,7 +1745,7 @@ public class PartyOverview {
 
             success = McMMOParties.getSQL().depositPartyBalance(party.getPartyID(), player.getUniqueId(), amount);
             if (!success) {
-                economy.depositPlayer(player, amount);
+                account.deposit(amount);
                 player.sendMessage(LanguageConfig.get().getMessage(PARTY_TRESOR_DEPOSIT_FAILED));
                 return;
             }
@@ -1749,7 +1760,7 @@ public class PartyOverview {
                 return;
             }
             amount = withdrawEvent.getAmount();
-            if (amount <= 0.0) {
+            if (!Double.isFinite(amount) || amount <= 0.0) {
                 player.sendMessage(LanguageConfig.get().getMessage(AMOUNT_MUST_BE_POSITIVE));
                 return;
             }
@@ -1760,7 +1771,7 @@ public class PartyOverview {
                 return;
             }
 
-            EconomyResponse depositResponse = economy.depositPlayer(player, amount);
+            EconomyResponse depositResponse = account.deposit(amount);
             if (!depositResponse.transactionSuccess()) {
                 McMMOParties.getSQL().depositPartyBalance(party.getPartyID(), player.getUniqueId(), amount);
                 player.sendMessage(LanguageConfig.get().getMessage(PARTY_TRESOR_PLAYER_DEPOSIT_FAILED));

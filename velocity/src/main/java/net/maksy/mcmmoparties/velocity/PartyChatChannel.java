@@ -12,9 +12,11 @@ import java.util.*;
 public final class PartyChatChannel {
 
     private final ProxyServer proxyServer;
+    private final VelocityMessaging messaging;
 
-    public PartyChatChannel(ProxyServer proxyServer) {
+    public PartyChatChannel(ProxyServer proxyServer, VelocityMessaging messaging) {
         this.proxyServer = proxyServer;
+        this.messaging = messaging;
     }
 
     @Subscribe
@@ -23,12 +25,9 @@ public final class PartyChatChannel {
             return;
         }
 
-        event.setResult(PluginMessageEvent.ForwardResult.handled());
-        String[] message = new String(event.getData(), StandardCharsets.UTF_8).split(",", 8);
-        if (message.length < 8 || !"chat".equalsIgnoreCase(message[0])) {
-            return;
-        }
-
+        String authenticated = messaging.receive(event);
+        if (authenticated == null) return;
+        String[] message = authenticated.split(",", 8);
         Map<RegisteredServer, List<UUID>> recipientsByServer = new HashMap<>();
         for (String entry : message[7].split(";")) {
             if (entry.isBlank()) {
@@ -71,10 +70,8 @@ public final class PartyChatChannel {
                     serverRecipients
             );
 
-            entry.getKey().sendPluginMessage(
-                    McMMOPartiesVelocity.PARTY_CHAT_CHANNEL,
-                    payload.getBytes(StandardCharsets.UTF_8)
-            );
+            byte[] packet = messaging.send(entry.getKey().getServerInfo().getName(), net.maksy.mcmmoparties.messaging.SecureMessaging.CHAT, payload);
+            if (packet != null) entry.getKey().sendPluginMessage(McMMOPartiesVelocity.PARTY_CHAT_CHANNEL, packet);
         }
     }
 }

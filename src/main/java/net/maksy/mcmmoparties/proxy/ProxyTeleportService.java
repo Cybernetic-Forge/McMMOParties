@@ -60,38 +60,22 @@ public final class ProxyTeleportService {
                 z + "," +
                 yaw + "," +
                 pitch;
-        player.sendPluginMessage(McMMOParties.getInstance(), getChannelName(), message.getBytes(StandardCharsets.UTF_8));
+        PaperMessaging.send(player, getChannelName(), message.getBytes(StandardCharsets.UTF_8));
     }
 
     public static void handleIncoming(byte[] bytes) {
-        String[] message = new String(bytes, StandardCharsets.UTF_8).split(",");
-        if (message.length < 9 || !"tp".equalsIgnoreCase(message[0])) {
-            return;
-        }
-
-        UUID playerUUID = UUID.fromString(message[1]);
-        Player player = Bukkit.getPlayer(playerUUID);
-        if (player == null) {
-            McMMOParties.getInstance().getLogger().warning("There is no online player with this uuid: " + message[1]);
-            return;
-        }
-
-        String serverName = message[2];
-        if (!serverName.trim().equalsIgnoreCase(McMMOParties.getConfigManager().getServerName().trim())) {
-            throw new IllegalArgumentException("Wrong server name: " + serverName + " should be " + McMMOParties.getConfigManager().getServerName());
-        }
-
-        World world = Bukkit.getWorld(message[3]);
+        net.maksy.mcmmoparties.messaging.Payload.Teleport payload;
+        try { payload = net.maksy.mcmmoparties.messaging.Payload.teleport(net.maksy.mcmmoparties.messaging.SignedMessageCodec.utf8(bytes)); }
+        catch (IllegalArgumentException invalid) { return; }
+        if (!payload.server().equals(McMMOParties.getConfigManager().getServerName())) return;
+        Player player = Bukkit.getPlayer(payload.player());
+        if (player == null) return;
+        World world = Bukkit.getWorld(payload.world());
         if (world == null) {
             player.sendMessage(LanguageConfig.get().getMessage(Lang.TELEPORT_WORLD_NOT_FOUND));
             return;
         }
-
-        double x = Double.parseDouble(message[4]);
-        double y = Double.parseDouble(message[5]);
-        double z = Double.parseDouble(message[6]);
-        float yaw = Float.parseFloat(message[7]);
-        float pitch = Float.parseFloat(message[8]);
-        player.teleport(new Location(world, x, y, z, yaw, pitch));
+        if (payload.y() < world.getMinHeight() - 64 || payload.y() > world.getMaxHeight() + 64) return;
+        player.teleport(new Location(world, payload.x(), payload.y(), payload.z(), payload.yaw(), payload.pitch()));
     }
 }

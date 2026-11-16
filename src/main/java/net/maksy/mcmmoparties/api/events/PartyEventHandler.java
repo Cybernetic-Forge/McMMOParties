@@ -1,7 +1,9 @@
 package net.maksy.mcmmoparties.api.events;
 
 import com.gmail.nossr50.events.experience.McMMOPlayerXpGainEvent;
-import com.gmail.nossr50.mcMMO;
+import com.gmail.nossr50.util.player.UserManager;
+import com.gmail.nossr50.datatypes.experience.XPGainReason;
+import com.gmail.nossr50.datatypes.experience.XPGainSource;
 import net.maksy.mcmmoparties.McMMOParties;
 import net.maksy.mcmmoparties.configuration.PartyLoader;
 import net.maksy.mcmmoparties.configuration.configs.LanguageConfig;
@@ -85,8 +87,13 @@ public class PartyEventHandler {
         PartyShareExpEvent shareEvent = new PartyShareExpEvent(party, event.getSkill(), a);
         Bukkit.getPluginManager().callEvent(shareEvent);
 
-        if (!shareEvent.isCancelled()) {
-            mcMMO.getDatabaseManager().loadPlayerProfile(player).addXp(event.getSkill(), shareEvent.getSharedExp());
+        if (!shareEvent.isCancelled() && Float.isFinite(shareEvent.getSharedExp()) && shareEvent.getSharedExp() > 0) {
+            var recipient = UserManager.getPlayer(player);
+            if (recipient == null || !player.isOnline()) return;
+            // The source amount already includes mcMMO modifiers. Apply it once to the live profile.
+            recipient.applyXpGain(event.getSkill(), shareEvent.getSharedExp(),
+                    event.getXpGainReason() == XPGainReason.PVP ? XPGainReason.SHARED_PVP : XPGainReason.SHARED_PVE,
+                    XPGainSource.PARTY_MEMBERS);
         }
     }
 

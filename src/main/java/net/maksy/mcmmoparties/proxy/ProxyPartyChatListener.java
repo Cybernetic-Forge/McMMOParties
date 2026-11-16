@@ -12,6 +12,7 @@ public class ProxyPartyChatListener implements PluginMessageListener {
         if (!expectedChannel.equalsIgnoreCase(channel)) {
             return;
         }
-        ProxyPartyChatService.handleIncoming(message);
+        byte[] payload = PaperMessaging.receive(channel, message);
+        if (payload != null) ProxyPartyChatService.handleIncoming(payload);
     }
 }

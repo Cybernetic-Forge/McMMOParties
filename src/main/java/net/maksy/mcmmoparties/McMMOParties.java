@@ -24,6 +24,10 @@ import net.maksy.mcmmoparties.listeners.hooks.ChestShopListener;
 import net.maksy.mcmmoparties.listeners.hooks.ChestShopProtectionListener;
 import net.maksy.mcmmoparties.listeners.hooks.DungeonInstanceListener;
 import net.maksy.mcmmoparties.listeners.ExpEvents;
+import net.maksy.mcmmoparties.listeners.PartyChatListener;
+import net.maksy.mcmmoparties.listeners.PartyFriendlyFireListener;
+import net.maksy.mcmmoparties.services.PartyChatModeService;
+import net.maksy.mcmmoparties.services.MetricsService;
 import net.maksy.mcmmoparties.proxy.ProxyPartyChatListener;
 import net.maksy.mcmmoparties.proxy.ProxyTeleportListener;
 import net.maksy.mcmmoparties.utils.ChatUT;
@@ -64,6 +68,9 @@ public final class McMMOParties extends JavaPlugin {
     private static PartyOverviewCfg partyOverviewCfg;
     private ProxyTeleportListener proxyTeleportListener;
     private ProxyPartyChatListener proxyPartyChatListener;
+    private MetricsService metricsService;
+    @Getter
+    private static PartyChatModeService partyChatModeService;
 
     @Override
     public void onLoad() {
@@ -104,6 +111,9 @@ public final class McMMOParties extends JavaPlugin {
         getCommand("pa-admin").setTabCompleter(partyAdminCommands);
 
         partyEventHandler = new PartyEventHandler();
+        partyChatModeService = new PartyChatModeService();
+
+        net.maksy.mcmmoparties.proxy.PaperMessaging.initialize();
 
         NamespacedKey teleportChannel = NamespacedKey.fromString(configManager.getTeleportChannel());
         if (teleportChannel != null) {
@@ -124,6 +134,11 @@ public final class McMMOParties extends JavaPlugin {
         }
 
         getServer().getPluginManager().registerEvents(new ExpEvents(), this);
+        getServer().getPluginManager().registerEvents(new PartyChatListener(partyChatModeService), this);
+        getServer().getPluginManager().registerEvents(new PartyFriendlyFireListener(), this);
+        if (getServer().getPluginManager().isPluginEnabled("mcMMO")) {
+            getServer().getPluginManager().registerEvents(new net.maksy.mcmmoparties.listeners.hooks.McMMOFriendlyFireListener(), this);
+        }
         getServer().getPluginManager().registerEvents(new AbilityBuffListener(), this);
         getServer().getPluginManager().registerEvents(GuiSessionRegistry.listener(), this);
         if(hookManager.isHooked(HookType.MythicDungeons)) {
@@ -132,10 +147,15 @@ public final class McMMOParties extends JavaPlugin {
         if(hookManager.isHooked(HookType.ChestShop)) {
             registerChestShopIntegration();
         }
+        metricsService = new MetricsService(this);
+        metricsService.start();
     }
 
     @Override
     public void onDisable() {
+        if (metricsService != null) metricsService.stop();
+        if (partyChatModeService != null) partyChatModeService.clear();
+        net.maksy.mcmmoparties.proxy.PaperMessaging.shutdown();
         NamespacedKey teleportChannel = configManager != null ? NamespacedKey.fromString(configManager.getTeleportChannel()) : null;
         if (teleportChannel != null && proxyTeleportListener != null) {
             getServer().getMessenger().unregisterIncomingPluginChannel(this, teleportChannel.toString(), proxyTeleportListener);

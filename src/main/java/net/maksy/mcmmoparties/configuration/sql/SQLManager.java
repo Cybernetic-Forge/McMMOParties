@@ -54,6 +54,10 @@ public class SQLManager {
     private final PartyInvitationTableSQL invitationTable;
     private final PlayerPreferenceTableSQL playerPreferenceTable;
 
+    public DatabaseType getDatabaseType() {
+        return dbType;
+    }
+
     public SQLManager() {
         try {
             ensureDriverLoaded();

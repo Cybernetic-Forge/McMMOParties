@@ -12,6 +12,7 @@ public class ProxyTeleportListener implements PluginMessageListener {
         if (!expectedChannel.equalsIgnoreCase(channel)) {
             return;
         }
-        ProxyTeleportService.handleIncoming(message);
+        byte[] payload = PaperMessaging.receive(channel, message);
+        if (payload != null) ProxyTeleportService.handleIncoming(payload);
     }
 }

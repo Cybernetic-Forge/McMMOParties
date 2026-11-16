@@ -61,8 +61,8 @@ public final class ProxyPartyChatService {
             return;
         }
 
-        sender.sendPluginMessage(
-                McMMOParties.getInstance(),
+        PaperMessaging.send(
+                sender,
                 getChannelName(),
                 encodePayload(
                         sender.getUniqueId(),
@@ -129,35 +129,10 @@ public final class ProxyPartyChatService {
     }
 
     private static DecodedChatPayload decodePayload(byte[] bytes) {
-        String[] message = new String(bytes, StandardCharsets.UTF_8).split(",", 8);
-        if (message.length < 8 || !"chat".equalsIgnoreCase(message[0])) {
-            return null;
-        }
-
         try {
-            UUID senderId = UUID.fromString(message[1]);
-            List<UUID> recipients = new ArrayList<>();
-            if (!message[7].isBlank()) {
-                for (String entry : message[7].split(";")) {
-                    if (!entry.isBlank()) {
-                        recipients.add(UUID.fromString(entry));
-                    }
-                }
-            }
-
-            return new DecodedChatPayload(
-                    senderId,
-                    decode(message[2]),
-                    decode(message[3]),
-                    decode(message[4]),
-                    decode(message[5]),
-                    decode(message[6]),
-                    recipients
-            );
-        } catch (IllegalArgumentException ex) {
-            McMMOParties.getInstance().getLogger().warning("Invalid incoming party chat payload: " + ex.getMessage());
-            return null;
-        }
+            var payload = net.maksy.mcmmoparties.messaging.Payload.chat(net.maksy.mcmmoparties.messaging.SignedMessageCodec.utf8(bytes));
+            return new DecodedChatPayload(payload.sender(), payload.name(), payload.party(), payload.display(), payload.server(), payload.text(), payload.recipients());
+        } catch (IllegalArgumentException invalid) { return null; }
     }
 
     private static String encode(String value) {

@@ -8,6 +8,9 @@ SQL:
 
 translation: en
 
+Metrics:
+  Enabled: true # Set to false to disable McMMOParties reporting.
+
 command-aliases: ["pa", "party", "mcmmoparty"]
 
 force-disable:
@@ -31,6 +34,7 @@ DungeonInstance:
   DefaultSlots: 2
 
 Party:
+  FriendlyFire: false # Allow players sharing a party to hurt one another.
   BaseMemberSlots: 10
   MaxPartiesPerPlayer: 3 # Set to -1 for unlimited simultaneous party memberships.
   PartyLevelCap: 100 # Set to -1 for unlimited party levels.

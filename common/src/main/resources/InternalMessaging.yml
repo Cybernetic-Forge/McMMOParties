@@ -1,0 +1,35 @@
+# Use separate random Base64 keys (at least 32 decoded bytes) for every backend.
+# Paper: proxy.secret must match this node's servers.<Velocity-name>.secret on Velocity.
+# Paper config.yml Network.ServerName must equal the backend name registered in Velocity.
+# Empty/missing secrets disable cross-server messaging; local party functions remain available.
+proxy:
+  secret: ""
+  channels: ["mcmmoparties:teleport", "mcmmoparties:partychat"]
+servers:
+  Bauwelt:
+    secret: ""
+    channels: ["mcmmoparties:teleport", "mcmmoparties:partychat"]
+  Industriewelt:
+    secret: ""
+    channels: ["mcmmoparties:teleport", "mcmmoparties:partychat"]
+  Farmwelt:
+    secret: ""
+    channels: ["mcmmoparties:teleport", "mcmmoparties:partychat"]
+  Eventwelt:
+    secret: ""
+    channels: ["mcmmoparties:teleport", "mcmmoparties:partychat"]
+  Zusatzwelt:
+    secret: ""
+    channels: ["mcmmoparties:teleport", "mcmmoparties:partychat"]
+  Team-Bauwelt:
+    secret: ""
+    channels: ["mcmmoparties:teleport", "mcmmoparties:partychat"]
+  Testwelt:
+    secret: ""
+    channels: ["mcmmoparties:teleport", "mcmmoparties:partychat"]
+  Limbo:
+    secret: ""
+    channels: ["mcmmoparties:teleport", "mcmmoparties:partychat"]
+  paper:
+    secret: ""
+    channels: ["mcmmoparties:teleport", "mcmmoparties:partychat"]
