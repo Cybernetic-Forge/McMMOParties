@@ -103,6 +103,10 @@ public class PartyLoader {
         return active != null && active.getPartyID().equalsIgnoreCase(partyId);
     }
 
+    public String getSelectedPartyId(UUID playerId) {
+        return activePartyByPlayer.get(playerId);
+    }
+
     public void setActiveParty(UUID uuid, String partyId, java.util.function.Consumer<Boolean> callback) {
         McMMOParty party = getParty(partyId);
         if (party == null || !party.getMembers().contains(uuid)) {

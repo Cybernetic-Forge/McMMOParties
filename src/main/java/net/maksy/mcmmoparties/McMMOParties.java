@@ -18,6 +18,7 @@ import net.maksy.mcmmoparties.hooks.HookManager;
 import net.maksy.mcmmoparties.hooks.chestshop.ChestShopPartyAccountProvider;
 import net.maksy.mcmmoparties.hooks.chestshop.ChestShopPartyHook;
 import net.maksy.mcmmoparties.hooks.mythiccraft.DungeonInstanceManager;
+import net.maksy.mcmmoparties.hooks.placeholderapi.PartyExpansion;
 import net.maksy.mcmmoparties.listeners.AbilityBuffListener;
 import net.maksy.mcmmoparties.listeners.hooks.ChestShopEconomyListener;
 import net.maksy.mcmmoparties.listeners.hooks.ChestShopListener;
@@ -69,6 +70,7 @@ public final class McMMOParties extends JavaPlugin {
     private ProxyTeleportListener proxyTeleportListener;
     private ProxyPartyChatListener proxyPartyChatListener;
     private MetricsService metricsService;
+    private Runnable stopPlaceholderExpansion;
     @Getter
     private static PartyChatModeService partyChatModeService;
 
@@ -147,12 +149,19 @@ public final class McMMOParties extends JavaPlugin {
         if(hookManager.isHooked(HookType.ChestShop)) {
             registerChestShopIntegration();
         }
+        if (getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            stopPlaceholderExpansion = PartyExpansion.start(this, partyLoader);
+        }
         metricsService = new MetricsService(this);
         metricsService.start();
     }
 
     @Override
     public void onDisable() {
+        if (stopPlaceholderExpansion != null) {
+            stopPlaceholderExpansion.run();
+            stopPlaceholderExpansion = null;
+        }
         if (metricsService != null) metricsService.stop();
         if (partyChatModeService != null) partyChatModeService.clear();
         net.maksy.mcmmoparties.proxy.PaperMessaging.shutdown();

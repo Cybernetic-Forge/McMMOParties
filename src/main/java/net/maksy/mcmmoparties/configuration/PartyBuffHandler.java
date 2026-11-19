@@ -501,7 +501,7 @@ public class PartyBuffHandler {
         return value;
     }
 
-    private int getTotalSpentPoints() {
+    public int getTotalSpentPoints() {
         int total = 0;
         for (int points : spentPointsByBuff.values()) {
             total += points;
